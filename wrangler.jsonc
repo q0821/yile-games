@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gogame",
+  "compatibility_date": "2026-03-15",
+  "pages_build_output_dir": ".",
+  "build": {
+    "command": "npm run version:generate"
+  }
+}
