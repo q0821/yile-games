@@ -107,7 +107,10 @@
     const cy = deps.padding + hint.x * deps.cellSize;
     const rect = deps.canvas.getBoundingClientRect();
     const left = rect.left + window.scrollX + cx;
-    const top = rect.top + window.scrollY + cy - 35;
+    const isNearTop = cy < deps.cellSize * 2;
+    const top = isNearTop
+      ? rect.top + window.scrollY + cy + deps.cellSize + 5
+      : rect.top + window.scrollY + cy - 35;
     el.textContent = `${rankNames[hint.rank] || ''} — ${hint.label}（點擊落子）`;
     el.style.left = left + 'px';
     el.style.top = top + 'px';
@@ -224,10 +227,15 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const letters = 'ABCDEFGHJKLMNOPQRST';
+    const labelOffset = deps.padding * 0.5;
     for (let i = 0; i < state.size; i++) {
       const pos = deps.padding + i * deps.cellSize;
-      ctx.fillText(letters[i], pos, deps.padding + (state.size - 1) * deps.cellSize + deps.cellSize * 0.7);
-      ctx.fillText(state.size - i, deps.padding - deps.cellSize * 0.6, pos);
+      // Column labels: top and bottom
+      ctx.fillText(letters[i], pos, labelOffset);
+      ctx.fillText(letters[i], pos, deps.padding + (state.size - 1) * deps.cellSize + labelOffset);
+      // Row labels: left and right
+      ctx.fillText(state.size - i, labelOffset, pos);
+      ctx.fillText(state.size - i, deps.padding + (state.size - 1) * deps.cellSize + labelOffset, pos);
     }
 
     if (state.isScoring && state.scoreData) {
