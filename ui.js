@@ -131,8 +131,13 @@
       const maxH = window.innerHeight - 120;
       maxSize = Math.max(400, Math.min(maxW, maxH, 800));
     }
-    const cellSize = Math.floor((maxSize - deps.padding * 2) / (state.size - 1));
-    const canvasSize = cellSize * (state.size - 1) + deps.padding * 2;
+    // Compute minimum padding so corner stones don't overlap coordinate labels.
+    // Constraint: padding/2 >= cellSize*0.44 + 8  →  padding >= (0.88*maxSize + 16*(size-1)) / (size-1+1.76)
+    const s = state.size - 1;
+    const minPadding = Math.ceil((0.88 * maxSize + 16 * s) / (s + 1.76));
+    deps.padding = Math.max(30, minPadding);
+    const cellSize = Math.floor((maxSize - deps.padding * 2) / s);
+    const canvasSize = cellSize * s + deps.padding * 2;
     deps.canvas.width = canvasSize;
     deps.canvas.height = canvasSize;
     deps.canvas.style.width = `${canvasSize}px`;
@@ -222,8 +227,8 @@
       ctx.fill();
     }
 
-    ctx.fillStyle = '#5a4420';
-    ctx.font = `${Math.max(10, deps.cellSize * 0.35)}px sans-serif`;
+    ctx.fillStyle = '#3a2010';
+    ctx.font = `bold ${Math.max(9, Math.min(deps.cellSize * 0.35, deps.padding * 0.4))}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const letters = 'ABCDEFGHJKLMNOPQRST';
