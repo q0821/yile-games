@@ -173,8 +173,9 @@ button.danger:hover { background: #a04a4a; }
 }
 .review-controls button {
   flex: 1;
-  padding: 8px 4px;
+  padding: 10px 4px;
   font-size: 18px;
+  min-height: 44px;
 }
 .move-info {
   text-align: center;
@@ -288,15 +289,15 @@ button.danger:hover { background: #a04a4a; }
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #2a3a5e;
   color: #e0e0e0;
   border: none;
   font-size: 20px;
   cursor: pointer;
-  line-height: 36px;
+  line-height: 44px;
   text-align: center;
   padding: 0;
 }
@@ -337,8 +338,9 @@ button.danger:hover { background: #a04a4a; }
 }
 .mobile-action-bar button {
   flex: 1;
-  padding: 10px 4px;
+  padding: 12px 4px;
   font-size: 13px;
+  min-height: 44px;
 }
 .mobile-status {
   display: none;
