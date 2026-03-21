@@ -316,11 +316,6 @@ function getLegalMoves(b, player, ko) {
   return GoRules.getLegalMoves(b, size, player, ko);
 }
 
-// ==================== SCORING ====================
-function calculateScore(b, dead) {
-  return GoRules.calculateScore(b, size, dead, captures, gameRules, komi);
-}
-
 // ==================== CAPTURE HINTS ====================
 function showHintOnce() {
   if (gameOver || isReviewing || isScoring || isAIThinking) return;
@@ -524,7 +519,7 @@ function getCurrentStateSnapshot() {
 function buildBoardViewState() {
   const state = getCurrentStateSnapshot();
   const displayBoard = isReviewing ? getReviewBoard() : board;
-  const scoreData = isScoring ? calculateScore(board, deadStones) : null;
+  const scoreData = isScoring ? GoRules.calculateScore(board, size, deadStones, captures, gameRules, komi) : null;
   const captureHints = showingHint && !gameOver && !isReviewing && !isScoring && !isAIThinking
     ? getAllCaptureMoves(board, size, currentPlayer, koPoint)
     : [];
@@ -677,12 +672,12 @@ function endGameByScoring() {
 }
 
 function updateScoringDisplay() {
-  const score = calculateScore(board, deadStones);
+  const score = GoRules.calculateScore(board, size, deadStones, captures, gameRules, komi);
   GoUI.updateScoringDisplay({ gameRules, komi }, score);
 }
 
 function confirmScoring() {
-  const score = calculateScore(board, deadStones);
+  const score = GoRules.calculateScore(board, size, deadStones, captures, gameRules, komi);
   const diff = score.black - score.white;
   const winner = diff > 0 ? '⚫ 黑方' : '⚪ 白方';
   const detail = `黑 ${score.black.toFixed(1)} vs 白 ${score.white.toFixed(1)}（含貼目 ${komi}）`;
