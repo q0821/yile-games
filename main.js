@@ -59,8 +59,6 @@ let lastMove = null;
 let hoverPos = null;
 
 // ==================== BOARD / RULES ENGINE ====================
-const createBoard = GoRules.createBoard;
-const cloneBoard = GoRules.cloneBoard;
 const opponent = GoRules.opponent;
 
 function inBounds(x, y) {
@@ -75,14 +73,6 @@ function getGroup(b, x, y) {
   return GoRules.getGroup(b, size, x, y);
 }
 
-function removeGroup(b, stones) {
-  return GoRules.removeGroup(b, stones);
-}
-
-function boardToString(b) {
-  return GoRules.boardToString(b);
-}
-
 function tryPlaceStone(b, x, y, player, currentKo) {
   return GoRules.tryPlaceStone(b, size, x, y, player, currentKo);
 }
@@ -91,9 +81,13 @@ function getLegalMoves(b, player, ko) {
   return GoRules.getLegalMoves(b, size, player, ko);
 }
 
+function isGameBusy() {
+  return gameOver || isReviewing || isScoring || isAIThinking;
+}
+
 // ==================== CAPTURE HINTS ====================
 function showHintOnce() {
-  if (gameOver || isReviewing || isScoring || isAIThinking) return;
+  if (isGameBusy()) return;
   showingHint = true;
   drawBoard();
 }
@@ -111,7 +105,7 @@ function getCaptureHints(b, player) {
 
 // ==================== BEGINNER GUIDANCE ====================
 function requestGuidanceHints() {
-  if (!guidanceEnabled || gameOver || isReviewing || isScoring || isAIThinking) return;
+  if (!guidanceEnabled || isGameBusy()) return;
   if (gameMode === 'pvc' && currentPlayer !== playerColor) return;
 
   guidanceHints = [];
@@ -285,7 +279,7 @@ function placeStone(x, y) {
 }
 
 function doPass() {
-  if (gameOver || isReviewing || isScoring || isAIThinking) return;
+  if (isGameBusy()) return;
 
   showingHint = false;
   clearGuidance();
@@ -339,7 +333,6 @@ function doUndo() {
   updateUI();
   drawBoard();
   setStatus('已悔棋');
-  syncGameStateStore();
 
   if (guidanceEnabled && !gameOver) {
     setTimeout(() => requestGuidanceHints(), 150);
