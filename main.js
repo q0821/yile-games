@@ -845,10 +845,15 @@ function handleBoardInteraction(e) {
   placeStone(x, y);
 }
 
+let _mouseMoveRaf = null;
 canvas.addEventListener('mousemove', (e) => {
-  const pos = getBoardPositionFromEvent(e);
-  hoverPos = pos;
-  drawBoard();
+  if (_mouseMoveRaf) return;
+  _mouseMoveRaf = requestAnimationFrame(() => {
+    _mouseMoveRaf = null;
+    const pos = getBoardPositionFromEvent(e);
+    hoverPos = pos;
+    drawBoard();
+  });
 });
 
 canvas.addEventListener('mouseleave', () => {
