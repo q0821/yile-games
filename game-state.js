@@ -316,10 +316,13 @@
   function beginScoring() {
     const current = ensureState();
     current.isScoring = true;
-    current.deadStones = new Set();
+    current.deadStones = (global.GoRules && global.GoRules.estimateDeadStones)
+      ? global.GoRules.estimateDeadStones(current.board, current.size)
+      : new Set();
     return {
       ok: true,
-      isScoring: current.isScoring
+      isScoring: current.isScoring,
+      deadStones: Array.from(current.deadStones)
     };
   }
 

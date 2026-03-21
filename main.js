@@ -358,7 +358,7 @@ function endGameByScoring() {
   applyStateFromStore();
   stopTimer();
   document.getElementById('scoringPanel').style.display = 'block';
-  setStatus('請標記死子，然後確認結果');
+  setStatus('已自動估算死子，可點擊修正，然後確認結果');
   updateScoringDisplay();
   drawBoard();
 }
@@ -734,7 +734,7 @@ function syncStatus(message = '') {
     return;
   }
   if (isScoring) {
-    GoUI.setStatus('請標記死子，然後確認結果');
+    GoUI.setStatus('已自動估算死子，可點擊修正，然後確認結果');
     return;
   }
   if (isReviewing) {
