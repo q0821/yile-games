@@ -43,4 +43,11 @@ function sandboxWithHints() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints };
+/** Returns a sandbox with GoTimer loaded (no DOM needed for pure functions). */
+function sandboxWithTimer() {
+  const ctx = createSandbox();
+  loadFile(ctx, 'timer.js');
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer };

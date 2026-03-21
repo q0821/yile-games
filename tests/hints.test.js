@@ -166,3 +166,67 @@ describe('getGuidanceLabel', () => {
     });
   });
 });
+
+// ─── buildGuidanceLegendHTML ──────────────────────────────────────────────────
+
+describe('buildGuidanceLegendHTML', () => {
+  const ctx = (overrides = {}) => ({
+    guidanceEnabled: true,
+    gameOver: false,
+    isReviewing: false,
+    isScoring: false,
+    size: 9,
+    ...overrides
+  });
+
+  test('returns null when guidanceEnabled is false', () => {
+    const hints = [{ x: 4, y: 4, rank: 0, label: '佔角' }];
+    expect(GoHints.buildGuidanceLegendHTML(hints, ctx({ guidanceEnabled: false }))).toBeNull();
+  });
+
+  test('returns null when hints array is empty', () => {
+    expect(GoHints.buildGuidanceLegendHTML([], ctx())).toBeNull();
+  });
+
+  test('returns null when gameOver is true', () => {
+    const hints = [{ x: 4, y: 4, rank: 0, label: '佔角' }];
+    expect(GoHints.buildGuidanceLegendHTML(hints, ctx({ gameOver: true }))).toBeNull();
+  });
+
+  test('returns null when isReviewing is true', () => {
+    const hints = [{ x: 4, y: 4, rank: 0, label: '佈局' }];
+    expect(GoHints.buildGuidanceLegendHTML(hints, ctx({ isReviewing: true }))).toBeNull();
+  });
+
+  test('returns null when isScoring is true', () => {
+    const hints = [{ x: 4, y: 4, rank: 0, label: '佈局' }];
+    expect(GoHints.buildGuidanceLegendHTML(hints, ctx({ isScoring: true }))).toBeNull();
+  });
+
+  test('returns HTML string containing coord and label', () => {
+    // hint at (4,4) on 9×9: coord = E5 (y=4 → 'E', size-x = 9-4 = 5)
+    const hints = [{ x: 4, y: 4, rank: 0, label: '佈局' }];
+    const html = GoHints.buildGuidanceLegendHTML(hints, ctx());
+    expect(typeof html).toBe('string');
+    expect(html).toContain('E5');
+    expect(html).toContain('佈局');
+  });
+
+  test('rank 0 shows ⭐ 最佳, rank 1 shows 🔵 次佳, rank 2 shows 🟢 可考慮', () => {
+    const hints = [
+      { x: 0, y: 0, rank: 0, label: 'A' },
+      { x: 1, y: 1, rank: 1, label: 'B' },
+      { x: 2, y: 2, rank: 2, label: 'C' }
+    ];
+    const html = GoHints.buildGuidanceLegendHTML(hints, ctx());
+    expect(html).toContain('⭐ 最佳');
+    expect(html).toContain('🔵 次佳');
+    expect(html).toContain('🟢 可考慮');
+  });
+
+  test('unknown rank falls back to 提示', () => {
+    const hints = [{ x: 0, y: 0, rank: 99, label: 'X' }];
+    const html = GoHints.buildGuidanceLegendHTML(hints, ctx());
+    expect(html).toContain('提示');
+  });
+});
