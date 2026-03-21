@@ -106,16 +106,28 @@
     const cx = deps.padding + hint.y * deps.cellSize;
     const cy = deps.padding + hint.x * deps.cellSize;
     const rect = deps.canvas.getBoundingClientRect();
-    const left = rect.left + window.scrollX + cx;
-    const isNearTop = cy < deps.cellSize * 2;
-    const top = isNearTop
-      ? rect.top + window.scrollY + cy + deps.cellSize + 5
-      : rect.top + window.scrollY + cy - 35;
+
     el.textContent = `${rankNames[hint.rank] || ''} — ${hint.label}（點擊落子）`;
+    el.style.display = 'block';
+
+    const elW = el.offsetWidth || 160;
+    const elH = el.offsetHeight || 32;
+    const margin = 6;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let left = rect.left + window.scrollX + cx - elW / 2;
+    const isNearTop = cy < deps.cellSize * 2;
+    let top = isNearTop
+      ? rect.top + window.scrollY + cy + deps.cellSize + 5
+      : rect.top + window.scrollY + cy - elH - 5;
+
+    left = Math.max(margin, Math.min(left, vw + window.scrollX - elW - margin));
+    top = Math.max(margin + window.scrollY, Math.min(top, vh + window.scrollY - elH - margin));
+
     el.style.left = left + 'px';
     el.style.top = top + 'px';
-    el.style.transform = 'translateX(-50%)';
-    el.style.display = 'block';
+    el.style.transform = 'none';
   }
 
   function resizeCanvas(deps, state) {
