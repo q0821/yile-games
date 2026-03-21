@@ -101,6 +101,86 @@
     return moves;
   }
 
+  function calculateTerritory(board, size) {
+    const territory = Array.from({ length: size }, () => Array(size).fill(EMPTY));
+    const visited = Array.from({ length: size }, () => Array(size).fill(false));
+
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < size; y++) {
+        if (visited[x][y] || board[x][y] !== EMPTY) continue;
+
+        const region = [];
+        const borders = new Set();
+        const stack = [[x, y]];
+
+        while (stack.length) {
+          const [cx, cy] = stack.pop();
+          if (visited[cx][cy]) continue;
+          visited[cx][cy] = true;
+          if (board[cx][cy] === EMPTY) {
+            region.push([cx, cy]);
+            for (const [nx, ny] of getNeighbors(size, cx, cy)) {
+              if (board[nx][ny] !== EMPTY) borders.add(board[nx][ny]);
+              else if (!visited[nx][ny]) stack.push([nx, ny]);
+            }
+          }
+        }
+
+        if (borders.size === 1) {
+          const owner = [...borders][0];
+          for (const [rx, ry] of region) territory[rx][ry] = owner;
+        }
+      }
+    }
+
+    return territory;
+  }
+
+  // Iteratively detect likely-dead groups: a group is dead if every one of its
+  // liberties lies inside enemy territory.  Removing dead stones may expose new
+  // dead groups, so we repeat until stable.
+  function estimateDeadStones(board, size) {
+    const dead = new Set();
+    let workBoard = cloneBoard(board);
+    let territory = calculateTerritory(workBoard, size);
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const visited = new Set();
+
+      for (let x = 0; x < size; x++) {
+        for (let y = 0; y < size; y++) {
+          const key = x * size + y;
+          if (visited.has(key) || workBoard[x][y] === EMPTY) continue;
+
+          const color = workBoard[x][y];
+          const { stones, liberties } = getGroup(workBoard, size, x, y);
+          for (const [gx, gy] of stones) visited.add(gx * size + gy);
+
+          const opp = opponent(color);
+          let safe = false;
+          for (const lib of liberties) {
+            if (territory[Math.floor(lib / size)][lib % size] !== opp) { safe = true; break; }
+          }
+
+          if (!safe) {
+            for (const [gx, gy] of stones) {
+              dead.add(gx * size + gy);
+              workBoard[gx][gy] = EMPTY;
+            }
+            changed = true;
+          }
+        }
+      }
+
+      // Recalculate territory only when stones were removed this pass.
+      if (changed) territory = calculateTerritory(workBoard, size);
+    }
+
+    return dead;
+  }
+
   function calculateScore(board, size, deadStones, captures, gameRules, komi) {
     const scored = cloneBoard(board);
     let deadBlack = 0;
@@ -117,37 +197,7 @@
       }
     }
 
-    const territory = Array.from({ length: size }, () => Array(size).fill(0));
-    const visited = Array.from({ length: size }, () => Array(size).fill(false));
-
-    for (let x = 0; x < size; x++) {
-      for (let y = 0; y < size; y++) {
-        if (visited[x][y] || scored[x][y] !== EMPTY) continue;
-
-        const region = [];
-        const borders = new Set();
-        const stack = [[x, y]];
-
-        while (stack.length) {
-          const [cx, cy] = stack.pop();
-          if (visited[cx][cy]) continue;
-          visited[cx][cy] = true;
-
-          if (scored[cx][cy] === EMPTY) {
-            region.push([cx, cy]);
-            for (const [nx, ny] of getNeighbors(size, cx, cy)) {
-              if (scored[nx][ny] !== EMPTY) borders.add(scored[nx][ny]);
-              else if (!visited[nx][ny]) stack.push([nx, ny]);
-            }
-          }
-        }
-
-        if (borders.size === 1) {
-          const owner = [...borders][0];
-          for (const [rx, ry] of region) territory[rx][ry] = owner;
-        }
-      }
-    }
+    const territory = calculateTerritory(scored, size);
 
     let blackStones = 0;
     let whiteStones = 0;
@@ -202,6 +252,8 @@
     boardToString,
     tryPlaceStone,
     getLegalMoves,
+    calculateTerritory,
+    estimateDeadStones,
     calculateScore
   };
 })(window);

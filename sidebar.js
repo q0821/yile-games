@@ -16,13 +16,17 @@
     const overlay = document.getElementById('sidebarOverlay');
     const settings = document.getElementById('settingsPanel');
     const info = document.getElementById('infoPanel');
-    settings.style.display = 'block';
-    settings.style.width = '100%';
-    info.style.display = 'block';
-    info.style.width = '100%';
-    info.style.marginTop = '16px';
-    sidebarContent.appendChild(settings);
-    sidebarContent.appendChild(info);
+    if (settings) {
+      settings.style.display = 'block';
+      settings.style.width = '100%';
+      sidebarContent.appendChild(settings);
+    }
+    if (info) {
+      info.style.display = 'block';
+      info.style.width = '100%';
+      info.style.marginTop = '16px';
+      sidebarContent.appendChild(info);
+    }
     sidebar.classList.add('open');
     overlay.classList.add('open');
   }

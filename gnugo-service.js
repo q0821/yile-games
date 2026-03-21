@@ -23,6 +23,16 @@ window.GnuGoService = (function () {
     return buildSGF(moveHistory.slice(0, count), size, komi);
   }
 
+  /** Convert a [row, col] move to SGF coordinate string, e.g. "dc". */
+  function moveToSgfCoord(move) {
+    return LETTERS[move[1]] + LETTERS[move[0]];
+  }
+
+  /** Append extra SGF move tokens to an existing SGF string (removes trailing ')' first). */
+  function appendToSgf(sgf, tokens) {
+    return sgf.slice(0, -1) + tokens.join('') + ')';
+  }
+
   function parseMoveFromSgfResponse(sgfResponse, expectedMoveCount, size) {
     const expected = expectedMoveCount ?? 0;
     const movePattern = /;([BW])\[([a-s]{0,2})\]/g;
@@ -49,9 +59,9 @@ window.GnuGoService = (function () {
     if (gnugoReady) return Promise.resolve();
     if (gnugoLoadingPromise) return gnugoLoadingPromise;
 
-    if (typeof setStatus === 'function') {
-      setStatus('⏳ 載入 GnuGo AI 引擎...');
-    }
+    const notify = typeof setStatus === 'function' ? setStatus : () => {};
+
+    notify('⏳ 載入 GnuGo AI 引擎...');
 
     const Module = {};
     Module.locateFile = function (path) {
@@ -66,19 +76,15 @@ window.GnuGoService = (function () {
         GnuGoLoader.init(Module);
         gnugoModule = Module;
         gnugoReady = true;
-        if (typeof setStatus === 'function') {
-          const statusEl = typeof document !== 'undefined' ? document.getElementById('statusMsg') : null;
-          const currentStatus = statusEl?.textContent?.trim() || '';
-          if (!currentStatus || currentStatus === '請開始新遊戲' || currentStatus === '⏳ 載入 GnuGo AI 引擎...') {
-            setStatus('GnuGo AI 引擎載入完成！');
-          }
+        const statusEl = typeof document !== 'undefined' ? document.getElementById('statusMsg') : null;
+        const currentStatus = statusEl?.textContent?.trim() || '';
+        if (!currentStatus || currentStatus === '請開始新遊戲' || currentStatus === '⏳ 載入 GnuGo AI 引擎...') {
+          notify('GnuGo AI 引擎載入完成！');
         }
       })
       .catch(err => {
         gnugoLoadingPromise = null;
-        if (typeof setStatus === 'function') {
-          setStatus('⚠️ AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
-        }
+        notify('⚠️ AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
         throw err;
       });
 
@@ -120,9 +126,11 @@ window.GnuGoService = (function () {
 
     hints.push(first);
 
-    const sgfForSecond = buildSGF(moveHistory, size, komi).slice(0, -1) +
-      `;${color}[${LETTERS[first[1]]}${LETTERS[first[0]]}]` +
-      `;${oppColor}[])`;
+    const baseSgf = buildSGF(moveHistory, size, komi);
+    const sgfForSecond = appendToSgf(baseSgf, [
+      `;${color}[${moveToSgfCoord(first)}]`,
+      `;${oppColor}[]`
+    ]);
     const second = play(10, sgfForSecond, moveHistory.length + 2, size).move;
     if (second && (second[0] !== first[0] || second[1] !== first[1])) {
       hints.push(second);
@@ -130,11 +138,12 @@ window.GnuGoService = (function () {
 
     if (count >= 3 && hints.length >= 2) {
       const secondMove = hints[1];
-      const sgfForThird = buildSGF(moveHistory, size, komi).slice(0, -1) +
-        `;${color}[${LETTERS[first[1]]}${LETTERS[first[0]]}]` +
-        `;${oppColor}[]` +
-        `;${color}[${LETTERS[secondMove[1]]}${LETTERS[secondMove[0]]}]` +
-        `;${oppColor}[])`;
+      const sgfForThird = appendToSgf(baseSgf, [
+        `;${color}[${moveToSgfCoord(first)}]`,
+        `;${oppColor}[]`,
+        `;${color}[${moveToSgfCoord(secondMove)}]`,
+        `;${oppColor}[]`
+      ]);
       const third = play(10, sgfForThird, moveHistory.length + 4, size).move;
       if (third && !hints.some(m => m[0] === third[0] && m[1] === third[1])) {
         hints.push(third);

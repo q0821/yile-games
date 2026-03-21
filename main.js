@@ -59,8 +59,6 @@ let lastMove = null;
 let hoverPos = null;
 
 // ==================== BOARD / RULES ENGINE ====================
-const createBoard = GoRules.createBoard;
-const cloneBoard = GoRules.cloneBoard;
 const opponent = GoRules.opponent;
 
 function inBounds(x, y) {
@@ -75,14 +73,6 @@ function getGroup(b, x, y) {
   return GoRules.getGroup(b, size, x, y);
 }
 
-function removeGroup(b, stones) {
-  return GoRules.removeGroup(b, stones);
-}
-
-function boardToString(b) {
-  return GoRules.boardToString(b);
-}
-
 function tryPlaceStone(b, x, y, player, currentKo) {
   return GoRules.tryPlaceStone(b, size, x, y, player, currentKo);
 }
@@ -91,9 +81,19 @@ function getLegalMoves(b, player, ko) {
   return GoRules.getLegalMoves(b, size, player, ko);
 }
 
+/** Game is in a terminal or special mode — no moves accepted at all. */
+function isGameBlocked() {
+  return gameOver || isReviewing || isScoring;
+}
+
+/** isGameBlocked + AI is currently calculating (UI interactions fully paused). */
+function isGameBusy() {
+  return isGameBlocked() || isAIThinking;
+}
+
 // ==================== CAPTURE HINTS ====================
 function showHintOnce() {
-  if (gameOver || isReviewing || isScoring || isAIThinking) return;
+  if (isGameBusy()) return;
   showingHint = true;
   drawBoard();
 }
@@ -111,7 +111,7 @@ function getCaptureHints(b, player) {
 
 // ==================== BEGINNER GUIDANCE ====================
 function requestGuidanceHints() {
-  if (!guidanceEnabled || gameOver || isReviewing || isScoring || isAIThinking) return;
+  if (!guidanceEnabled || isGameBusy()) return;
   if (gameMode === 'pvc' && currentPlayer !== playerColor) return;
 
   guidanceHints = [];
@@ -248,10 +248,9 @@ function drawBoard() {
 
 // ==================== GAME ACTIONS ====================
 function placeStone(x, y) {
-  if (gameOver || isReviewing || isScoring) return false;
+  if (isGameBlocked()) return false;
   if (isAIThinking && gameMode === 'pvc') return false;
 
-  syncGameStateStore();
   const result = GameState.applyMove(x, y);
   if (!result.ok) return false;
   applyStateFromStore();
@@ -285,12 +284,11 @@ function placeStone(x, y) {
 }
 
 function doPass() {
-  if (gameOver || isReviewing || isScoring || isAIThinking) return;
+  if (isGameBusy()) return;
 
   showingHint = false;
   clearGuidance();
 
-  syncGameStateStore();
   const result = GameState.applyPass();
   if (!result.ok) return;
   applyStateFromStore();
@@ -322,7 +320,7 @@ function doPass() {
 }
 
 function doUndo() {
-  if (gameOver || isReviewing || isScoring) return;
+  if (isGameBlocked()) return;
   showingHint = false;
   clearGuidance();
   if (!document.getElementById('undoToggle').checked) {
@@ -331,7 +329,6 @@ function doUndo() {
   }
   if (boardHistory.length === 0) return;
 
-  syncGameStateStore();
   const result = GameState.undo({ gameMode });
   if (!result.ok) return;
   applyStateFromStore();
@@ -339,7 +336,6 @@ function doUndo() {
   updateUI();
   drawBoard();
   setStatus('已悔棋');
-  syncGameStateStore();
 
   if (guidanceEnabled && !gameOver) {
     setTimeout(() => requestGuidanceHints(), 150);
@@ -347,18 +343,17 @@ function doUndo() {
 }
 
 function doResign() {
-  if (gameOver || isReviewing || isScoring) return;
+  if (isGameBlocked()) return;
   const winner = opponent(currentPlayer);
   endGame(`${winner === BLACK ? '⚫ 黑方' : '⚪ 白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`);
 }
 
 function endGameByScoring() {
-  syncGameStateStore();
   GameState.beginScoring();
   applyStateFromStore();
   stopTimer();
   document.getElementById('scoringPanel').style.display = 'block';
-  setStatus('請標記死子，然後確認結果');
+  setStatus('已自動估算死子，可點擊修正，然後確認結果');
   updateScoringDisplay();
   drawBoard();
 }
@@ -373,7 +368,6 @@ function confirmScoring() {
   const diff = score.black - score.white;
   const winner = diff > 0 ? '⚫ 黑方' : '⚪ 白方';
   const detail = `黑 ${score.black.toFixed(1)} vs 白 ${score.white.toFixed(1)}（含貼目 ${komi}）`;
-  syncGameStateStore();
   GameState.confirmScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
@@ -381,7 +375,6 @@ function confirmScoring() {
 }
 
 function cancelScoring() {
-  syncGameStateStore();
   GameState.cancelScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
@@ -453,7 +446,6 @@ function updateTimerDisplay() {
 // ==================== REVIEW ====================
 function enterReview() {
   if (!document.getElementById('reviewToggle').checked) return;
-  syncGameStateStore();
   const result = GameState.enterReview();
   if (!result.ok) return;
   applyStateFromStore();
@@ -470,7 +462,6 @@ function enterReview() {
 }
 
 function exitReview() {
-  syncGameStateStore();
   const result = GameState.exitReview();
   if (!result.ok) return;
   applyStateFromStore();
@@ -483,7 +474,6 @@ function exitReview() {
 }
 
 function reviewGo(n) {
-  syncGameStateStore();
   const result = GameState.reviewGo(n);
   if (!result.ok) return;
   applyStateFromStore();
@@ -654,14 +644,14 @@ function requestAIMove() {
   if (!GnuGoService.isReady()) {
     initGnuGo().then(() => requestAIMove()).catch(() => {
       setStatus('⚠️ AI 引擎未就緒');
-      isAIThinking = false;
-      syncGameStateStore();
+      GameState.sync({ isAIThinking: false });
+      applyStateFromStore();
       updateUI();
     });
     return;
   }
-  isAIThinking = true;
-  syncGameStateStore();
+  GameState.sync({ isAIThinking: true });
+  applyStateFromStore();
   syncStatus();
   updateUI();
 
@@ -670,8 +660,8 @@ function requestAIMove() {
     try {
       const sgf = buildSGF();
       const move = GnuGoService.play(aiLevel, sgf, moveHistory.length, size).move;
-      isAIThinking = false;
-      syncGameStateStore();
+      GameState.sync({ isAIThinking: false });
+      applyStateFromStore();
       updateUI();
       if (move) {
         placeStone(move[0], move[1]);
@@ -688,8 +678,8 @@ function requestAIMove() {
       }
     } catch (err) {
       console.error('GnuGo error:', err);
-      isAIThinking = false;
-      syncGameStateStore();
+      GameState.sync({ isAIThinking: false });
+      applyStateFromStore();
       updateUI();
       setStatus('⚠️ AI 出錯，請重新開始');
     }
@@ -717,35 +707,7 @@ function setStatus(msg) {
 
 function syncStatus(message = '') {
   const state = { currentPlayer, gameOver, isScoring, isReviewing, isAIThinking };
-  if (typeof GoUI.syncStatus === 'function') {
-    GoUI.syncStatus(state, message);
-    return;
-  }
-  if (typeof GoUI.getStatusMessage === 'function') {
-    GoUI.setStatus(GoUI.getStatusMessage(state, message));
-    return;
-  }
-  if (message) {
-    GoUI.setStatus(message);
-    return;
-  }
-  if (gameOver) {
-    GoUI.setStatus('遊戲已結束');
-    return;
-  }
-  if (isScoring) {
-    GoUI.setStatus('請標記死子，然後確認結果');
-    return;
-  }
-  if (isReviewing) {
-    GoUI.setStatus('覆盤模式');
-    return;
-  }
-  if (isAIThinking) {
-    GoUI.setStatus('🤔 GnuGo 思考中...');
-    return;
-  }
-  GoUI.setStatus(`${currentPlayer === BLACK ? '黑' : '白'}方回合`);
+  GoUI.syncStatus(state, message);
 }
 
 function startNewGame() {
@@ -770,8 +732,6 @@ function startNewGame() {
   });
   applyStateFromStore();
 
-  isAIThinking = false;
-  syncGameStateStore();
   analysisData = null;
   isAnalyzing = false;
   guidanceEnabled = document.getElementById('guidanceToggle').checked;
@@ -798,8 +758,6 @@ function startNewGame() {
   }
 
   const aiStartsGame = gameMode === 'pvc' && playerColor === WHITE && !gameOver;
-  isAIThinking = false;
-  syncGameStateStore();
   updateUI();
   syncStatus(aiStartsGame ? '🤔 GnuGo 思考中...' : '');
   drawBoard();
@@ -844,7 +802,6 @@ function handleBoardInteraction(e) {
     // Toggle dead stones
     if (board[x][y] !== EMPTY) {
       const group = getGroup(board, x, y);
-      syncGameStateStore();
       const result = GameState.toggleDeadGroup(group.stones);
       if (!result.ok) return;
       applyStateFromStore();
@@ -942,9 +899,6 @@ window.addEventListener('resize', () => {
 // ==================== SAVE / RESTORE ====================
 const SAVE_KEY = 'gogame_state';
 
-function syncGameStateStore() {
-  GameState.sync(getCurrentStateSnapshot());
-}
 
 function applyStateFromStore() {
   const s = GameState.getState();
@@ -982,7 +936,7 @@ function applyStateFromStore() {
 
 function saveGame() {
   if (isReviewing || isScoring) return;
-  syncGameStateStore();
+  GameState.sync({ timerSeconds }); // timerSeconds is mutated in-place by the timer interval
   const snapshot = GameState.getSnapshot();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot)); } catch(e) {}
 }

@@ -73,21 +73,32 @@
     }
   }
 
-  function renderGuidanceLegend(guidanceHints, ctx) {
+  const RANK_NAMES = ['⭐ 最佳', '🔵 次佳', '🟢 可考慮'];
+
+  /** Pure: returns HTML string for the legend, or null when legend should be hidden. */
+  function buildGuidanceLegendHTML(guidanceHints, ctx) {
     const { guidanceEnabled, gameOver, isReviewing, isScoring, size } = ctx;
-    const legend = document.getElementById('guidanceLegend');
     if (!guidanceEnabled || guidanceHints.length === 0 || gameOver || isReviewing || isScoring) {
-      legend.style.display = 'none';
-      legend.innerHTML = '';
-      return;
+      return null;
     }
-    const rankNames = ['⭐ 最佳', '🔵 次佳', '🟢 可考慮'];
-    legend.innerHTML = guidanceHints.map((hint) => {
+    return guidanceHints.map((hint) => {
       const coord = `${String.fromCharCode(65 + hint.y)}${size - hint.x}`;
-      return `<div><strong>${rankNames[hint.rank] || '提示'}</strong>：${coord} — ${hint.label}</div>`;
+      return `<div><strong>${RANK_NAMES[hint.rank] || '提示'}</strong>：${coord} — ${hint.label}</div>`;
     }).join('');
-    legend.style.display = 'block';
   }
 
-  global.GoHints = { getCaptureHints, getGamePhase, getGuidanceLabel, renderGuidanceLegend };
+  function renderGuidanceLegend(guidanceHints, ctx) {
+    const legend = document.getElementById('guidanceLegend');
+    if (!legend) return;
+    const html = buildGuidanceLegendHTML(guidanceHints, ctx);
+    if (html === null) {
+      legend.style.display = 'none';
+      legend.innerHTML = '';
+    } else {
+      legend.innerHTML = html;
+      legend.style.display = 'block';
+    }
+  }
+
+  global.GoHints = { getCaptureHints, getGamePhase, getGuidanceLabel, buildGuidanceLegendHTML, renderGuidanceLegend };
 })(window);

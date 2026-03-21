@@ -34,14 +34,18 @@
     },
 
     updateDisplay(timerSeconds) {
-      const format = s => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
       const bEl = document.getElementById('blackTimer');
       const wEl = document.getElementById('whiteTimer');
       if (!bEl || !wEl) return;
-      bEl.textContent = format(timerSeconds[1]);
-      wEl.textContent = format(timerSeconds[2]);
+      bEl.textContent = GoTimer.formatTime(timerSeconds[1]);
+      wEl.textContent = GoTimer.formatTime(timerSeconds[2]);
       bEl.classList.toggle('urgent', timerSeconds[1] < 60);
       wEl.classList.toggle('urgent', timerSeconds[2] < 60);
+    },
+
+    /** Pure: convert seconds to "MM:SS" string. */
+    formatTime(s) {
+      return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
     }
   };
 

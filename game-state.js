@@ -149,7 +149,7 @@
       passCount: snapshot.passCount || 0,
       gameOver: snapshot.gameOver || false,
       lastMove: snapshot.lastMove || null,
-      gameMode: snapshot.gameMode || 'pvp',
+      gameMode: snapshot.gameMode || 'pvc',
       playerColor: snapshot.playerColor || BLACK,
       aiLevel: snapshot.aiLevel || 10,
       timerEnabled: snapshot.timerEnabled || false,
@@ -232,10 +232,7 @@
 
     return {
       ok: true,
-      captured: result.captured,
-      currentPlayer: current.currentPlayer,
-      gameOver: current.gameOver,
-      isAIThinking: current.isAIThinking
+      captured: result.captured
     };
   }
 
@@ -248,22 +245,11 @@
     current.lastMove = null;
 
     if (current.passCount >= 2) {
-      return {
-        ok: true,
-        endedByDoublePass: true,
-        currentPlayer: current.currentPlayer,
-        passCount: current.passCount
-      };
+      return { ok: true, endedByDoublePass: true };
     }
 
     current.currentPlayer = global.GoRules.opponent(current.currentPlayer);
-    return {
-      ok: true,
-      endedByDoublePass: false,
-      currentPlayer: current.currentPlayer,
-      passCount: current.passCount,
-      isAIThinking: current.isAIThinking
-    };
+    return { ok: true, endedByDoublePass: false };
   }
 
   function undo(options = {}) {
@@ -316,10 +302,13 @@
   function beginScoring() {
     const current = ensureState();
     current.isScoring = true;
-    current.deadStones = new Set();
+    current.deadStones = (global.GoRules && global.GoRules.estimateDeadStones)
+      ? global.GoRules.estimateDeadStones(current.board, current.size)
+      : new Set();
     return {
       ok: true,
-      isScoring: current.isScoring
+      isScoring: current.isScoring,
+      deadStones: Array.from(current.deadStones)
     };
   }
 
@@ -337,11 +326,7 @@
     const current = ensureState();
     current.isScoring = false;
     current.gameOver = true;
-    return {
-      ok: true,
-      gameOver: current.gameOver,
-      isAIThinking: current.isAIThinking
-    };
+    return { ok: true };
   }
 
   function toggleDeadGroup(groupStones = []) {
@@ -357,43 +342,27 @@
       else current.deadStones.add(key);
     }
 
-    return {
-      ok: true,
-      deadStones: Array.from(current.deadStones),
-      isAIThinking: current.isAIThinking
-    };
+    return { ok: true };
   }
 
   function enterReview() {
     const current = ensureState();
     current.isReviewing = true;
     current.currentReviewMove = current.moveHistory.length;
-    return {
-      ok: true,
-      currentReviewMove: current.currentReviewMove,
-      isAIThinking: current.isAIThinking
-    };
+    return { ok: true };
   }
 
   function exitReview() {
     const current = ensureState();
     current.isReviewing = false;
-    return {
-      ok: true,
-      isReviewing: current.isReviewing,
-      isAIThinking: current.isAIThinking
-    };
+    return { ok: true };
   }
 
   function reviewGo(n) {
     const current = ensureState();
     if (!current.isReviewing) return { ok: false };
     current.currentReviewMove = Math.max(0, Math.min(n, current.moveHistory.length));
-    return {
-      ok: true,
-      currentReviewMove: current.currentReviewMove,
-      isAIThinking: current.isAIThinking
-    };
+    return { ok: true };
   }
 
   resetState();

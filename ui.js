@@ -3,6 +3,75 @@
   const BLACK = 1;
   const WHITE = 2;
 
+  // Offscreen canvas cache for static board background (wood texture + grid + stars + labels)
+  let _bgCache = null;
+  let _bgCacheKey = '';
+
+  function renderBoardBackground(deps, state) {
+    const w = deps.canvas.width;
+    const cacheKey = `${w}_${state.size}`;
+    if (_bgCache && _bgCacheKey === cacheKey) return _bgCache;
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = w;
+    offscreen.height = w;
+    const ctx = offscreen.getContext('2d');
+
+    ctx.fillStyle = '#dcb35c';
+    ctx.fillRect(0, 0, w, w);
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    for (let i = 0; i < w; i += 8) {
+      ctx.strokeStyle = i % 24 === 0 ? '#a08030' : '#c4a04c';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(w, i + (Math.sin(i * 0.05) * 3));
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = '#5a4420';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < state.size; i++) {
+      const pos = deps.padding + i * deps.cellSize;
+      ctx.beginPath();
+      ctx.moveTo(deps.padding, pos);
+      ctx.lineTo(deps.padding + (state.size - 1) * deps.cellSize, pos);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(pos, deps.padding);
+      ctx.lineTo(pos, deps.padding + (state.size - 1) * deps.cellSize);
+      ctx.stroke();
+    }
+
+    const stars = deps.starPoints[state.size] || [];
+    for (const [x, y] of stars) {
+      ctx.fillStyle = '#5a4420';
+      ctx.beginPath();
+      ctx.arc(deps.padding + y * deps.cellSize, deps.padding + x * deps.cellSize, deps.cellSize * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#3a2010';
+    ctx.font = `bold ${Math.max(9, Math.min(deps.cellSize * 0.35, deps.padding * 0.4))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const letters = 'ABCDEFGHJKLMNOPQRST';
+    const labelOffset = deps.padding * 0.5;
+    for (let i = 0; i < state.size; i++) {
+      const pos = deps.padding + i * deps.cellSize;
+      ctx.fillText(letters[i], pos, labelOffset);
+      ctx.fillText(letters[i], pos, deps.padding + (state.size - 1) * deps.cellSize + labelOffset);
+      ctx.fillText(state.size - i, labelOffset, pos);
+      ctx.fillText(state.size - i, deps.padding + (state.size - 1) * deps.cellSize + labelOffset, pos);
+    }
+
+    _bgCache = offscreen;
+    _bgCacheKey = cacheKey;
+    return offscreen;
+  }
+
   function updateHUD(state) {
     const normalizedState = {
       ...state,
@@ -50,7 +119,7 @@
   function getStatusMessage(state, fallbackMessage = '') {
     if (fallbackMessage) return fallbackMessage;
     if (state.gameOver) return '遊戲已結束';
-    if (state.isScoring) return '請標記死子，然後確認結果';
+    if (state.isScoring) return '已自動估算死子，可點擊修正，然後確認結果';
     if (state.isReviewing) return '覆盤模式';
     if (state.isAIThinking) return '🤔 GnuGo 思考中...';
     return `${state.currentPlayer === BLACK ? '黑' : '白'}方回合`;
@@ -203,57 +272,7 @@
     const canvas = deps.canvas;
     const w = canvas.width;
 
-    ctx.fillStyle = '#dcb35c';
-    ctx.fillRect(0, 0, w, w);
-    ctx.save();
-    ctx.globalAlpha = 0.15;
-    for (let i = 0; i < w; i += 8) {
-      ctx.strokeStyle = i % 24 === 0 ? '#a08030' : '#c4a04c';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(w, i + (Math.sin(i * 0.05) * 3));
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    ctx.strokeStyle = '#5a4420';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < state.size; i++) {
-      const pos = deps.padding + i * deps.cellSize;
-      ctx.beginPath();
-      ctx.moveTo(deps.padding, pos);
-      ctx.lineTo(deps.padding + (state.size - 1) * deps.cellSize, pos);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(pos, deps.padding);
-      ctx.lineTo(pos, deps.padding + (state.size - 1) * deps.cellSize);
-      ctx.stroke();
-    }
-
-    const stars = deps.starPoints[state.size] || [];
-    for (const [x, y] of stars) {
-      ctx.fillStyle = '#5a4420';
-      ctx.beginPath();
-      ctx.arc(deps.padding + y * deps.cellSize, deps.padding + x * deps.cellSize, deps.cellSize * 0.12, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = '#3a2010';
-    ctx.font = `bold ${Math.max(9, Math.min(deps.cellSize * 0.35, deps.padding * 0.4))}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const letters = 'ABCDEFGHJKLMNOPQRST';
-    const labelOffset = deps.padding * 0.5;
-    for (let i = 0; i < state.size; i++) {
-      const pos = deps.padding + i * deps.cellSize;
-      // Column labels: top and bottom
-      ctx.fillText(letters[i], pos, labelOffset);
-      ctx.fillText(letters[i], pos, deps.padding + (state.size - 1) * deps.cellSize + labelOffset);
-      // Row labels: left and right
-      ctx.fillText(state.size - i, labelOffset, pos);
-      ctx.fillText(state.size - i, deps.padding + (state.size - 1) * deps.cellSize + labelOffset, pos);
-    }
+    ctx.drawImage(renderBoardBackground(deps, state), 0, 0);
 
     if (state.isScoring && state.scoreData) {
       for (let x = 0; x < state.size; x++) {
