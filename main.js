@@ -245,7 +245,6 @@ function placeStone(x, y) {
   if (gameOver || isReviewing || isScoring) return false;
   if (isAIThinking && gameMode === 'pvc') return false;
 
-  syncGameStateStore();
   const result = GameState.applyMove(x, y);
   if (!result.ok) return false;
   applyStateFromStore();
@@ -284,7 +283,6 @@ function doPass() {
   showingHint = false;
   clearGuidance();
 
-  syncGameStateStore();
   const result = GameState.applyPass();
   if (!result.ok) return;
   applyStateFromStore();
@@ -325,7 +323,6 @@ function doUndo() {
   }
   if (boardHistory.length === 0) return;
 
-  syncGameStateStore();
   const result = GameState.undo({ gameMode });
   if (!result.ok) return;
   applyStateFromStore();
@@ -346,7 +343,6 @@ function doResign() {
 }
 
 function endGameByScoring() {
-  syncGameStateStore();
   GameState.beginScoring();
   applyStateFromStore();
   stopTimer();
@@ -366,7 +362,6 @@ function confirmScoring() {
   const diff = score.black - score.white;
   const winner = diff > 0 ? '⚫ 黑方' : '⚪ 白方';
   const detail = `黑 ${score.black.toFixed(1)} vs 白 ${score.white.toFixed(1)}（含貼目 ${komi}）`;
-  syncGameStateStore();
   GameState.confirmScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
@@ -374,7 +369,6 @@ function confirmScoring() {
 }
 
 function cancelScoring() {
-  syncGameStateStore();
   GameState.cancelScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
@@ -446,7 +440,6 @@ function updateTimerDisplay() {
 // ==================== REVIEW ====================
 function enterReview() {
   if (!document.getElementById('reviewToggle').checked) return;
-  syncGameStateStore();
   const result = GameState.enterReview();
   if (!result.ok) return;
   applyStateFromStore();
@@ -463,7 +456,6 @@ function enterReview() {
 }
 
 function exitReview() {
-  syncGameStateStore();
   const result = GameState.exitReview();
   if (!result.ok) return;
   applyStateFromStore();
@@ -476,7 +468,6 @@ function exitReview() {
 }
 
 function reviewGo(n) {
-  syncGameStateStore();
   const result = GameState.reviewGo(n);
   if (!result.ok) return;
   applyStateFromStore();
@@ -647,14 +638,14 @@ function requestAIMove() {
   if (!GnuGoService.isReady()) {
     initGnuGo().then(() => requestAIMove()).catch(() => {
       setStatus('⚠️ AI 引擎未就緒');
-      isAIThinking = false;
-      syncGameStateStore();
+      GameState.sync({ isAIThinking: false });
+      applyStateFromStore();
       updateUI();
     });
     return;
   }
-  isAIThinking = true;
-  syncGameStateStore();
+  GameState.sync({ isAIThinking: true });
+  applyStateFromStore();
   syncStatus();
   updateUI();
 
@@ -663,8 +654,8 @@ function requestAIMove() {
     try {
       const sgf = buildSGF();
       const move = GnuGoService.play(aiLevel, sgf, moveHistory.length, size).move;
-      isAIThinking = false;
-      syncGameStateStore();
+      GameState.sync({ isAIThinking: false });
+      applyStateFromStore();
       updateUI();
       if (move) {
         placeStone(move[0], move[1]);
@@ -681,8 +672,8 @@ function requestAIMove() {
       }
     } catch (err) {
       console.error('GnuGo error:', err);
-      isAIThinking = false;
-      syncGameStateStore();
+      GameState.sync({ isAIThinking: false });
+      applyStateFromStore();
       updateUI();
       setStatus('⚠️ AI 出錯，請重新開始');
     }
@@ -735,8 +726,6 @@ function startNewGame() {
   });
   applyStateFromStore();
 
-  isAIThinking = false;
-  syncGameStateStore();
   analysisData = null;
   isAnalyzing = false;
   guidanceEnabled = document.getElementById('guidanceToggle').checked;
@@ -763,8 +752,6 @@ function startNewGame() {
   }
 
   const aiStartsGame = gameMode === 'pvc' && playerColor === WHITE && !gameOver;
-  isAIThinking = false;
-  syncGameStateStore();
   updateUI();
   syncStatus(aiStartsGame ? '🤔 GnuGo 思考中...' : '');
   drawBoard();
@@ -809,7 +796,6 @@ function handleBoardInteraction(e) {
     // Toggle dead stones
     if (board[x][y] !== EMPTY) {
       const group = getGroup(board, x, y);
-      syncGameStateStore();
       const result = GameState.toggleDeadGroup(group.stones);
       if (!result.ok) return;
       applyStateFromStore();
@@ -907,9 +893,6 @@ window.addEventListener('resize', () => {
 // ==================== SAVE / RESTORE ====================
 const SAVE_KEY = 'gogame_state';
 
-function syncGameStateStore() {
-  GameState.sync(getCurrentStateSnapshot());
-}
 
 function applyStateFromStore() {
   const s = GameState.getState();
@@ -947,7 +930,7 @@ function applyStateFromStore() {
 
 function saveGame() {
   if (isReviewing || isScoring) return;
-  syncGameStateStore();
+  GameState.sync({ timerSeconds }); // timerSeconds is mutated in-place by the timer interval
   const snapshot = GameState.getSnapshot();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot)); } catch(e) {}
 }
