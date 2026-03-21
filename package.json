@@ -2,7 +2,11 @@
   "name": "gogame",
   "private": true,
   "scripts": {
+    "test": "jest",
     "version:generate": "node generate-version.js",
     "build": "node generate-version.js"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0"
   }
 }
