@@ -687,6 +687,8 @@ const playSound = GoSound.playSound;
 
 // ==================== UI ====================
 function updateUI() {
+  const overlay = document.getElementById('aiThinkingOverlay');
+  if (overlay) overlay.style.display = isAIThinking ? 'flex' : 'none';
   GoUI.updateHUD({
     gameOver,
     isAIThinking,
