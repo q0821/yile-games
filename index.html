@@ -222,6 +222,7 @@
 <script src="game-state.js?v=v2026.03.15-9c49be6"></script>
 <script src="ui.js?v=v2026.03.15-9c49be6"></script>
 <script src="sound.js?v=v2026.03.15-9c49be6"></script>
+<script src="timer.js?v=v2026.03.15-9c49be6"></script>
 <script>
 // ==================== CONSTANTS ====================
 const { EMPTY, BLACK, WHITE } = GoRules;
@@ -252,7 +253,6 @@ let isAIThinking = false;
 // Timer
 let timerEnabled = false;
 let timerSeconds = { [BLACK]: 600, [WHITE]: 600 };
-let timerInterval = null;
 
 // Review
 let isReviewing = false;
@@ -718,45 +718,32 @@ function closeModal() {
 }
 
 // ==================== TIMER ====================
+function _timerOnTimeout(losingPlayer) {
+  const winner = opponent(losingPlayer);
+  endGame(`${winner === BLACK ? '⚫ 黑方' : '⚪ 白方'}勝`, `${losingPlayer === BLACK ? '黑' : '白'}方超時`);
+}
+
 function initTimer() {
   const minutes = parseInt(document.getElementById('timerMinutes').value);
-  timerSeconds = { [BLACK]: minutes * 60, [WHITE]: minutes * 60 };
-  updateTimerDisplay();
+  GoTimer.init(timerSeconds, minutes);
 }
 
 function startTimer() {
   if (!timerEnabled) return;
-  stopTimer();
-  timerInterval = setInterval(() => {
-    timerSeconds[currentPlayer]--;
-    updateTimerDisplay();
-    if (timerSeconds[currentPlayer] <= 0) {
-      timerSeconds[currentPlayer] = 0;
-      updateTimerDisplay();
-      const winner = opponent(currentPlayer);
-      endGame(`${winner === BLACK ? '⚫ 黑方' : '⚪ 白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方超時`);
-    }
-  }, 1000);
+  GoTimer.start(timerSeconds, () => currentPlayer, _timerOnTimeout);
 }
 
 function switchTimer() {
   if (!timerEnabled) return;
-  stopTimer();
-  startTimer();
+  GoTimer.switch(timerSeconds, () => currentPlayer, _timerOnTimeout);
 }
 
 function stopTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  GoTimer.stop();
 }
 
 function updateTimerDisplay() {
-  const format = s => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
-  const bEl = document.getElementById('blackTimer');
-  const wEl = document.getElementById('whiteTimer');
-  bEl.textContent = format(timerSeconds[BLACK]);
-  wEl.textContent = format(timerSeconds[WHITE]);
-  bEl.classList.toggle('urgent', timerSeconds[BLACK] < 60);
-  wEl.classList.toggle('urgent', timerSeconds[WHITE] < 60);
+  GoTimer.updateDisplay(timerSeconds);
 }
 
 // ==================== REVIEW ====================
