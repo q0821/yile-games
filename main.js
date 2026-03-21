@@ -789,6 +789,7 @@ function startNewGame() {
   drawBoard();
   clearSave();
   saveGame();
+  GnuGoService.clearPlayCache();
 
   // If PvC mode, preload GnuGo and start if AI plays black
   if (gameMode === 'pvc') {

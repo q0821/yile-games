@@ -85,15 +85,28 @@ window.GnuGoService = (function () {
     return gnugoLoadingPromise;
   }
 
+  const _playCache = new Map();
+  const _PLAY_CACHE_MAX = 60;
+
   function play(level, sgf, expectedMoveCount, size) {
     if (!gnugoReady || !gnugoModule) {
       throw new Error('GnuGo not ready');
     }
-    const result = gnugoModule.ccall('play', 'string', ['number', 'string'], [level, sgf]);
-    return {
-      raw: result,
-      move: parseMoveFromSgfResponse(result, expectedMoveCount, size)
-    };
+    const cacheKey = `${level}::${sgf}`;
+    if (_playCache.has(cacheKey)) {
+      const cached = _playCache.get(cacheKey);
+      return { raw: cached.raw, move: parseMoveFromSgfResponse(cached.raw, expectedMoveCount, size) };
+    }
+    const raw = gnugoModule.ccall('play', 'string', ['number', 'string'], [level, sgf]);
+    if (_playCache.size >= _PLAY_CACHE_MAX) {
+      _playCache.delete(_playCache.keys().next().value);
+    }
+    _playCache.set(cacheKey, { raw });
+    return { raw, move: parseMoveFromSgfResponse(raw, expectedMoveCount, size) };
+  }
+
+  function clearPlayCache() {
+    _playCache.clear();
   }
 
   function getTopMoves(moveHistory, size, komi, currentPlayer, count) {
@@ -138,6 +151,7 @@ window.GnuGoService = (function () {
     buildSGFUpTo,
     parseMoveFromSgfResponse,
     play,
+    clearPlayCache,
     getTopMoves
   };
 })();
