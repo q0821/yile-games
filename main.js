@@ -228,17 +228,22 @@ function buildBoardViewState() {
   };
 }
 
+let _drawRaf = null;
 function drawBoard() {
-  const deps = {
-    canvas,
-    ctx,
-    padding,
-    cellSize,
-    starPoints: STAR_POINTS
-  };
-  GoUI.drawBoard(deps, buildBoardViewState());
-  cellSize = deps.cellSize;
-  padding = deps.padding;
+  if (_drawRaf) return;
+  _drawRaf = requestAnimationFrame(() => {
+    _drawRaf = null;
+    const deps = {
+      canvas,
+      ctx,
+      padding,
+      cellSize,
+      starPoints: STAR_POINTS
+    };
+    GoUI.drawBoard(deps, buildBoardViewState());
+    cellSize = deps.cellSize;
+    padding = deps.padding;
+  });
 }
 
 // ==================== GAME ACTIONS ====================
