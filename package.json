@@ -2,11 +2,16 @@
   "name": "gogame",
   "private": true,
   "scripts": {
+    "dev": "vite",
+    "build": "vite build && node generate-version.js",
+    "preview": "vite preview",
     "test": "jest",
-    "version:generate": "node generate-version.js",
-    "build": "node generate-version.js"
+    "version:generate": "node generate-version.js"
   },
   "devDependencies": {
-    "jest": "^30.3.0"
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "jest": "^30.3.0",
+    "vite": "^8.0.1"
   }
 }

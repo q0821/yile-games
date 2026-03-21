@@ -24,16 +24,17 @@ const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
 const dd = String(now.getUTCDate()).padStart(2, '0');
 const version = `v${yyyy}.${mm}.${dd}-${shortSha}`;
 
-// 寫入 version.json
+// 寫入 version.json（輸出到 public/ 供 Vite 複製到 dist/）
 const payload = {
   version,
   updatedAt: now.toISOString(),
   commit: shortSha
 };
-fs.writeFileSync('version.json', JSON.stringify(payload, null, 2) + '\n');
+const versionPath = fs.existsSync('public') ? 'public/version.json' : 'version.json';
+fs.writeFileSync(versionPath, JSON.stringify(payload, null, 2) + '\n');
 
 // 將版本號注入 sw.js，讓瀏覽器每次部署都偵測到 sw.js 內容有變化
-const swPath = 'sw.js';
+const swPath = fs.existsSync('public/sw.js') ? 'public/sw.js' : 'sw.js';
 let swContent = fs.readFileSync(swPath, 'utf8');
 swContent = swContent.replace(/^const VERSION = '.*?';/m, `const VERSION = '${version}';`);
 fs.writeFileSync(swPath, swContent);
