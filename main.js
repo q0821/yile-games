@@ -81,8 +81,14 @@ function getLegalMoves(b, player, ko) {
   return GoRules.getLegalMoves(b, size, player, ko);
 }
 
+/** Game is in a terminal or special mode — no moves accepted at all. */
+function isGameBlocked() {
+  return gameOver || isReviewing || isScoring;
+}
+
+/** isGameBlocked + AI is currently calculating (UI interactions fully paused). */
 function isGameBusy() {
-  return gameOver || isReviewing || isScoring || isAIThinking;
+  return isGameBlocked() || isAIThinking;
 }
 
 // ==================== CAPTURE HINTS ====================
@@ -242,7 +248,7 @@ function drawBoard() {
 
 // ==================== GAME ACTIONS ====================
 function placeStone(x, y) {
-  if (gameOver || isReviewing || isScoring) return false;
+  if (isGameBlocked()) return false;
   if (isAIThinking && gameMode === 'pvc') return false;
 
   const result = GameState.applyMove(x, y);
@@ -314,7 +320,7 @@ function doPass() {
 }
 
 function doUndo() {
-  if (gameOver || isReviewing || isScoring) return;
+  if (isGameBlocked()) return;
   showingHint = false;
   clearGuidance();
   if (!document.getElementById('undoToggle').checked) {
@@ -337,7 +343,7 @@ function doUndo() {
 }
 
 function doResign() {
-  if (gameOver || isReviewing || isScoring) return;
+  if (isGameBlocked()) return;
   const winner = opponent(currentPlayer);
   endGame(`${winner === BLACK ? '⚫ 黑方' : '⚪ 白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`);
 }
