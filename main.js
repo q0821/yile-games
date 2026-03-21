@@ -717,35 +717,7 @@ function setStatus(msg) {
 
 function syncStatus(message = '') {
   const state = { currentPlayer, gameOver, isScoring, isReviewing, isAIThinking };
-  if (typeof GoUI.syncStatus === 'function') {
-    GoUI.syncStatus(state, message);
-    return;
-  }
-  if (typeof GoUI.getStatusMessage === 'function') {
-    GoUI.setStatus(GoUI.getStatusMessage(state, message));
-    return;
-  }
-  if (message) {
-    GoUI.setStatus(message);
-    return;
-  }
-  if (gameOver) {
-    GoUI.setStatus('遊戲已結束');
-    return;
-  }
-  if (isScoring) {
-    GoUI.setStatus('已自動估算死子，可點擊修正，然後確認結果');
-    return;
-  }
-  if (isReviewing) {
-    GoUI.setStatus('覆盤模式');
-    return;
-  }
-  if (isAIThinking) {
-    GoUI.setStatus('🤔 GnuGo 思考中...');
-    return;
-  }
-  GoUI.setStatus(`${currentPlayer === BLACK ? '黑' : '白'}方回合`);
+  GoUI.syncStatus(state, message);
 }
 
 function startNewGame() {

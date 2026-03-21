@@ -101,7 +101,6 @@
     return moves;
   }
 
-  // Returns a 2-D array where territory[x][y] is BLACK, WHITE, or EMPTY (contested/neutral).
   function calculateTerritory(board, size) {
     const territory = Array.from({ length: size }, () => Array(size).fill(EMPTY));
     const visited = Array.from({ length: size }, () => Array(size).fill(false));
@@ -143,11 +142,11 @@
   function estimateDeadStones(board, size) {
     const dead = new Set();
     let workBoard = cloneBoard(board);
-    let changed = true;
+    let territory = calculateTerritory(workBoard, size);
 
+    let changed = true;
     while (changed) {
       changed = false;
-      const territory = calculateTerritory(workBoard, size);
       const visited = new Set();
 
       for (let x = 0; x < size; x++) {
@@ -167,16 +166,16 @@
 
           if (!safe) {
             for (const [gx, gy] of stones) {
-              const k = gx * size + gy;
-              if (!dead.has(k)) {
-                dead.add(k);
-                workBoard[gx][gy] = EMPTY;
-                changed = true;
-              }
+              dead.add(gx * size + gy);
+              workBoard[gx][gy] = EMPTY;
             }
+            changed = true;
           }
         }
       }
+
+      // Recalculate territory only when stones were removed this pass.
+      if (changed) territory = calculateTerritory(workBoard, size);
     }
 
     return dead;
