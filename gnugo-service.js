@@ -49,9 +49,9 @@ window.GnuGoService = (function () {
     if (gnugoReady) return Promise.resolve();
     if (gnugoLoadingPromise) return gnugoLoadingPromise;
 
-    if (typeof setStatus === 'function') {
-      setStatus('⏳ 載入 GnuGo AI 引擎...');
-    }
+    const notify = typeof setStatus === 'function' ? setStatus : () => {};
+
+    notify('⏳ 載入 GnuGo AI 引擎...');
 
     const Module = {};
     Module.locateFile = function (path) {
@@ -66,19 +66,15 @@ window.GnuGoService = (function () {
         GnuGoLoader.init(Module);
         gnugoModule = Module;
         gnugoReady = true;
-        if (typeof setStatus === 'function') {
-          const statusEl = typeof document !== 'undefined' ? document.getElementById('statusMsg') : null;
-          const currentStatus = statusEl?.textContent?.trim() || '';
-          if (!currentStatus || currentStatus === '請開始新遊戲' || currentStatus === '⏳ 載入 GnuGo AI 引擎...') {
-            setStatus('GnuGo AI 引擎載入完成！');
-          }
+        const statusEl = typeof document !== 'undefined' ? document.getElementById('statusMsg') : null;
+        const currentStatus = statusEl?.textContent?.trim() || '';
+        if (!currentStatus || currentStatus === '請開始新遊戲' || currentStatus === '⏳ 載入 GnuGo AI 引擎...') {
+          notify('GnuGo AI 引擎載入完成！');
         }
       })
       .catch(err => {
         gnugoLoadingPromise = null;
-        if (typeof setStatus === 'function') {
-          setStatus('⚠️ AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
-        }
+        notify('⚠️ AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
         throw err;
       });
 
