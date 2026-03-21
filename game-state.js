@@ -149,7 +149,7 @@
       passCount: snapshot.passCount || 0,
       gameOver: snapshot.gameOver || false,
       lastMove: snapshot.lastMove || null,
-      gameMode: snapshot.gameMode || 'pvp',
+      gameMode: snapshot.gameMode || 'pvc',
       playerColor: snapshot.playerColor || BLACK,
       aiLevel: snapshot.aiLevel || 10,
       timerEnabled: snapshot.timerEnabled || false,

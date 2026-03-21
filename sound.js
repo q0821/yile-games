@@ -90,7 +90,9 @@
           osc.stop(t + i * 0.2 + 0.6);
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('GoSound:', e);
+    }
   }
 
   global.GoSound = { playSound };

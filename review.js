@@ -1,20 +1,7 @@
 (function(global) {
-  const { BLACK } = GoRules;
 
   function buildSGFUpTo(n, moveHistory, size, komi) {
-    const letters = 'abcdefghijklmnopqrs';
-    let sgf = `(;GM[1]FF[4]SZ[${size}]KM[${komi}]`;
-    for (let i = 0; i < n; i++) {
-      const m = moveHistory[i];
-      const color = m.player === BLACK ? 'B' : 'W';
-      if (m.pass) {
-        sgf += `;${color}[]`;
-      } else {
-        sgf += `;${color}[${letters[m.y]}${letters[m.x]}]`;
-      }
-    }
-    sgf += ')';
-    return sgf;
+    return GnuGoService.buildSGFUpTo(moveHistory, size, komi, n);
   }
 
   function getReviewBoard(moveHistory, currentReviewMove, size) {
