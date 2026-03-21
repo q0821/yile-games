@@ -399,9 +399,22 @@ function endGame(title, detail) {
   if (document.getElementById('reviewToggle').checked) {
     document.getElementById('reviewBtn').style.display = 'block';
   }
+  document.getElementById('exportSgfBtn').style.display = 'block';
   setStatus(`遊戲結束 - ${title}`);
   drawBoard();
   playSound('gameend');
+}
+
+function exportSGF() {
+  const sgf = buildSGF();
+  const blob = new Blob([sgf], { type: 'application/x-go-sgf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `gogame_${date}_${size}x${size}.sgf`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function closeModal() {
@@ -774,6 +787,7 @@ function startNewGame() {
   document.getElementById('exitReviewBtn').style.display = 'none';
   document.getElementById('analysisBtn').style.display = 'none';
   document.getElementById('analysisPanel').style.display = 'none';
+  document.getElementById('exportSgfBtn').style.display = 'none';
   document.getElementById('resultModal').classList.remove('show');
 
   // Timer
