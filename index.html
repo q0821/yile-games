@@ -225,6 +225,7 @@
 <script src="timer.js?v=v2026.03.15-9c49be6"></script>
 <script src="sidebar.js?v=v2026.03.15-9c49be6"></script>
 <script src="hints.js?v=v2026.03.15-9c49be6"></script>
+<script src="review.js?v=v2026.03.15-9c49be6"></script>
 <script>
 // ==================== CONSTANTS ====================
 const { EMPTY, BLACK, WHITE } = GoRules;
@@ -703,21 +704,11 @@ function reviewGo(n) {
 }
 
 function getReviewBoard() {
-  let b = createBoard(size);
-  for (let i = 0; i < currentReviewMove; i++) {
-    const m = moveHistory[i];
-    if (m.pass) continue;
-    const result = tryPlaceStone(b, m.x, m.y, m.player, null);
-    if (result.valid) b = result.newBoard;
-  }
-  return b;
+  return GoReview.getReviewBoard(moveHistory, currentReviewMove, size);
 }
 
 function getReviewLastMove() {
-  for (let i = currentReviewMove - 1; i >= 0; i--) {
-    if (!moveHistory[i].pass) return [moveHistory[i].x, moveHistory[i].y];
-  }
-  return null;
+  return GoReview.getReviewLastMove(moveHistory, currentReviewMove);
 }
 
 function updateReviewInfo() {
@@ -730,19 +721,7 @@ function updateReviewInfo() {
 
 // ==================== AI REVIEW ANALYSIS ====================
 function buildSGFUpTo(n) {
-  const letters = 'abcdefghijklmnopqrs';
-  let sgf = `(;GM[1]FF[4]SZ[${size}]KM[${komi}]`;
-  for (let i = 0; i < n; i++) {
-    const m = moveHistory[i];
-    const color = m.player === BLACK ? 'B' : 'W';
-    if (m.pass) {
-      sgf += `;${color}[]`;
-    } else {
-      sgf += `;${color}[${letters[m.y]}${letters[m.x]}]`;
-    }
-  }
-  sgf += ')';
-  return sgf;
+  return GoReview.buildSGFUpTo(n, moveHistory, size, komi);
 }
 
 function startAnalysis() {
