@@ -224,6 +224,7 @@
 <script src="sound.js?v=v2026.03.15-9c49be6"></script>
 <script src="timer.js?v=v2026.03.15-9c49be6"></script>
 <script src="sidebar.js?v=v2026.03.15-9c49be6"></script>
+<script src="hints.js?v=v2026.03.15-9c49be6"></script>
 <script>
 // ==================== CONSTANTS ====================
 const { EMPTY, BLACK, WHITE } = GoRules;
@@ -333,88 +334,10 @@ function clearHint() {
 }
 
 function getCaptureHints(b, player) {
-  const hints = [];
-  const seen = new Set();
-  const opp = opponent(player);
-
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      if (b[x][y] !== opp) continue;
-      const group = getGroup(b, x, y);
-      if (group.liberties.size === 1) {
-        // This group has exactly 1 liberty — can be captured!
-        for (const libKey of group.liberties) {
-          const lx = Math.floor(libKey / size);
-          const ly = libKey % size;
-          const key = `${lx},${ly}`;
-          if (!seen.has(key)) {
-            // Verify it's a valid move
-            const result = tryPlaceStone(b, lx, ly, player, koPoint);
-            if (result.valid) {
-              hints.push([lx, ly]);
-              seen.add(key);
-            }
-          }
-        }
-      }
-    }
-  }
-  return hints;
+  return GoHints.getCaptureHints(b, size, player, koPoint);
 }
 
 // ==================== BEGINNER GUIDANCE ====================
-function getGamePhase() {
-  const total = moveHistory.length;
-  const threshold = size <= 9 ? 10 : size <= 13 ? 20 : 30;
-  if (total < threshold) return 'opening';
-  if (total < threshold * 3) return 'middle';
-  return 'endgame';
-}
-
-function getGuidanceLabel(x, y, rank, phase) {
-  const isCorner = (r, c) => {
-    const margin = size <= 9 ? 2 : 3;
-    return (r < margin || r >= size - margin) && (c < margin || c >= size - margin);
-  };
-  const isSide = (r, c) => {
-    const margin = size <= 9 ? 2 : 3;
-    return r < margin || r >= size - margin || c < margin || c >= size - margin;
-  };
-
-  if (phase === 'opening') {
-    if (isCorner(x, y)) {
-      const cornerStones = board[x] && board[x][y] === EMPTY;
-      const nearby = getNeighbors(x, y).some(([nx, ny]) => board[nx][ny] !== EMPTY);
-      if (nearby) return '守角';
-      return '佔角';
-    }
-    if (isSide(x, y)) return '拓邊';
-    return '佈局';
-  } else if (phase === 'middle') {
-    // Check if this move would capture
-    const opp = opponent(currentPlayer);
-    for (const [nx, ny] of getNeighbors(x, y)) {
-      if (board[nx][ny] === opp) {
-        const group = getGroup(board, nx, ny);
-        if (group.liberties.size <= 2) return '攻擊';
-      }
-    }
-    // Check if this protects own weak group
-    for (const [nx, ny] of getNeighbors(x, y)) {
-      if (board[nx][ny] === currentPlayer) {
-        const group = getGroup(board, nx, ny);
-        if (group.liberties.size <= 2) return '補強';
-      }
-    }
-    if (isSide(x, y)) return '拓邊';
-    return '中腹';
-  } else {
-    // Endgame
-    if (isSide(x, y)) return '收官';
-    return '收官';
-  }
-}
-
 function requestGuidanceHints() {
   if (!guidanceEnabled || gameOver || isReviewing || isScoring || isAIThinking) return;
   if (gameMode === 'pvc' && currentPlayer !== playerColor) return;
@@ -440,12 +363,13 @@ function requestGuidanceHints() {
 
   setTimeout(() => {
     try {
-      const phase = getGamePhase();
+      const phase = GoHints.getGamePhase(moveHistory.length, size);
+      const labelCtx = { board, size, currentPlayer };
       const hints = [];
       const topMoves = GnuGoService.getTopMoves(moveHistory, size, komi, currentPlayer, 3);
 
       topMoves.forEach((move, index) => {
-        const label = getGuidanceLabel(move[0], move[1], index, phase);
+        const label = GoHints.getGuidanceLabel(move[0], move[1], index, phase, labelCtx);
         hints.push({ x: move[0], y: move[1], rank: index, label });
       });
 
@@ -461,18 +385,7 @@ function requestGuidanceHints() {
 }
 
 function renderGuidanceLegend() {
-  const legend = document.getElementById('guidanceLegend');
-  if (!guidanceEnabled || guidanceHints.length === 0 || gameOver || isReviewing || isScoring) {
-    legend.style.display = 'none';
-    legend.innerHTML = '';
-    return;
-  }
-  const rankNames = ['⭐ 最佳', '🔵 次佳', '🟢 可考慮'];
-  legend.innerHTML = guidanceHints.map((hint) => {
-    const coord = `${String.fromCharCode(65 + hint.y)}${size - hint.x}`;
-    return `<div><strong>${rankNames[hint.rank] || '提示'}</strong>：${coord} — ${hint.label}</div>`;
-  }).join('');
-  legend.style.display = 'block';
+  GoHints.renderGuidanceLegend(guidanceHints, { guidanceEnabled, gameOver, isReviewing, isScoring, size });
 }
 
 function clearGuidance() {
@@ -523,7 +436,7 @@ function buildBoardViewState() {
   const displayBoard = isReviewing ? getReviewBoard() : board;
   const scoreData = isScoring ? GoRules.calculateScore(board, size, deadStones, captures, gameRules, komi) : null;
   const captureHints = showingHint && !gameOver && !isReviewing && !isScoring && !isAIThinking
-    ? getAllCaptureMoves(board, size, currentPlayer, koPoint)
+    ? getCaptureHints(board, currentPlayer)
     : [];
   const lastMoveToShow = isReviewing ? getReviewLastMove() : lastMove;
 
