@@ -3,6 +3,17 @@ const { EMPTY, BLACK, WHITE } = GoRules;
 let komi = 7.5;
 let gameRules = 'chinese'; // 'chinese' or 'japanese'
 
+const GUIDANCE_HINT_DELAY_MS = 150;   // debounce before requesting guidance hints
+const AI_MOVE_DELAY_MS       = 100;   // short delay before AI move after a stone is placed
+const AI_INIT_DELAY_MS       = 300;   // longer delay when AI engine just finished initialising
+const ANALYSIS_STEP_DELAY_MS = 10;    // yield-to-browser interval between analysis steps
+const ANALYSIS_GOOD_DIST     = 3;     // Manhattan distance ≤ this → 'good' rating
+const ANALYSIS_BAD_DIST      = 7;     // Manhattan distance > this → 'bad' rating
+const COORD_LETTERS = 'ABCDEFGHJKLMNOPQRST'; // Go column labels (I omitted)
+
+const VALID_BOARD_SIZES = [9, 13, 19];
+const VALID_GAME_MODES  = ['pvc', 'pvp'];
+
 const STAR_POINTS = {
   9:  [[2,2],[2,6],[4,4],[6,2],[6,6]],
   13: [[3,3],[3,6],[3,9],[6,3],[6,6],[6,9],[9,3],[9,6],[9,9]],
@@ -272,12 +283,12 @@ function placeStone(x, y) {
   saveGame();
 
   if (willRequestAI) {
-    setTimeout(() => requestAIMove(), 100);
+    setTimeout(() => requestAIMove(), AI_MOVE_DELAY_MS);
   }
 
   if (guidanceEnabled && !gameOver) {
     if (gameMode !== 'pvc' || currentPlayer === playerColor) {
-      setTimeout(() => requestGuidanceHints(), 150);
+      setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
     }
   }
 
@@ -311,12 +322,12 @@ function doPass() {
   saveGame();
 
   if (willRequestAI) {
-    setTimeout(() => requestAIMove(), 100);
+    setTimeout(() => requestAIMove(), AI_MOVE_DELAY_MS);
   }
 
   if (guidanceEnabled && !gameOver) {
     if (gameMode !== 'pvc' || currentPlayer === playerColor) {
-      setTimeout(() => requestGuidanceHints(), 150);
+      setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
     }
   }
 }
@@ -341,7 +352,7 @@ function doUndo() {
   saveGame();
 
   if (guidanceEnabled && !gameOver) {
-    setTimeout(() => requestGuidanceHints(), 150);
+    setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
   }
 }
 
@@ -535,50 +546,44 @@ function analyzeStep(moveIndex) {
 
   const m = moveHistory[moveIndex];
 
-  // Skip pass moves
-  if (m.pass) {
-    analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
-    analysisProgress = Math.round(((moveIndex + 1) / moveHistory.length) * 100);
-    updateAnalysisProgress();
-    setTimeout(() => analyzeStep(moveIndex + 1), 10);
-    return;
-  }
-
-  // Build SGF up to this move (not including it), ask GnuGo what it would play
-  const sgf = buildSGFUpTo(moveIndex);
-
+  // Build SGF up to this move (not including it), ask GnuGo what it would play.
+  // A single setTimeout yields to the browser for UI updates between steps;
+  // pass moves skip the WASM call but still yield so the progress bar repaints.
   setTimeout(() => {
-    try {
-      const level = 10; // always use max level for analysis
-      const aiMove = GnuGoService.play(level, sgf, moveIndex, size).move;
+    if (!isAnalyzing) return; // re-check after yield
 
-      let rating = 'good';
-      if (aiMove) {
-        const dist = Math.abs(aiMove[0] - m.x) + Math.abs(aiMove[1] - m.y);
-        if (dist === 0) {
-          rating = 'good';       // Same as AI
-        } else if (dist <= 3) {
-          rating = 'good';       // Close enough
-        } else if (dist <= 7) {
-          rating = 'question';   // Questionable
-        } else {
-          rating = 'bad';        // Very different
+    if (!m.pass) {
+      try {
+        const level = 10; // always use max level for analysis
+        const sgf = buildSGFUpTo(moveIndex);
+        const aiMove = GnuGoService.play(level, sgf, moveIndex, size).move;
+
+        let rating = 'good';
+        if (aiMove) {
+          const dist = Math.abs(aiMove[0] - m.x) + Math.abs(aiMove[1] - m.y);
+          if (dist === 0) {
+            rating = 'good';       // Same as AI
+          } else if (dist <= ANALYSIS_GOOD_DIST) {
+            rating = 'good';       // Close enough
+          } else if (dist <= ANALYSIS_BAD_DIST) {
+            rating = 'question';   // Questionable
+          } else {
+            rating = 'bad';        // Very different
+          }
         }
-      }
 
-      analysisData.push({
-        move: m,
-        aiSuggestion: aiMove,
-        rating: rating
-      });
-    } catch (e) {
+        analysisData.push({ move: m, aiSuggestion: aiMove, rating });
+      } catch (e) {
+        analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
+      }
+    } else {
       analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
     }
 
     analysisProgress = Math.round(((moveIndex + 1) / moveHistory.length) * 100);
     updateAnalysisProgress();
-    setTimeout(() => analyzeStep(moveIndex + 1), 10);
-  }, 10);
+    analyzeStep(moveIndex + 1);
+  }, ANALYSIS_STEP_DELAY_MS);
 }
 
 function updateAnalysisProgress() {
@@ -618,11 +623,10 @@ function updateAnalysisMoveInfo() {
     el.textContent = 'Pass';
     return;
   }
-  const letters = 'ABCDEFGHJKLMNOPQRST';
   const ratingText = d.rating === 'good' ? '✅ 好手' : d.rating === 'question' ? '⚠️ 疑問手' : d.rating === 'bad' ? '❌ 惡手' : '';
   let text = `${ratingText}`;
   if (d.aiSuggestion && d.rating !== 'good') {
-    text += `　AI 建議：${letters[d.aiSuggestion[1]]}${size - d.aiSuggestion[0]}`;
+    text += `　AI 建議：${COORD_LETTERS[d.aiSuggestion[1]]}${size - d.aiSuggestion[0]}`;
   }
   el.textContent = text;
 }
@@ -678,7 +682,7 @@ function requestAIMove() {
       }
       // Guidance after AI move
       if (guidanceEnabled && !gameOver && currentPlayer === playerColor) {
-        setTimeout(() => requestGuidanceHints(), 150);
+        setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
       }
     } catch (err) {
       console.error('GnuGo error:', err);
@@ -714,9 +718,13 @@ function syncStatus(message = '') {
 }
 
 function startNewGame() {
-  // Read settings
-  size = parseInt(document.getElementById('boardSize').value);
-  gameMode = document.getElementById('gameMode').value;
+  // Read settings (with whitelist validation to guard against tampered DOM)
+  const rawSize = parseInt(document.getElementById('boardSize').value);
+  size = VALID_BOARD_SIZES.includes(rawSize) ? rawSize : 19;
+
+  const rawMode = document.getElementById('gameMode').value;
+  gameMode = VALID_GAME_MODES.includes(rawMode) ? rawMode : 'pvc';
+
   playerColor = parseInt(document.getElementById('playerColor').value);
   aiLevel = parseInt(document.getElementById('aiStrength').value);
   timerEnabled = document.getElementById('timerToggle').checked;
@@ -772,7 +780,7 @@ function startNewGame() {
   if (gameMode === 'pvc') {
     initGnuGo().then(() => {
       if (playerColor === WHITE && !gameOver) {
-        setTimeout(() => requestAIMove(), 300);
+        setTimeout(() => requestAIMove(), AI_INIT_DELAY_MS);
       }
     });
   }
@@ -979,7 +987,7 @@ function loadGame() {
     if (gameMode === 'pvc' && !gameOver) {
       initGnuGo().then(() => {
         if (currentPlayer !== playerColor) {
-          setTimeout(() => requestAIMove(), 300);
+          setTimeout(() => requestAIMove(), AI_INIT_DELAY_MS);
         }
       });
     }
