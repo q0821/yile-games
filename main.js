@@ -265,10 +265,11 @@ function placeStone(x, y) {
   syncStatus();
   isAIThinking = previousIsAIThinking;
   drawBoard();
-  playSound('place');
-  if (result.captured > 0) setTimeout(() => playSound('capture'), 80);
+  GoSound.playSound('place');
+  if (result.captured > 0) setTimeout(() => GoSound.playSound('capture'), 80);
 
   if (timerEnabled) switchTimer();
+  saveGame();
 
   if (willRequestAI) {
     setTimeout(() => requestAIMove(), 100);
@@ -307,6 +308,7 @@ function doPass() {
   drawBoard();
 
   if (timerEnabled) switchTimer();
+  saveGame();
 
   if (willRequestAI) {
     setTimeout(() => requestAIMove(), 100);
@@ -336,6 +338,7 @@ function doUndo() {
   updateUI();
   drawBoard();
   setStatus('已悔棋');
+  saveGame();
 
   if (guidanceEnabled && !gameOver) {
     setTimeout(() => requestGuidanceHints(), 150);
@@ -395,7 +398,7 @@ function endGame(title, detail) {
   document.getElementById('exportSgfBtn').style.display = 'block';
   setStatus(`遊戲結束 - ${title}`);
   drawBoard();
-  playSound('gameend');
+  GoSound.playSound('gameend');
 }
 
 function exportSGF() {
@@ -524,6 +527,7 @@ function startAnalysis() {
 }
 
 function analyzeStep(moveIndex) {
+  if (!isAnalyzing) return; // user may have exited review while analysis was running
   if (moveIndex >= moveHistory.length) {
     finishAnalysis();
     return;
@@ -686,7 +690,6 @@ function requestAIMove() {
   }, 50);
 }
 
-const playSound = GoSound.playSound;
 
 // ==================== UI ====================
 function updateUI() {
@@ -869,6 +872,7 @@ document.getElementById('guidanceToggle').addEventListener('change', (e) => {
   if (guidanceEnabled && !gameOver && !isReviewing && !isScoring) {
     requestGuidanceHints();
   } else {
+    guidanceLoading = false;
     clearGuidance();
     drawBoard();
   }
@@ -990,13 +994,6 @@ function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
 }
 
-// Auto-save after each move
-const origPlaceStone = placeStone;
-placeStone = function(x, y) {
-  const result = origPlaceStone(x, y);
-  if (result) saveGame();
-  return result;
-};
 
 const origDoPass = doPass;
 doPass = function() {
