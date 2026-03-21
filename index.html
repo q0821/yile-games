@@ -223,6 +223,7 @@
 <script src="ui.js?v=v2026.03.15-9c49be6"></script>
 <script src="sound.js?v=v2026.03.15-9c49be6"></script>
 <script src="timer.js?v=v2026.03.15-9c49be6"></script>
+<script src="sidebar.js?v=v2026.03.15-9c49be6"></script>
 <script>
 // ==================== CONSTANTS ====================
 const { EMPTY, BLACK, WHITE } = GoRules;
@@ -1650,57 +1651,7 @@ doUndo = function() {
 };
 
 // ==================== MOBILE SIDEBAR ====================
-const sidebarContent = document.getElementById('sidebarContent');
-const gameContainer = document.querySelector('.game-container');
-
-function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  if (sidebar.classList.contains('open')) {
-    closeSidebar();
-  } else {
-    openSidebar();
-  }
-}
-
-function openSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  // Move real panels into sidebar
-  const settings = document.getElementById('settingsPanel');
-  const info = document.getElementById('infoPanel');
-  settings.style.display = 'block';
-  settings.style.width = '100%';
-  info.style.display = 'block';
-  info.style.width = '100%';
-  info.style.marginTop = '16px';
-  sidebarContent.appendChild(settings);
-  sidebarContent.appendChild(info);
-  sidebar.classList.add('open');
-  overlay.classList.add('open');
-}
-
-function closeSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-  // Move panels back to game container
-  const settings = document.getElementById('settingsPanel');
-  const info = document.getElementById('infoPanel');
-  const boardWrapper = document.querySelector('.board-wrapper');
-  if (settings && settings.parentNode === sidebarContent) {
-    settings.style.display = '';
-    settings.style.width = '';
-    gameContainer.insertBefore(settings, boardWrapper);
-  }
-  if (info && info.parentNode === sidebarContent) {
-    info.style.display = '';
-    info.style.width = '';
-    info.style.marginTop = '';
-    gameContainer.appendChild(info);
-  }
-  sidebar.classList.remove('open');
-  overlay.classList.remove('open');
-}
+// toggleSidebar / openSidebar / closeSidebar defined in sidebar.js
 
 // ==================== PWA ====================
 const VERSION_INFO_URL = 'version.json?v=v2026.03.15-9c49be6';
