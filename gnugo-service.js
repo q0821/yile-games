@@ -1,166 +1,217 @@
-window.GnuGoService = (function () {
-  const LETTERS = 'abcdefghijklmnopqrs';
+// GnuGoService — communicates with GnuGo running inside a Web Worker.
+// All AI calls are async; the worker processes WASM off the main thread.
 
-  let gnugoModule = null;
-  let gnugoReady = false;
-  let gnugoLoadingPromise = null;
+const LETTERS = 'abcdefghijklmnopqrs';
 
-  function buildSGF(moveHistory, size, komi) {
-    let sgf = `(;GM[1]FF[4]SZ[${size}]KM[${komi}]`;
-    for (const m of moveHistory) {
-      const color = m.player === 1 ? 'B' : 'W';
-      if (m.pass) {
-        sgf += `;${color}[]`;
-      } else {
-        sgf += `;${color}[${LETTERS[m.y]}${LETTERS[m.x]}]`;
-      }
+let _worker = null;
+let _workerReady = false;
+let _workerLoadingPromise = null;
+let _pendingCalls = new Map(); // id → { resolve, reject }
+let _nextId = 1;
+
+function _getWorker() {
+  if (_worker) return _worker;
+  _worker = new Worker('/gnugo-worker.js');
+  _worker.onmessage = function (e) {
+    const { type, id, raw, message } = e.data;
+    if (type === 'ready') {
+      _workerReady = true;
+      const p = _pendingCalls.get(id);
+      if (p) { _pendingCalls.delete(id); p.resolve(); }
+      return;
     }
-    sgf += ')';
-    return sgf;
-  }
-
-  function buildSGFUpTo(moveHistory, size, komi, count) {
-    return buildSGF(moveHistory.slice(0, count), size, komi);
-  }
-
-  /** Convert a [row, col] move to SGF coordinate string, e.g. "dc". */
-  function moveToSgfCoord(move) {
-    return LETTERS[move[1]] + LETTERS[move[0]];
-  }
-
-  /** Append extra SGF move tokens to an existing SGF string (removes trailing ')' first). */
-  function appendToSgf(sgf, tokens) {
-    return sgf.slice(0, -1) + tokens.join('') + ')';
-  }
-
-  function parseMoveFromSgfResponse(sgfResponse, expectedMoveCount, size) {
-    const expected = expectedMoveCount ?? 0;
-    const movePattern = /;([BW])\[([a-s]{0,2})\]/g;
-    const allMoves = [];
-    let match;
-
-    while ((match = movePattern.exec(sgfResponse)) !== null) {
-      allMoves.push({ color: match[1], coord: match[2] });
+    if (type === 'result') {
+      const p = _pendingCalls.get(id);
+      if (p) { _pendingCalls.delete(id); p.resolve(raw); }
+      return;
     }
+    if (type === 'error') {
+      const p = _pendingCalls.get(id);
+      if (p) { _pendingCalls.delete(id); p.reject(new Error(message)); }
+      return;
+    }
+  };
+  _worker.onerror = function (e) {
+    console.error('GnuGo worker error:', e);
+  };
+  return _worker;
+}
 
-    if (allMoves.length <= expected) return null;
+export function buildSGF(moveHistory, size, komi) {
+  let sgf = `(;GM[1]FF[4]SZ[${size}]KM[${komi}]`;
+  for (const m of moveHistory) {
+    const color = m.player === 1 ? 'B' : 'W';
+    if (m.pass) {
+      sgf += `;${color}[]`;
+    } else {
+      sgf += `;${color}[${LETTERS[m.y]}${LETTERS[m.x]}]`;
+    }
+  }
+  sgf += ')';
+  return sgf;
+}
 
-    const gnugoMove = allMoves[allMoves.length - 1];
-    if (!gnugoMove.coord || gnugoMove.coord.length < 2) return null;
+export function buildSGFUpTo(moveHistory, size, komi, count) {
+  return buildSGF(moveHistory.slice(0, count), size, komi);
+}
 
-    const col = LETTERS.indexOf(gnugoMove.coord[0]);
-    const row = LETTERS.indexOf(gnugoMove.coord[1]);
-    if (col < 0 || row < 0 || col >= size || row >= size) return null;
+/** Convert a [row, col] move to SGF coordinate string, e.g. "dc". */
+export function moveToSgfCoord(move) {
+  return LETTERS[move[1]] + LETTERS[move[0]];
+}
 
-    return [row, col];
+/** Append extra SGF move tokens to an existing SGF string (removes trailing ')' first). */
+export function appendToSgf(sgf, tokens) {
+  return sgf.slice(0, -1) + tokens.join('') + ')';
+}
+
+export function parseMoveFromSgfResponse(sgfResponse, expectedMoveCount, size) {
+  const expected = expectedMoveCount ?? 0;
+  const movePattern = /;([BW])\[([a-s]{0,2})\]/g;
+  const allMoves = [];
+  let match;
+
+  while ((match = movePattern.exec(sgfResponse)) !== null) {
+    allMoves.push({ color: match[1], coord: match[2] });
   }
 
-  function ensureReady(setStatus) {
-    if (gnugoReady) return Promise.resolve();
-    if (gnugoLoadingPromise) return gnugoLoadingPromise;
+  if (allMoves.length <= expected) return null;
 
-    const notify = typeof setStatus === 'function' ? setStatus : () => {};
+  const gnugoMove = allMoves[allMoves.length - 1];
+  if (!gnugoMove.coord || gnugoMove.coord.length < 2) return null;
 
-    notify('⏳ 載入 GnuGo AI 引擎...');
+  const col = LETTERS.indexOf(gnugoMove.coord[0]);
+  const row = LETTERS.indexOf(gnugoMove.coord[1]);
+  if (col < 0 || row < 0 || col >= size || row >= size) return null;
 
-    const Module = {};
-    Module.locateFile = function (path) {
-      if (path === 'gnugo.wasm') return 'gnugo.wasm';
-      return path;
-    };
+  return [row, col];
+}
 
-    gnugoLoadingPromise = fetch('gnugo.wasm')
-      .then(response => response.arrayBuffer())
-      .then(bytes => {
-        Module.wasmBinary = new Uint8Array(bytes);
-        GnuGoLoader.init(Module);
-        gnugoModule = Module;
-        gnugoReady = true;
+// ——— Initialisation ———
+
+export function ensureReady(setStatus) {
+  if (_workerReady) return Promise.resolve();
+  if (_workerLoadingPromise) return _workerLoadingPromise;
+
+  const notify = typeof setStatus === 'function' ? setStatus : () => {};
+  notify('⏳ 載入 GnuGo AI 引擎...');
+
+  const id = _nextId++;
+  const worker = _getWorker();
+
+  _workerLoadingPromise = new Promise((resolve, reject) => {
+    _pendingCalls.set(id, {
+      resolve: () => {
         const statusEl = typeof document !== 'undefined' ? document.getElementById('statusMsg') : null;
         const currentStatus = statusEl?.textContent?.trim() || '';
-        if (!currentStatus || currentStatus === '請開始新遊戲' || currentStatus === '⏳ 載入 GnuGo AI 引擎...') {
-          notify('GnuGo AI 引擎載入完成！');
-        }
-      })
-      .catch(err => {
-        gnugoLoadingPromise = null;
+        const safeToOverwrite = !currentStatus
+          || currentStatus === '請開始新遊戲'
+          || currentStatus === '⏳ 載入 GnuGo AI 引擎...'
+          || currentStatus.startsWith('已恢復棋局');
+        if (safeToOverwrite) notify('GnuGo AI 引擎載入完成！');
+        resolve();
+      },
+      reject: (err) => {
+        _workerLoadingPromise = null;
         notify('⚠️ AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
-        throw err;
-      });
+        reject(err);
+      }
+    });
+  });
 
-    return gnugoLoadingPromise;
+  worker.postMessage({ type: 'init', id, payload: { wasmUrl: '/gnugo.wasm' } });
+  return _workerLoadingPromise;
+}
+
+export function isReady() {
+  return _workerReady;
+}
+
+// ——— Cache ———
+
+const _playCache = new Map();
+const _PLAY_CACHE_MAX = 60;
+
+export function clearPlayCache() {
+  _playCache.clear();
+}
+
+// ——— Core async play ———
+
+/** Returns Promise<{ raw: string, move: [row, col] | null }> */
+export function play(level, sgf, expectedMoveCount, size) {
+  const cacheKey = `${level}::${sgf}`;
+  if (_playCache.has(cacheKey)) {
+    const cached = _playCache.get(cacheKey);
+    return Promise.resolve({
+      raw: cached.raw,
+      move: parseMoveFromSgfResponse(cached.raw, expectedMoveCount, size)
+    });
   }
 
-  const _playCache = new Map();
-  const _PLAY_CACHE_MAX = 60;
-
-  function play(level, sgf, expectedMoveCount, size) {
-    if (!gnugoReady || !gnugoModule) {
-      throw new Error('GnuGo not ready');
-    }
-    const cacheKey = `${level}::${sgf}`;
-    if (_playCache.has(cacheKey)) {
-      const cached = _playCache.get(cacheKey);
-      return { raw: cached.raw, move: parseMoveFromSgfResponse(cached.raw, expectedMoveCount, size) };
-    }
-    const raw = gnugoModule.ccall('play', 'string', ['number', 'string'], [level, sgf]);
-    if (_playCache.size >= _PLAY_CACHE_MAX) {
-      _playCache.delete(_playCache.keys().next().value);
-    }
-    _playCache.set(cacheKey, { raw });
-    return { raw, move: parseMoveFromSgfResponse(raw, expectedMoveCount, size) };
+  if (!_workerReady) {
+    return Promise.reject(new Error('GnuGo not ready'));
   }
 
-  function clearPlayCache() {
-    _playCache.clear();
+  const id = _nextId++;
+  return new Promise((resolve, reject) => {
+    _pendingCalls.set(id, {
+      resolve: (raw) => {
+        if (_playCache.size >= _PLAY_CACHE_MAX) {
+          _playCache.delete(_playCache.keys().next().value);
+        }
+        _playCache.set(cacheKey, { raw });
+        resolve({ raw, move: parseMoveFromSgfResponse(raw, expectedMoveCount, size) });
+      },
+      reject
+    });
+    _getWorker().postMessage({ type: 'play', id, payload: { level, sgf } });
+  });
+}
+
+// ——— High-level helpers (all async) ———
+
+export async function getTopMoves(moveHistory, size, komi, currentPlayer, count) {
+  const hints = [];
+  const sgfBase = buildSGF(moveHistory, size, komi);
+  const firstResult = await play(10, sgfBase, moveHistory.length, size);
+  const first = firstResult.move;
+  if (!first) return hints;
+
+  const color = currentPlayer === 1 ? 'B' : 'W';
+  const oppColor = currentPlayer === 1 ? 'W' : 'B';
+
+  hints.push(first);
+
+  const sgfForSecond = appendToSgf(sgfBase, [
+    `;${color}[${moveToSgfCoord(first)}]`,
+    `;${oppColor}[]`
+  ]);
+  const secondResult = await play(10, sgfForSecond, moveHistory.length + 2, size);
+  const second = secondResult.move;
+  if (second && (second[0] !== first[0] || second[1] !== first[1])) {
+    hints.push(second);
   }
 
-  function getTopMoves(moveHistory, size, komi, currentPlayer, count) {
-    const hints = [];
-    const sgfBase = buildSGF(moveHistory, size, komi);
-    const first = play(10, sgfBase, moveHistory.length, size).move;
-    if (!first) return hints;
-
-    const color = currentPlayer === 1 ? 'B' : 'W';
-    const oppColor = currentPlayer === 1 ? 'W' : 'B';
-
-    hints.push(first);
-
-    const baseSgf = buildSGF(moveHistory, size, komi);
-    const sgfForSecond = appendToSgf(baseSgf, [
+  if (count >= 3 && hints.length >= 2) {
+    const secondMove = hints[1];
+    const sgfForThird = appendToSgf(sgfBase, [
       `;${color}[${moveToSgfCoord(first)}]`,
+      `;${oppColor}[]`,
+      `;${color}[${moveToSgfCoord(secondMove)}]`,
       `;${oppColor}[]`
     ]);
-    const second = play(10, sgfForSecond, moveHistory.length + 2, size).move;
-    if (second && (second[0] !== first[0] || second[1] !== first[1])) {
-      hints.push(second);
+    const thirdResult = await play(10, sgfForThird, moveHistory.length + 4, size);
+    const third = thirdResult.move;
+    if (third && !hints.some(m => m[0] === third[0] && m[1] === third[1])) {
+      hints.push(third);
     }
-
-    if (count >= 3 && hints.length >= 2) {
-      const secondMove = hints[1];
-      const sgfForThird = appendToSgf(baseSgf, [
-        `;${color}[${moveToSgfCoord(first)}]`,
-        `;${oppColor}[]`,
-        `;${color}[${moveToSgfCoord(secondMove)}]`,
-        `;${oppColor}[]`
-      ]);
-      const third = play(10, sgfForThird, moveHistory.length + 4, size).move;
-      if (third && !hints.some(m => m[0] === third[0] && m[1] === third[1])) {
-        hints.push(third);
-      }
-    }
-
-    return hints.slice(0, count);
   }
 
-  return {
-    ensureReady,
-    isReady: () => gnugoReady,
-    buildSGF,
-    buildSGFUpTo,
-    parseMoveFromSgfResponse,
-    play,
-    clearPlayCache,
-    getTopMoves
-  };
-})();
+  return hints.slice(0, count);
+}
+
+export const GnuGoService = {
+  ensureReady, isReady, buildSGF, buildSGFUpTo, appendToSgf,
+  moveToSgfCoord, parseMoveFromSgfResponse, play, clearPlayCache, getTopMoves
+};

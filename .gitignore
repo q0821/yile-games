@@ -1,3 +1,4 @@
 .DS_Store
 .amp/
 node_modules/
+dist/

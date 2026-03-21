@@ -1,52 +1,131 @@
 /**
- * Test helpers: load browser IIFE modules into a vm sandbox so they work
- * in Node.js without a real DOM.  Each file does (function(global){...})(window),
- * so we create a context where `window` === the context object itself.
+ * Test helpers: load ES6 modules into a vm sandbox for use in Node.js tests.
+ *
+ * Since the source files now use ES6 import/export, we use Babel to
+ * transpile them to CJS before executing in the vm context.
  */
 const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
+const babel = require('@babel/core');
 
 const ROOT = path.join(__dirname, '..');
 
-function createSandbox() {
-  const ctx = vm.createContext({});
-  ctx.window = ctx;
-  return ctx;
+const BABEL_OPTS = {
+  presets: [['@babel/preset-env', {
+    targets: { node: 'current' },
+    modules: 'commonjs'
+  }]],
+  babelrc: false,
+  configFile: false
+};
+
+/** Transpile a file from ES6 → CJS. */
+function transpile(filePath) {
+  const code = fs.readFileSync(filePath, 'utf8');
+  return babel.transformSync(code, { ...BABEL_OPTS, filename: filePath }).code;
 }
 
-function loadFile(ctx, file) {
-  const code = fs.readFileSync(path.join(ROOT, file), 'utf8');
-  vm.runInContext(code, ctx);
+/**
+ * A tiny require() that:
+ *  - resolves local files relative to ROOT, transpiles them, and runs them
+ *    in the shared vm context.
+ *  - caches results so each file is loaded only once per sandbox.
+ */
+function makeRequire(ctx, cache) {
+  function localRequire(id) {
+    if (cache[id] !== undefined) return cache[id];
+
+    // Relative imports → resolve from ROOT
+    if (!id.startsWith('.') && !id.startsWith('/')) {
+      throw new Error(`require('${id}') not supported in sandbox`);
+    }
+    const filePath = require.resolve(path.resolve(ROOT, id));
+
+    // Create a fresh exports object, expose it as module+exports in the context,
+    // then execute the transpiled code.
+    const modExports = {};
+    cache[id] = modExports; // set before running to handle circular deps
+
+    const cjs = transpile(filePath);
+    const script = new vm.Script(
+      `(function(require, module, exports){ ${cjs} })(localRequire, localModule, localModule.exports);`
+    );
+    ctx.localRequire = localRequire;
+    ctx.localModule = { exports: modExports };
+    script.runInContext(ctx);
+
+    // Copy whatever was placed on module.exports back
+    Object.assign(modExports, ctx.localModule.exports);
+    cache[id] = modExports;
+    return modExports;
+  }
+  return localRequire;
+}
+
+function createSandbox() {
+  const cache = {};
+  const ctx = vm.createContext({
+    // Minimal browser-like globals
+    document: {
+      getElementById: () => null,
+      createElement: () => ({ style: {} }),
+      querySelector: () => null
+    },
+    window: null,
+    console,
+    setTimeout, clearTimeout, setInterval, clearInterval,
+    Math, Array, Object, Set, Map, JSON, Promise,
+    requestAnimationFrame: (fn) => { fn(0); return 0; },
+    // Stubs for missing properties
+    localRequire: null,
+    localModule: null
+  });
+  ctx.window = ctx;
+  ctx.localRequire = makeRequire(ctx, cache);
+  return { ctx, localRequire: ctx.localRequire };
+}
+
+/**
+ * Load a source file into a sandbox context and return its exports merged
+ * into the context object (for convenience: ctx.GoRules etc.).
+ */
+function loadIntoContext(ctx, localRequire, relPath) {
+  const exports = localRequire(relPath);
+  // Expose named exports directly on ctx so tests can do ctx.GoRules etc.
+  for (const [k, v] of Object.entries(exports)) {
+    if (k !== '__esModule') ctx[k] = v;
+  }
+  return exports;
 }
 
 /** Returns a sandbox with GoRules loaded. */
 function sandboxWithRules() {
-  const ctx = createSandbox();
-  loadFile(ctx, 'rules.js');
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
   return ctx;
 }
 
 /** Returns a sandbox with GoRules + GameState loaded. */
 function sandboxWithGameState() {
-  const ctx = createSandbox();
-  loadFile(ctx, 'rules.js');
-  loadFile(ctx, 'game-state.js');
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
+  loadIntoContext(ctx, localRequire, './game-state.js');
   return ctx;
 }
 
 /** Returns a sandbox with GoRules + GoHints loaded. */
 function sandboxWithHints() {
-  const ctx = createSandbox();
-  loadFile(ctx, 'rules.js');
-  loadFile(ctx, 'hints.js');
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
+  loadIntoContext(ctx, localRequire, './hints.js');
   return ctx;
 }
 
 /** Returns a sandbox with GoTimer loaded (no DOM needed for pure functions). */
 function sandboxWithTimer() {
-  const ctx = createSandbox();
-  loadFile(ctx, 'timer.js');
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './timer.js');
   return ctx;
 }
 

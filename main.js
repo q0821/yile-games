@@ -1,15 +1,25 @@
-// ==================== CONSTANTS ====================
-const { EMPTY, BLACK, WHITE } = GoRules;
-let komi = 7.5;
-let gameRules = 'chinese'; // 'chinese' or 'japanese'
+// main.js — entry point; wires modules together and manages shared game state.
 
-const GUIDANCE_HINT_DELAY_MS = 150;   // debounce before requesting guidance hints
-const AI_MOVE_DELAY_MS       = 100;   // short delay before AI move after a stone is placed
-const AI_INIT_DELAY_MS       = 300;   // longer delay when AI engine just finished initialising
-const ANALYSIS_STEP_DELAY_MS = 10;    // yield-to-browser interval between analysis steps
-const ANALYSIS_GOOD_DIST     = 3;     // Manhattan distance ≤ this → 'good' rating
-const ANALYSIS_BAD_DIST      = 7;     // Manhattan distance > this → 'bad' rating
-const COORD_LETTERS = 'ABCDEFGHJKLMNOPQRST'; // Go column labels (I omitted)
+import { EMPTY, BLACK, WHITE, opponent, inBounds as _inBounds, getNeighbors as _getNeighbors, getGroup as _getGroup, getLegalMoves as _getLegalMoves, tryPlaceStone as _tryPlaceStone, calculateScore } from './rules.js';
+import * as GameStateModule from './game-state.js';
+import { GoUI } from './ui.js';
+import { GoSound } from './sound.js';
+import { GoTimer } from './timer.js';
+import { GoHints } from './hints.js';
+import { GoReview } from './review.js';
+import { GnuGoService } from './gnugo-service.js';
+import { toggleSidebar, openSidebar, closeSidebar } from './sidebar.js';
+import { makeAiController } from './ai-controller.js';
+import { registerEventHandlers } from './event-handlers.js';
+
+// ==================== CONSTANTS ====================
+const GUIDANCE_HINT_DELAY_MS = 150;
+const AI_MOVE_DELAY_MS       = 100;
+const AI_INIT_DELAY_MS       = 300;
+const ANALYSIS_STEP_DELAY_MS = 10;
+const ANALYSIS_GOOD_DIST     = 3;
+const ANALYSIS_BAD_DIST      = 7;
+const COORD_LETTERS = 'ABCDEFGHJKLMNOPQRST';
 
 const VALID_BOARD_SIZES = [9, 13, 19];
 const VALID_GAME_MODES  = ['pvc', 'pvp'];
@@ -21,6 +31,9 @@ const STAR_POINTS = {
 };
 
 // ==================== GAME STATE ====================
+let komi = 7.5;
+let gameRules = 'chinese';
+
 let size = 19;
 let board = [];
 let currentPlayer = BLACK;
@@ -35,33 +48,25 @@ let playerColor = BLACK;
 let aiLevel = 10;
 let isAIThinking = false;
 
-// Timer
 let timerEnabled = false;
 let timerSeconds = { [BLACK]: 600, [WHITE]: 600 };
 
-// Review
 let isReviewing = false;
 let currentReviewMove = 0;
 
-// AI Analysis
-let analysisData = null;  // array of { move, aiSuggestion, rating }
+let analysisData = null;
 let isAnalyzing = false;
 let analysisProgress = 0;
 
-// Scoring
 let isScoring = false;
 let deadStones = new Set();
-
-// Hint
 let showingHint = false;
 
-// Beginner Guidance
 let guidanceEnabled = false;
-let guidanceHints = [];       // [{x, y, rank, label}]
-let guidanceTooltip = null;   // {x, y, label} currently showing tooltip
+let guidanceHints = [];
+let guidanceTooltip = null;
 let guidanceLoading = false;
 
-// Canvas
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 let cellSize = 30;
@@ -69,38 +74,98 @@ let padding = 40;
 let lastMove = null;
 let hoverPos = null;
 
+// ==================== GameState proxy ====================
+const GameState = GameStateModule;
+
 // ==================== BOARD / RULES ENGINE ====================
-const opponent = GoRules.opponent;
+function inBounds(x, y)          { return _inBounds(size, x, y); }
+function getNeighbors(x, y)      { return _getNeighbors(size, x, y); }
+function getGroup(b, x, y)       { return _getGroup(b, size, x, y); }
+function tryPlaceStone(b, x, y, player, ko) { return _tryPlaceStone(b, size, x, y, player, ko); }
+function getLegalMoves(b, player, ko)       { return _getLegalMoves(b, size, player, ko); }
 
-function inBounds(x, y) {
-  return GoRules.inBounds(size, x, y);
-}
+function isGameBlocked() { return gameOver || isReviewing || isScoring; }
+function isGameBusy()    { return isGameBlocked() || isAIThinking; }
 
-function getNeighbors(x, y) {
-  return GoRules.getNeighbors(size, x, y);
-}
+// ==================== APP CONTEXT (shared with sub-modules) ====================
+// The `app` object provides sub-modules with access to mutable state and helpers.
+const app = {
+  // Constants
+  EMPTY, BLACK, WHITE,
+  GUIDANCE_HINT_DELAY_MS, AI_MOVE_DELAY_MS, AI_INIT_DELAY_MS,
+  ANALYSIS_STEP_DELAY_MS, ANALYSIS_GOOD_DIST, ANALYSIS_BAD_DIST,
+  COORD_LETTERS, STAR_POINTS,
 
-function getGroup(b, x, y) {
-  return GoRules.getGroup(b, size, x, y);
-}
+  // State getters (re-read live values)
+  get size()              { return size; },
+  get board()             { return board; },
+  get currentPlayer()     { return currentPlayer; },
+  get captures()          { return captures; },
+  get moveHistory()       { return moveHistory; },
+  get koPoint()           { return koPoint; },
+  get passCount()         { return passCount; },
+  get gameOver()          { return gameOver; },
+  get gameMode()          { return gameMode; },
+  get playerColor()       { return playerColor; },
+  get aiLevel()           { return aiLevel; },
+  get isAIThinking()      { return isAIThinking; },
+  get timerEnabled()      { return timerEnabled; },
+  get timerSeconds()      { return timerSeconds; },
+  get gameRules()         { return gameRules; },
+  get komi()              { return komi; },
+  get isReviewing()       { return isReviewing; },
+  get currentReviewMove() { return currentReviewMove; },
+  get isScoring()         { return isScoring; },
+  get deadStones()        { return deadStones; },
+  get showingHint()       { return showingHint; },
+  get guidanceEnabled()   { return guidanceEnabled; },
+  get guidanceHints()     { return guidanceHints; },
+  get guidanceTooltip()   { return guidanceTooltip; },
+  get guidanceLoading()   { return guidanceLoading; },
+  get analysisData()      { return analysisData; },
+  get isAnalyzing()       { return isAnalyzing; },
+  get analysisProgress()  { return analysisProgress; },
+  get canvas()            { return canvas; },
+  get padding()           { return padding; },
+  get cellSize()          { return cellSize; },
+  get hoverPos()          { return hoverPos; },
 
-function tryPlaceStone(b, x, y, player, currentKo) {
-  return GoRules.tryPlaceStone(b, size, x, y, player, currentKo);
-}
+  // State setters
+  set guidanceHints(v)    { guidanceHints = v; },
+  set guidanceTooltip(v)  { guidanceTooltip = v; },
+  set guidanceLoading(v)  { guidanceLoading = v; },
+  set guidanceEnabled(v)  { guidanceEnabled = v; },
+  set isAnalyzing(v)      { isAnalyzing = v; },
+  set analysisData(v)     { analysisData = v; },
+  set analysisProgress(v) { analysisProgress = v; },
+  set hoverPos(v)         { hoverPos = v; },
 
-function getLegalMoves(b, player, ko) {
-  return GoRules.getLegalMoves(b, size, player, ko);
-}
+  // References to modules
+  GameState,
+  GoUI, GoSound, GoTimer, GoHints, GoReview, GnuGoService,
 
-/** Game is in a terminal or special mode — no moves accepted at all. */
-function isGameBlocked() {
-  return gameOver || isReviewing || isScoring;
-}
+  // Functions (bound below)
+  inBounds, getGroup,
+  isGameBlocked, isGameBusy,
+  placeStone: (...args) => placeStone(...args),
+  doPass: (...args) => doPass(...args),
+  applyStateFromStore: () => applyStateFromStore(),
+  updateUI: () => updateUI(),
+  updateScoringDisplay: () => updateScoringDisplay(),
+  syncStatus: (...args) => syncStatus(...args),
+  setStatus: (msg) => setStatus(msg),
+  drawBoard: () => drawBoard(),
+  renderGuidanceLegend: () => renderGuidanceLegend(),
+  hideGuidanceTooltip: () => hideGuidanceTooltip(),
+  showGuidanceTooltipAt: (hint) => showGuidanceTooltipAt(hint),
+  clearGuidance: () => clearGuidance(),
+  reviewGo: (n) => reviewGo(n),
+  closeSidebar,
+};
 
-/** isGameBlocked + AI is currently calculating (UI interactions fully paused). */
-function isGameBusy() {
-  return isGameBlocked() || isAIThinking;
-}
+// ==================== AI CONTROLLER ====================
+const aiController = makeAiController(app);
+app.aiController = aiController;
 
 // ==================== CAPTURE HINTS ====================
 function showHintOnce() {
@@ -110,10 +175,7 @@ function showHintOnce() {
 }
 
 function clearHint() {
-  if (showingHint) {
-    showingHint = false;
-    drawBoard();
-  }
+  if (showingHint) { showingHint = false; drawBoard(); }
 }
 
 function getCaptureHints(b, player) {
@@ -122,49 +184,7 @@ function getCaptureHints(b, player) {
 
 // ==================== BEGINNER GUIDANCE ====================
 function requestGuidanceHints() {
-  if (!guidanceEnabled || isGameBusy()) return;
-  if (gameMode === 'pvc' && currentPlayer !== playerColor) return;
-
-  guidanceHints = [];
-  guidanceTooltip = null;
-  hideGuidanceTooltip();
-
-  if (!GnuGoService.isReady()) {
-    guidanceLoading = true;
-    drawBoard();
-    initGnuGo().then(() => {
-      guidanceLoading = false;
-      if (guidanceEnabled) requestGuidanceHints();
-    }).catch(() => {
-      guidanceLoading = false;
-    });
-    return;
-  }
-
-  guidanceLoading = true;
-  drawBoard();
-
-  setTimeout(() => {
-    try {
-      const phase = GoHints.getGamePhase(moveHistory.length, size);
-      const labelCtx = { board, size, currentPlayer };
-      const hints = [];
-      const topMoves = GnuGoService.getTopMoves(moveHistory, size, komi, currentPlayer, 3);
-
-      topMoves.forEach((move, index) => {
-        const label = GoHints.getGuidanceLabel(move[0], move[1], index, phase, labelCtx);
-        hints.push({ x: move[0], y: move[1], rank: index, label });
-      });
-
-      guidanceHints = hints;
-    } catch (e) {
-      console.error('Guidance hint error:', e);
-      guidanceHints = [];
-    }
-    guidanceLoading = false;
-    renderGuidanceLegend();
-    drawBoard();
-  }, 10);
+  aiController.requestGuidanceHints();
 }
 
 function renderGuidanceLegend() {
@@ -178,10 +198,7 @@ function clearGuidance() {
   renderGuidanceLegend();
 }
 
-function hideGuidanceTooltip() {
-  GoUI.hideGuidanceTooltip();
-}
-
+function hideGuidanceTooltip() { GoUI.hideGuidanceTooltip(); }
 function showGuidanceTooltipAt(hint) {
   GoUI.showGuidanceTooltipAt({ canvas, padding, cellSize }, hint);
 }
@@ -189,39 +206,21 @@ function showGuidanceTooltipAt(hint) {
 // ==================== RENDERING ====================
 function getCurrentStateSnapshot() {
   return {
-    size,
-    board,
-    currentPlayer,
-    captures,
-    moveHistory,
-    boardHistory,
-    koPoint,
-    passCount,
-    gameOver,
-    lastMove,
-    gameMode,
-    playerColor,
-    aiLevel,
-    timerEnabled,
-    timerSeconds,
-    gameRules,
-    komi,
-    isReviewing,
-    currentReviewMove,
-    isScoring,
-    deadStones,
-    isAIThinking
+    size, board, currentPlayer, captures, moveHistory, boardHistory,
+    koPoint, passCount, gameOver, lastMove, gameMode, playerColor,
+    aiLevel, timerEnabled, timerSeconds, gameRules, komi, isReviewing,
+    currentReviewMove, isScoring, deadStones, isAIThinking
   };
 }
 
 function buildBoardViewState() {
   const state = getCurrentStateSnapshot();
-  const displayBoard = isReviewing ? getReviewBoard() : board;
-  const scoreData = isScoring ? GoRules.calculateScore(board, size, deadStones, captures, gameRules, komi) : null;
+  const displayBoard = isReviewing ? GoReview.getReviewBoard(moveHistory, currentReviewMove, size) : board;
+  const scoreData = isScoring ? calculateScore(board, size, deadStones, captures, gameRules, komi) : null;
   const captureHints = showingHint && !gameOver && !isReviewing && !isScoring && !isAIThinking
     ? getCaptureHints(board, currentPlayer)
     : [];
-  const lastMoveToShow = isReviewing ? getReviewLastMove() : lastMove;
+  const lastMoveToShow = isReviewing ? GoReview.getReviewLastMove(moveHistory, currentReviewMove) : lastMove;
 
   return {
     ...state,
@@ -235,7 +234,8 @@ function buildBoardViewState() {
     captureHints,
     guidanceEnabled,
     guidanceLoading,
-    guidanceHints
+    guidanceHints,
+    hoverPos
   };
 }
 
@@ -244,13 +244,7 @@ function drawBoard() {
   if (_drawRaf) return;
   _drawRaf = requestAnimationFrame(() => {
     _drawRaf = null;
-    const deps = {
-      canvas,
-      ctx,
-      padding,
-      cellSize,
-      starPoints: STAR_POINTS
-    };
+    const deps = { canvas, ctx, padding, cellSize, starPoints: STAR_POINTS };
     GoUI.drawBoard(deps, buildBoardViewState());
     cellSize = deps.cellSize;
     padding = deps.padding;
@@ -283,7 +277,7 @@ function placeStone(x, y) {
   saveGame();
 
   if (willRequestAI) {
-    setTimeout(() => requestAIMove(), AI_MOVE_DELAY_MS);
+    setTimeout(() => aiController.requestAIMove(), AI_MOVE_DELAY_MS);
   }
 
   if (guidanceEnabled && !gameOver) {
@@ -322,7 +316,7 @@ function doPass() {
   saveGame();
 
   if (willRequestAI) {
-    setTimeout(() => requestAIMove(), AI_MOVE_DELAY_MS);
+    setTimeout(() => aiController.requestAIMove(), AI_MOVE_DELAY_MS);
   }
 
   if (guidanceEnabled && !gameOver) {
@@ -347,6 +341,7 @@ function doUndo() {
   applyStateFromStore();
 
   updateUI();
+  syncStatus();
   drawBoard();
   setStatus('已悔棋');
   saveGame();
@@ -373,12 +368,12 @@ function endGameByScoring() {
 }
 
 function updateScoringDisplay() {
-  const score = GoRules.calculateScore(board, size, deadStones, captures, gameRules, komi);
+  const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
   GoUI.updateScoringDisplay({ gameRules, komi }, score);
 }
 
 function confirmScoring() {
-  const score = GoRules.calculateScore(board, size, deadStones, captures, gameRules, komi);
+  const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
   const diff = score.black - score.white;
   const winner = diff > 0 ? '⚫ 黑方' : '⚪ 白方';
   const detail = `黑 ${score.black.toFixed(1)} vs 白 ${score.white.toFixed(1)}（含貼目 ${komi}）`;
@@ -413,7 +408,7 @@ function endGame(title, detail) {
 }
 
 function exportSGF() {
-  const sgf = buildSGF();
+  const sgf = GnuGoService.buildSGF(moveHistory, size, komi);
   const blob = new Blob([sgf], { type: 'application/x-go-sgf' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -449,13 +444,9 @@ function switchTimer() {
   GoTimer.switch(timerSeconds, () => currentPlayer, _timerOnTimeout);
 }
 
-function stopTimer() {
-  GoTimer.stop();
-}
+function stopTimer() { GoTimer.stop(); }
 
-function updateTimerDisplay() {
-  GoTimer.updateDisplay(timerSeconds);
-}
+function updateTimerDisplay() { GoTimer.updateDisplay(timerSeconds); }
 
 // ==================== REVIEW ====================
 function enterReview() {
@@ -492,233 +483,35 @@ function reviewGo(n) {
   if (!result.ok) return;
   applyStateFromStore();
   updateReviewInfo();
-  if (analysisData && !isAnalyzing) updateAnalysisMoveInfo();
+  if (analysisData && !isAnalyzing) aiController.updateAnalysisMoveInfo();
   drawBoard();
-}
-
-function getReviewBoard() {
-  return GoReview.getReviewBoard(moveHistory, currentReviewMove, size);
-}
-
-function getReviewLastMove() {
-  return GoReview.getReviewLastMove(moveHistory, currentReviewMove);
 }
 
 function updateReviewInfo() {
-  GoUI.updateReviewInfo({
-    currentReviewMove,
-    moveHistory,
-    size
-  });
+  GoUI.updateReviewInfo({ currentReviewMove, moveHistory, size });
 }
 
 // ==================== AI REVIEW ANALYSIS ====================
-function buildSGFUpTo(n) {
-  return GoReview.buildSGFUpTo(n, moveHistory, size, komi);
-}
-
 function startAnalysis() {
-  if (isAnalyzing || !gameOver || moveHistory.length === 0) return;
-
-  initGnuGo().then(() => {
-    isAnalyzing = true;
-    analysisData = [];
-    analysisProgress = 0;
-
-    document.getElementById('analysisBtn').style.display = 'none';
-    document.getElementById('analysisPanel').style.display = 'block';
-    document.getElementById('analysisProgressBar').style.display = 'block';
-    document.getElementById('analysisSummary').style.display = 'none';
-    document.getElementById('analysisMoveInfo').style.display = 'none';
-
-    analyzeStep(0);
-  }).catch(() => {
-    setStatus('⚠️ AI 引擎未就緒，無法分析');
-  });
+  aiController.startAnalysis();
 }
-
-function analyzeStep(moveIndex) {
-  if (!isAnalyzing) return; // user may have exited review while analysis was running
-  if (moveIndex >= moveHistory.length) {
-    finishAnalysis();
-    return;
-  }
-
-  const m = moveHistory[moveIndex];
-
-  // Build SGF up to this move (not including it), ask GnuGo what it would play.
-  // A single setTimeout yields to the browser for UI updates between steps;
-  // pass moves skip the WASM call but still yield so the progress bar repaints.
-  setTimeout(() => {
-    if (!isAnalyzing) return; // re-check after yield
-
-    if (!m.pass) {
-      try {
-        const level = 10; // always use max level for analysis
-        const sgf = buildSGFUpTo(moveIndex);
-        const aiMove = GnuGoService.play(level, sgf, moveIndex, size).move;
-
-        let rating = 'good';
-        if (aiMove) {
-          const dist = Math.abs(aiMove[0] - m.x) + Math.abs(aiMove[1] - m.y);
-          if (dist === 0) {
-            rating = 'good';       // Same as AI
-          } else if (dist <= ANALYSIS_GOOD_DIST) {
-            rating = 'good';       // Close enough
-          } else if (dist <= ANALYSIS_BAD_DIST) {
-            rating = 'question';   // Questionable
-          } else {
-            rating = 'bad';        // Very different
-          }
-        }
-
-        analysisData.push({ move: m, aiSuggestion: aiMove, rating });
-      } catch (e) {
-        analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
-      }
-    } else {
-      analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
-    }
-
-    analysisProgress = Math.round(((moveIndex + 1) / moveHistory.length) * 100);
-    updateAnalysisProgress();
-    analyzeStep(moveIndex + 1);
-  }, ANALYSIS_STEP_DELAY_MS);
-}
-
-function updateAnalysisProgress() {
-  document.getElementById('analysisProgressFill').style.width = analysisProgress + '%';
-  document.getElementById('analysisProgressText').textContent =
-    `分析中... ${analysisProgress}%（${analysisData.length} / ${moveHistory.length} 手）`;
-}
-
-function finishAnalysis() {
-  isAnalyzing = false;
-  document.getElementById('analysisProgressBar').style.display = 'none';
-  document.getElementById('analysisSummary').style.display = 'block';
-  document.getElementById('analysisMoveInfo').style.display = 'block';
-
-  let good = 0, question = 0, bad = 0;
-  for (const d of analysisData) {
-    if (d.rating === 'good') good++;
-    else if (d.rating === 'question') question++;
-    else if (d.rating === 'bad') bad++;
-  }
-  document.getElementById('goodCount').textContent = good;
-  document.getElementById('questionCount').textContent = question;
-  document.getElementById('badCount').textContent = bad;
-
-  updateAnalysisMoveInfo();
-  drawBoard();
-}
-
-function updateAnalysisMoveInfo() {
-  const el = document.getElementById('analysisMoveInfo');
-  if (!analysisData || currentReviewMove === 0) {
-    el.textContent = '';
-    return;
-  }
-  const d = analysisData[currentReviewMove - 1];
-  if (!d || d.move.pass) {
-    el.textContent = 'Pass';
-    return;
-  }
-  const ratingText = d.rating === 'good' ? '✅ 好手' : d.rating === 'question' ? '⚠️ 疑問手' : d.rating === 'bad' ? '❌ 惡手' : '';
-  let text = `${ratingText}`;
-  if (d.aiSuggestion && d.rating !== 'good') {
-    text += `　AI 建議：${COORD_LETTERS[d.aiSuggestion[1]]}${size - d.aiSuggestion[0]}`;
-  }
-  el.textContent = text;
-}
-
-// ==================== AI (GnuGo WASM) ====================
-
-function buildSGF() {
-  return GnuGoService.buildSGF(moveHistory, size, komi);
-}
-
-function parseGnuGoMove(sgfResponse, expectedMoveCount) {
-  const expected = expectedMoveCount !== undefined ? expectedMoveCount : moveHistory.length;
-  return GnuGoService.parseMoveFromSgfResponse(sgfResponse, expected, size);
-}
-
-function initGnuGo() {
-  return GnuGoService.ensureReady(setStatus);
-}
-
-
-function requestAIMove() {
-  if (gameOver || isAIThinking) return;
-  if (!GnuGoService.isReady()) {
-    initGnuGo().then(() => requestAIMove()).catch(() => {
-      setStatus('⚠️ AI 引擎未就緒');
-      GameState.sync({ isAIThinking: false });
-      applyStateFromStore();
-      updateUI();
-    });
-    return;
-  }
-  GameState.sync({ isAIThinking: true });
-  applyStateFromStore();
-  syncStatus();
-  updateUI();
-
-  // Use setTimeout to avoid blocking UI
-  setTimeout(() => {
-    try {
-      const sgf = buildSGF();
-      const move = GnuGoService.play(aiLevel, sgf, moveHistory.length, size).move;
-      GameState.sync({ isAIThinking: false });
-      applyStateFromStore();
-      updateUI();
-      if (move) {
-        placeStone(move[0], move[1]);
-      } else {
-        doPass();
-      }
-      if (!gameOver && !isAIThinking) {
-        applyStateFromStore();
-        updateUI();
-      }
-      // Guidance after AI move
-      if (guidanceEnabled && !gameOver && currentPlayer === playerColor) {
-        setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
-      }
-    } catch (err) {
-      console.error('GnuGo error:', err);
-      GameState.sync({ isAIThinking: false });
-      applyStateFromStore();
-      updateUI();
-      setStatus('⚠️ AI 出錯，請重新開始');
-    }
-  }, 50);
-}
-
 
 // ==================== UI ====================
 function updateUI() {
   const overlay = document.getElementById('aiThinkingOverlay');
   if (overlay) overlay.style.display = isAIThinking ? 'flex' : 'none';
-  GoUI.updateHUD({
-    gameOver,
-    isAIThinking,
-    currentPlayer,
-    captures,
-    moveHistory
-  });
+  GoUI.updateHUD({ gameOver, isAIThinking, currentPlayer, captures, moveHistory });
 }
 
-function setStatus(msg) {
-  GoUI.setStatus(msg);
-}
+function setStatus(msg) { GoUI.setStatus(msg); }
 
 function syncStatus(message = '') {
   const state = { currentPlayer, gameOver, isScoring, isReviewing, isAIThinking };
   GoUI.syncStatus(state, message);
 }
 
+// ==================== NEW GAME ====================
 function startNewGame() {
-  // Read settings (with whitelist validation to guard against tampered DOM)
   const rawSize = parseInt(document.getElementById('boardSize').value);
   size = VALID_BOARD_SIZES.includes(rawSize) ? rawSize : 19;
 
@@ -731,16 +524,7 @@ function startNewGame() {
   gameRules = document.getElementById('gameRules').value;
   komi = gameRules === 'japanese' ? 6.5 : 7.5;
 
-  GameState.startGame({
-    size,
-    gameMode,
-    playerColor,
-    aiLevel,
-    timerEnabled,
-    timerSeconds,
-    gameRules,
-    komi
-  });
+  GameState.startGame({ size, gameMode, playerColor, aiLevel, timerEnabled, timerSeconds, gameRules, komi });
   applyStateFromStore();
 
   analysisData = null;
@@ -751,7 +535,6 @@ function startNewGame() {
   guidanceLoading = false;
   hideGuidanceTooltip();
 
-  // UI reset
   document.getElementById('scoringPanel').style.display = 'none';
   document.getElementById('reviewBar').style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
@@ -761,12 +544,8 @@ function startNewGame() {
   document.getElementById('exportSgfBtn').style.display = 'none';
   document.getElementById('resultModal').classList.remove('show');
 
-  // Timer
   stopTimer();
-  if (timerEnabled) {
-    initTimer();
-    startTimer();
-  }
+  if (timerEnabled) { initTimer(); startTimer(); }
 
   const aiStartsGame = gameMode === 'pvc' && playerColor === WHITE && !gameOver;
   updateUI();
@@ -776,141 +555,21 @@ function startNewGame() {
   saveGame();
   GnuGoService.clearPlayCache();
 
-  // If PvC mode, preload GnuGo and start if AI plays black
   if (gameMode === 'pvc') {
-    initGnuGo().then(() => {
+    aiController.initGnuGo().then(() => {
       if (playerColor === WHITE && !gameOver) {
-        setTimeout(() => requestAIMove(), AI_INIT_DELAY_MS);
+        setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
       }
     });
   }
 
-  // Beginner guidance on game start
   if (guidanceEnabled) {
     setTimeout(() => requestGuidanceHints(), 200);
   }
 }
 
-// ==================== EVENT HANDLERS ====================
-function getBoardPositionFromEvent(e) {
-  const rect = canvas.getBoundingClientRect();
-  const point = e.touches?.[0] || e.changedTouches?.[0] || e;
-  const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-  const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
-  const mx = (point.clientX - rect.left) * scaleX;
-  const my = (point.clientY - rect.top) * scaleY;
-  const x = Math.round((my - padding) / cellSize);
-  const y = Math.round((mx - padding) / cellSize);
-  return inBounds(x, y) ? [x, y] : null;
-}
-
-function handleBoardInteraction(e) {
-  const pos = getBoardPositionFromEvent(e);
-  if (!pos) return;
-  const [x, y] = pos;
-
-  if (isScoring) {
-    // Toggle dead stones
-    if (board[x][y] !== EMPTY) {
-      const group = getGroup(board, x, y);
-      const result = GameState.toggleDeadGroup(group.stones);
-      if (!result.ok) return;
-      applyStateFromStore();
-      updateScoringDisplay();
-      drawBoard();
-    }
-    return;
-  }
-
-  if (guidanceEnabled && guidanceHints.length > 0) {
-    const hint = guidanceHints.find(h => h.x === x && h.y === y);
-    guidanceTooltip = hint || null;
-    if (hint) {
-      showGuidanceTooltipAt(hint);
-    } else {
-      hideGuidanceTooltip();
-    }
-  }
-
-  placeStone(x, y);
-}
-
-let _mouseMoveRaf = null;
-canvas.addEventListener('mousemove', (e) => {
-  if (_mouseMoveRaf) return;
-  _mouseMoveRaf = requestAnimationFrame(() => {
-    _mouseMoveRaf = null;
-    const pos = getBoardPositionFromEvent(e);
-    hoverPos = pos;
-    drawBoard();
-  });
-});
-
-canvas.addEventListener('mouseleave', () => {
-  hoverPos = null;
-  drawBoard();
-});
-
-let lastTouchInteractionAt = 0;
-
-canvas.addEventListener('click', (e) => {
-  if (Date.now() - lastTouchInteractionAt < 500) return;
-  handleBoardInteraction(e);
-});
-canvas.addEventListener('touchstart', (e) => {
-  const pos = getBoardPositionFromEvent(e);
-  hoverPos = pos;
-  drawBoard();
-}, { passive: true });
-canvas.addEventListener('touchend', (e) => {
-  lastTouchInteractionAt = Date.now();
-  e.preventDefault();
-  handleBoardInteraction(e);
-}, { passive: false });
-
-// Settings visibility toggles
-document.getElementById('gameMode').addEventListener('change', (e) => {
-  const isPvC = e.target.value === 'pvc';
-  document.getElementById('playerColorGroup').style.display = isPvC ? 'block' : 'none';
-  document.getElementById('aiStrengthGroup').style.display = isPvC ? 'block' : 'none';
-});
-
-document.getElementById('guidanceToggle').addEventListener('change', (e) => {
-  guidanceEnabled = e.target.checked;
-  if (guidanceEnabled && !gameOver && !isReviewing && !isScoring) {
-    requestGuidanceHints();
-  } else {
-    guidanceLoading = false;
-    clearGuidance();
-    drawBoard();
-  }
-  renderGuidanceLegend();
-});
-
-document.getElementById('timerToggle').addEventListener('change', (e) => {
-  const show = e.target.checked;
-  document.getElementById('timerSettings').style.display = show ? 'block' : 'none';
-  document.getElementById('timerArea').style.display = show ? 'block' : 'none';
-});
-
-// Keyboard shortcuts for review
-document.addEventListener('keydown', (e) => {
-  if (!isReviewing) return;
-  if (e.key === 'ArrowLeft') reviewGo(currentReviewMove - 1);
-  else if (e.key === 'ArrowRight') reviewGo(currentReviewMove + 1);
-  else if (e.key === 'Home') reviewGo(0);
-  else if (e.key === 'End') reviewGo(moveHistory.length);
-});
-
-// Resize — also close sidebar if switching away from mobile
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 900) closeSidebar();
-  drawBoard();
-});
-
 // ==================== SAVE / RESTORE ====================
 const SAVE_KEY = 'gogame_state';
-
 
 function applyStateFromStore() {
   const s = GameState.getState();
@@ -948,7 +607,7 @@ function applyStateFromStore() {
 
 function saveGame() {
   if (isReviewing || isScoring) return;
-  GameState.sync({ timerSeconds }); // timerSeconds is mutated in-place by the timer interval
+  GameState.sync({ timerSeconds });
   const snapshot = GameState.getSnapshot();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot)); } catch(e) {}
 }
@@ -963,7 +622,6 @@ function loadGame() {
     GameState.restoreSnapshot(s);
     applyStateFromStore();
 
-    // Sync UI controls
     document.getElementById('boardSize').value = size;
     document.getElementById('gameMode').value = gameMode;
     document.getElementById('playerColor').value = playerColor;
@@ -983,11 +641,10 @@ function loadGame() {
     drawBoard();
     syncStatus(gameOver ? '遊戲已結束' : `已恢復棋局（第 ${moveHistory.length} 手）`);
 
-    // Preload GnuGo if needed
     if (gameMode === 'pvc' && !gameOver) {
-      initGnuGo().then(() => {
+      aiController.initGnuGo().then(() => {
         if (currentPlayer !== playerColor) {
-          setTimeout(() => requestAIMove(), AI_INIT_DELAY_MS);
+          setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
         }
       });
     }
@@ -1002,21 +659,11 @@ function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
 }
 
-
-const origDoPass = doPass;
-doPass = function() {
-  origDoPass();
-  saveGame();
-};
-
-const origDoUndo = doUndo;
-doUndo = function() {
-  origDoUndo();
-  saveGame();
-};
-
-// ==================== MOBILE SIDEBAR ====================
-// toggleSidebar / openSidebar / closeSidebar defined in sidebar.js
+// Wrap doPass/doUndo to also save
+const _origDoPass = doPass;
+function doPassAndSave() { _origDoPass(); saveGame(); }
+const _origDoUndo = doUndo;
+function doUndoAndSave() { _origDoUndo(); saveGame(); }
 
 // ==================== PWA ====================
 const VERSION_INFO_URL = 'version.json?v=v2026.03.15-9c49be6';
@@ -1036,12 +683,59 @@ async function applyAppVersion() {
   }
 }
 
+// ==================== GLOBAL ERROR HANDLING ====================
+window.addEventListener('error', (e) => {
+  if (!e.filename || !e.filename.includes(location.hostname)) return;
+  console.error('Uncaught error:', e.error || e.message);
+  setStatus(`⚠️ 發生錯誤：${e.message || '未知錯誤'}`);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled promise rejection:', e.reason);
+  const msg = e.reason?.message || String(e.reason) || '未知錯誤';
+  setStatus(`⚠️ 非同步錯誤：${msg}`);
+});
+
+// ==================== EXPOSE TO HTML onclick handlers ====================
+// index.html uses onclick="..." so we expose top-level names on window.
+Object.assign(window, {
+  startNewGame,
+  doPass: doPassAndSave,
+  doUndo: doUndoAndSave,
+  doResign,
+  showHintOnce,
+  enterReview,
+  exitReview,
+  reviewGo,
+  startAnalysis,
+  exportSGF,
+  closeModal,
+  confirmScoring,
+  cancelScoring,
+  toggleSidebar,
+  openSidebar,
+  closeSidebar,
+  currentReviewMove: undefined, // overwritten via getter below
+  moveHistory: undefined,       // overwritten via getter below
+});
+// Keep window.currentReviewMove and window.moveHistory in sync for inline onclick
+// handlers in index.html (e.g. reviewGo(currentReviewMove-1)).
+Object.defineProperty(window, 'currentReviewMove', {
+  get() { return currentReviewMove; },
+  configurable: true
+});
+Object.defineProperty(window, 'moveHistory', {
+  get() { return moveHistory; },
+  configurable: true
+});
+
+// ==================== INIT ====================
+registerEventHandlers(app);
+applyAppVersion();
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js?v=v2026.03.15-9c49be6').catch(() => {});
 }
-
-// ==================== INIT ====================
-applyAppVersion();
 
 if (!loadGame()) {
   startNewGame();
