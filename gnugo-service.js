@@ -2,6 +2,7 @@
 // All AI calls are async; the worker processes WASM off the main thread.
 
 const LETTERS = 'abcdefghijklmnopqrs';
+const INIT_TIMEOUT_MS = 60000; // 60s to load 6.9MB WASM
 
 let _worker = null;
 let _workerReady = false;
@@ -33,6 +34,14 @@ function _getWorker() {
   };
   _worker.onerror = function (e) {
     console.error('GnuGo worker error:', e);
+    const err = new Error(e.message || 'Worker failed to load');
+    for (const [, p] of _pendingCalls.entries()) {
+      p.reject(err);
+    }
+    _pendingCalls.clear();
+    _workerLoadingPromise = null;
+    _workerReady = false;
+    _worker = null;
   };
   return _worker;
 }
@@ -100,8 +109,20 @@ export function ensureReady(setStatus) {
   const worker = _getWorker();
 
   _workerLoadingPromise = new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      if (_pendingCalls.has(id)) {
+        _pendingCalls.delete(id);
+        _workerLoadingPromise = null;
+        _workerReady = false;
+        if (_worker) { _worker.terminate(); _worker = null; }
+        notify('⚠️ AI 引擎載入逾時，請重新整理頁面');
+        reject(new Error('GnuGo init timed out'));
+      }
+    }, INIT_TIMEOUT_MS);
+
     _pendingCalls.set(id, {
       resolve: () => {
+        clearTimeout(timeoutId);
         const statusEl = typeof document !== 'undefined' ? document.getElementById('statusMsg') : null;
         const currentStatus = statusEl?.textContent?.trim() || '';
         const safeToOverwrite = !currentStatus
@@ -112,6 +133,7 @@ export function ensureReady(setStatus) {
         resolve();
       },
       reject: (err) => {
+        clearTimeout(timeoutId);
         _workerLoadingPromise = null;
         notify('⚠️ AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
         reject(err);
