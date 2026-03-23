@@ -556,11 +556,16 @@ function startNewGame() {
   GnuGoService.clearPlayCache();
 
   if (gameMode === 'pvc') {
-    aiController.initGnuGo().then(() => {
-      if (playerColor === WHITE && !gameOver) {
-        setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
-      }
-    });
+    aiController.initGnuGo()
+      .then(() => {
+        if (playerColor === WHITE && !gameOver) {
+          setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
+        }
+      })
+      .catch((err) => {
+        console.error('GnuGo init failed:', err);
+        setStatus('⚠️ AI 引擎載入失敗，請重新整理頁面');
+      });
   }
 
   if (guidanceEnabled) {
@@ -642,11 +647,16 @@ function loadGame() {
     syncStatus(gameOver ? '遊戲已結束' : `已恢復棋局（第 ${moveHistory.length} 手）`);
 
     if (gameMode === 'pvc' && !gameOver) {
-      aiController.initGnuGo().then(() => {
-        if (currentPlayer !== playerColor) {
-          setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
-        }
-      });
+      aiController.initGnuGo()
+        .then(() => {
+          if (currentPlayer !== playerColor) {
+            setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
+          }
+        })
+        .catch((err) => {
+          console.error('GnuGo init failed:', err);
+          setStatus('⚠️ AI 引擎載入失敗，請重新整理頁面');
+        });
     }
     return true;
   } catch(e) {
