@@ -69,13 +69,13 @@
       </select>
     </div>
 
-    <h3 style="margin-top:16px">🔧 功能開關</h3>
+    <h3>🔧 功能開關</h3>
     <div class="toggle-row">
       <span>計時器</span>
       <label class="toggle"><input type="checkbox" id="timerToggle"><span class="slider"></span></label>
     </div>
     <div id="timerSettings" style="display:none; margin-bottom:8px;">
-      <label style="font-size:12px;color:#8899bb">每方時間（分鐘）</label>
+      <label>每方時間（分鐘）</label>
       <select id="timerMinutes" style="margin-top:2px">
         <option value="5">5 分鐘</option>
         <option value="10" selected>10 分鐘</option>
@@ -115,7 +115,7 @@
     <canvas id="board"></canvas>
     <div id="aiThinkingOverlay" style="display:none"></div>
     <div class="guidance-tooltip" id="guidanceTooltip" style="display:none"></div>
-    <div id="guidanceLegend" style="display:none; width:100%; max-width:500px; margin-top:8px; padding:10px 12px; background:#16213e; border:1px solid #2a3a5e; border-radius:8px; color:#e0e0e0; font-size:13px; line-height:1.5;"></div>
+    <div id="guidanceLegend" class="guidance-legend" style="display:none;"></div>
     <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
       <div class="review-controls">
         <button onclick="reviewGo(0)" title="回到開始">⏮</button>
@@ -172,22 +172,20 @@
       <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">💾 匯出 SGF</button>
     </div>
     <!-- Analysis panel -->
-    <div id="analysisPanel" style="display:none; margin-top:10px;">
-      <div style="background:#1e2d50;border-radius:8px;padding:12px;">
-        <h4 style="color:#f0d060;margin-bottom:8px;text-align:center">🤖 AI 覆盤分析</h4>
-        <div id="analysisProgressBar" style="display:none;margin-bottom:8px;">
-          <div style="background:#2a3a5e;border-radius:4px;height:8px;overflow:hidden;">
-            <div id="analysisProgressFill" style="background:#c0943a;height:100%;width:0%;transition:width 0.3s;"></div>
-          </div>
-          <div id="analysisProgressText" style="font-size:12px;color:#8899bb;text-align:center;margin-top:4px;">分析中...</div>
+    <div id="analysisPanel" class="analysis-panel" style="display:none;">
+      <h4 class="analysis-title">🤖 AI 覆盤分析</h4>
+      <div id="analysisProgressBar" class="analysis-progress" style="display:none;">
+        <div class="analysis-progress-track">
+          <div id="analysisProgressFill" class="analysis-progress-fill"></div>
         </div>
-        <div id="analysisSummary" style="display:none;">
-          <div class="score-row"><span>✅ 好手</span><span id="goodCount" style="color:#4caf50">0</span></div>
-          <div class="score-row"><span>⚠️ 疑問手</span><span id="questionCount" style="color:#ff9800">0</span></div>
-          <div class="score-row"><span>❌ 惡手</span><span id="badCount" style="color:#f44336">0</span></div>
-        </div>
-        <div id="analysisMoveInfo" style="display:none;margin-top:8px;font-size:13px;color:#8899bb;text-align:center;"></div>
+        <div id="analysisProgressText" class="analysis-progress-text">分析中...</div>
       </div>
+      <div id="analysisSummary" style="display:none;">
+        <div class="score-row"><span>✅ 好手</span><span id="goodCount" class="count-good">0</span></div>
+        <div class="score-row"><span>⚠️ 疑問手</span><span id="questionCount" class="count-warn">0</span></div>
+        <div class="score-row"><span>❌ 惡手</span><span id="badCount" class="count-bad">0</span></div>
+      </div>
+      <div id="analysisMoveInfo" class="analysis-move-info" style="display:none;"></div>
     </div>
 
     <!-- Scoring Panel -->
