@@ -331,9 +331,11 @@ export function drawBoard(deps, state) {
 
   if (state.emotionEnabled && !state.isScoring) {
     const libertyMap = computeLibertyMap(state.displayBoard, state.size);
-    const fontSize = Math.max(8, Math.min(deps.cellSize * 0.5, 20));
+    // Use ~65% of cellSize so emoji fill the stone; minimum 10px for readability
+    const fontSize = Math.max(10, Math.min(deps.cellSize * 0.65, 22));
     ctx.save();
-    ctx.font = `${fontSize}px serif`;
+    // Explicitly list colour-emoji fonts so mobile browsers don't fall back to text glyphs
+    ctx.font = `${fontSize}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let x = 0; x < state.size; x++) {
