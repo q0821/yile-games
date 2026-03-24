@@ -1,4 +1,24 @@
-import { EMPTY, BLACK, WHITE } from './rules.js';
+import { EMPTY, BLACK, WHITE, getGroup } from './rules.js';
+
+// ——— Liberty map for emotion mode ———
+function computeLibertyMap(board, size) {
+  const map = Array.from({ length: size }, () => new Array(size).fill(0));
+  const visited = new Set();
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
+      if (board[x][y] === EMPTY) continue;
+      const key = x * size + y;
+      if (visited.has(key)) continue;
+      const { stones, liberties } = getGroup(board, size, x, y);
+      const count = liberties.size;
+      for (const [sx, sy] of stones) {
+        map[sx][sy] = count;
+        visited.add(sx * size + sy);
+      }
+    }
+  }
+  return map;
+}
 
 // Offscreen canvas cache for static board background (wood texture + grid + stars + labels)
 let _bgCache = null;
@@ -307,6 +327,24 @@ export function drawBoard(deps, state) {
         drawStone(deps, x, y, state.displayBoard[x][y], state.deadStones.has(x * state.size + y));
       }
     }
+  }
+
+  if (state.emotionEnabled && !state.isScoring) {
+    const libertyMap = computeLibertyMap(state.displayBoard, state.size);
+    const fontSize = Math.max(8, Math.min(deps.cellSize * 0.5, 20));
+    ctx.save();
+    ctx.font = `${fontSize}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let x = 0; x < state.size; x++) {
+      for (let y = 0; y < state.size; y++) {
+        if (state.displayBoard[x][y] === EMPTY) continue;
+        const libs = libertyMap[x][y];
+        const emoji = libs === 1 ? '😰' : libs === 2 ? '😐' : libs === 3 ? '🙂' : '😄';
+        ctx.fillText(emoji, deps.padding + y * deps.cellSize, deps.padding + x * deps.cellSize);
+      }
+    }
+    ctx.restore();
   }
 
   if (state.lastMove) {

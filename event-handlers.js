@@ -104,6 +104,11 @@ export function registerEventHandlers(app) {
     app.renderGuidanceLegend();
   });
 
+  document.getElementById('emotionToggle').addEventListener('change', (e) => {
+    app.emotionEnabled = e.target.checked;
+    app.drawBoard();
+  });
+
   document.getElementById('timerToggle').addEventListener('change', (e) => {
     const show = e.target.checked;
     document.getElementById('timerSettings').style.display = show ? 'block' : 'none';

@@ -63,6 +63,7 @@ let deadStones = new Set();
 let showingHint = false;
 
 let guidanceEnabled = false;
+let emotionEnabled = false;
 let guidanceHints = [];
 let guidanceTooltip = null;
 let guidanceLoading = false;
@@ -119,6 +120,7 @@ const app = {
   get deadStones()        { return deadStones; },
   get showingHint()       { return showingHint; },
   get guidanceEnabled()   { return guidanceEnabled; },
+  get emotionEnabled()    { return emotionEnabled; },
   get guidanceHints()     { return guidanceHints; },
   get guidanceTooltip()   { return guidanceTooltip; },
   get guidanceLoading()   { return guidanceLoading; },
@@ -135,6 +137,7 @@ const app = {
   set guidanceTooltip(v)  { guidanceTooltip = v; },
   set guidanceLoading(v)  { guidanceLoading = v; },
   set guidanceEnabled(v)  { guidanceEnabled = v; },
+  set emotionEnabled(v)   { emotionEnabled = v; },
   set isAnalyzing(v)      { isAnalyzing = v; },
   set analysisData(v)     { analysisData = v; },
   set analysisProgress(v) { analysisProgress = v; },
@@ -235,6 +238,7 @@ function buildBoardViewState() {
     guidanceEnabled,
     guidanceLoading,
     guidanceHints,
+    emotionEnabled,
     hoverPos
   };
 }
@@ -530,6 +534,7 @@ function startNewGame() {
   analysisData = null;
   isAnalyzing = false;
   guidanceEnabled = document.getElementById('guidanceToggle').checked;
+  emotionEnabled  = document.getElementById('emotionToggle').checked;
   guidanceHints = [];
   guidanceTooltip = null;
   guidanceLoading = false;
