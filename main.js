@@ -681,8 +681,8 @@ const _origDoUndo = doUndo;
 function doUndoAndSave() { _origDoUndo(); saveGame(); }
 
 // ==================== PWA ====================
-const VERSION_INFO_URL = 'version.json?v=v2026.03.15-9c49be6';
-const VERSION_FALLBACK = 'v2026.03.15-9c49be6';
+const VERSION_INFO_URL = 'version.json?v=v2026.03.28-cd2a9b0';
+const VERSION_FALLBACK = 'v2026.03.28-cd2a9b0';
 
 async function applyAppVersion() {
   try {
@@ -749,7 +749,7 @@ registerEventHandlers(app);
 applyAppVersion();
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=v2026.03.15-9c49be6').catch(() => {});
+  navigator.serviceWorker.register('sw.js?v=v2026.03.28-cd2a9b0').catch(() => {});
 }
 
 if (!loadGame()) {
