@@ -39,4 +39,13 @@ let swContent = fs.readFileSync(swPath, 'utf8');
 swContent = swContent.replace(/^const VERSION = '.*?';/m, `const VERSION = '${version}';`);
 fs.writeFileSync(swPath, swContent);
 
+// 將版本號注入 index.html 和 main.js 中的快取破壞字串
+const filesToPatch = ['index.html', 'main.js'];
+for (const file of filesToPatch) {
+  if (!fs.existsSync(file)) continue;
+  let content = fs.readFileSync(file, 'utf8');
+  const updated = content.replace(/v\d{4}\.\d{2}\.\d{2}-[a-f0-9]{7}/g, version);
+  if (updated !== content) fs.writeFileSync(file, updated);
+}
+
 console.log(version);
