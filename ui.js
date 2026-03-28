@@ -331,19 +331,31 @@ export function drawBoard(deps, state) {
 
   if (state.emotionEnabled && !state.isScoring) {
     const libertyMap = computeLibertyMap(state.displayBoard, state.size);
-    // Use ~65% of cellSize so emoji fill the stone; minimum 10px for readability
-    const fontSize = Math.max(10, Math.min(deps.cellSize * 0.65, 22));
+    const fontSize = Math.max(10, Math.min(deps.cellSize * 0.60, 18));
     ctx.save();
-    // Explicitly list colour-emoji fonts so mobile browsers don't fall back to text glyphs
-    ctx.font = `${fontSize}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
+    ctx.font = `bold ${fontSize}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(2, fontSize * 0.18);
     for (let x = 0; x < state.size; x++) {
       for (let y = 0; y < state.size; y++) {
         if (state.displayBoard[x][y] === EMPTY) continue;
         const libs = libertyMap[x][y];
-        const emoji = libs === 1 ? '😰' : libs === 2 ? '😐' : libs === 3 ? '🙂' : '😄';
-        ctx.fillText(emoji, deps.padding + y * deps.cellSize, deps.padding + x * deps.cellSize);
+        const cx = deps.padding + y * deps.cellSize;
+        const cy = deps.padding + x * deps.cellSize;
+        // Danger colour: red→orange→yellow→green
+        const fillColor = libs === 1 ? '#ff4444'
+                        : libs === 2 ? '#ffaa00'
+                        : libs === 3 ? '#ffee44'
+                        : '#66cc66';
+        // Contrasting outline so the number is readable on both black and white stones
+        ctx.strokeStyle = state.displayBoard[x][y] === BLACK
+          ? 'rgba(0,0,0,0.85)'
+          : 'rgba(255,255,255,0.90)';
+        ctx.strokeText(libs, cx, cy);
+        ctx.fillStyle = fillColor;
+        ctx.fillText(libs, cx, cy);
       }
     }
     ctx.restore();
