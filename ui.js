@@ -145,7 +145,7 @@ export function setStatus(message) {
 
 export function getStatusMessage(state, fallbackMessage = '') {
   if (fallbackMessage) return fallbackMessage;
-  if (state.gameOver) return '遊戲已結束';
+  if (state.gameOver) return '遊戲結束 — 可覆盤或開始新局';
   if (state.isScoring) return '已自動估算死子，可點擊修正，然後確認結果';
   if (state.isReviewing) return '覆盤模式';
   if (state.isAIThinking) return '🤔 GnuGo 思考中...';

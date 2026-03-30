@@ -335,7 +335,7 @@ function doUndo() {
   showingHint = false;
   clearGuidance();
   if (!document.getElementById('undoToggle').checked) {
-    setStatus('悔棋功能已關閉');
+    setStatus('悔棋功能已關閉，可在設定中開啟');
     return;
   }
   if (boardHistory.length === 0) return;
@@ -347,7 +347,7 @@ function doUndo() {
   updateUI();
   syncStatus();
   drawBoard();
-  setStatus('已悔棋');
+  setStatus('已退回一手');
   saveGame();
 
   if (guidanceEnabled && !gameOver) {
@@ -649,7 +649,7 @@ function loadGame() {
 
     updateUI();
     drawBoard();
-    syncStatus(gameOver ? '遊戲已結束' : `已恢復棋局（第 ${moveHistory.length} 手）`);
+    syncStatus(gameOver ? '遊戲結束 — 可覆盤或開始新局' : `已恢復棋局（第 ${moveHistory.length} 手）`);
 
     if (gameMode === 'pvc' && !gameOver) {
       aiController.initGnuGo()
@@ -702,13 +702,13 @@ async function applyAppVersion() {
 window.addEventListener('error', (e) => {
   if (!e.filename || !e.filename.includes(location.hostname)) return;
   console.error('Uncaught error:', e.error || e.message);
-  setStatus(`⚠️ 發生錯誤：${e.message || '未知錯誤'}`);
+  setStatus(`⚠️ 操作失敗：${e.message || '未知錯誤'}。遊戲已自動儲存，可重新整理頁面。`);
 });
 
 window.addEventListener('unhandledrejection', (e) => {
   console.error('Unhandled promise rejection:', e.reason);
   const msg = e.reason?.message || String(e.reason) || '未知錯誤';
-  setStatus(`⚠️ 非同步錯誤：${msg}`);
+  setStatus(`⚠️ 操作失敗：${msg}。遊戲已自動儲存，可重新整理頁面。`);
 });
 
 // ==================== EXPOSE TO HTML onclick handlers ====================

@@ -67,7 +67,7 @@ export function makeAiController(app) {
       try {
         await initGnuGo();
       } catch {
-        app.setStatus('⚠️ AI 引擎未就緒');
+        app.setStatus('⚠️ AI 引擎尚未載入，請稍候再試');
         app.GameState.sync({ isAIThinking: false });
         app.applyStateFromStore();
         app.updateUI();
@@ -108,7 +108,7 @@ export function makeAiController(app) {
       app.GameState.sync({ isAIThinking: false });
       app.applyStateFromStore();
       app.updateUI();
-      app.setStatus('⚠️ AI 出錯，請重新開始');
+      app.setStatus('⚠️ AI 發生錯誤，請點擊「開始新遊戲」重試');
     }
   }
 
@@ -119,7 +119,7 @@ export function makeAiController(app) {
     try {
       await initGnuGo();
     } catch {
-      app.setStatus('⚠️ AI 引擎未就緒，無法分析');
+      app.setStatus('⚠️ AI 引擎尚未載入，無法進行分析');
       return;
     }
 

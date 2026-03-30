@@ -126,6 +126,7 @@ export function ensureReady(setStatus) {
         const statusEl = typeof document !== 'undefined' ? document.getElementById('statusMsg') : null;
         const currentStatus = statusEl?.textContent?.trim() || '';
         const safeToOverwrite = !currentStatus
+          || currentStatus.startsWith('選擇設定後')
           || currentStatus === '請開始新遊戲'
           || currentStatus === '⏳ 載入 GnuGo AI 引擎...'
           || currentStatus.startsWith('已恢復棋局');
