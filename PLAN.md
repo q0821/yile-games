@@ -313,3 +313,38 @@ gogame/
 5. **Firebase 設定**：需建立 Firebase 專案並啟用 Realtime Database，安全規則須正確設定以防止資料濫用
 6. **線上對戰延遲**：Firebase Realtime Database 延遲通常在 100ms 以內，體驗接近即時
 7. **免費額度**：Firebase 免費方案（Spark Plan）提供 1GB 儲存 + 10GB/月傳輸，足夠小規模使用
+
+---
+
+<!-- AUTONOMOUS DECISION LOG -->
+## Decision Audit Trail
+
+| # | Phase | Decision | Classification | Principle | Rationale |
+|---|-------|----------|---------------|-----------|-----------|
+| 1 | CEO | Approach A (Firebase) | Mechanical | P5 explicit, P3 pragmatic | Simplest path, plan already detailed, cheating risk acceptable for hobby project |
+| 2 | CEO | SELECTIVE EXPANSION mode | Mechanical | P1 completeness | Feature enhancement on existing system, review with rigor + surface opportunities |
+| 3 | CEO | Add sound notification for opponent move | Mechanical | P2 boil lakes | In blast radius, trivial effort, already have sound system |
+| 4 | CEO | Add mobile-responsive lobby | Mechanical | P1 completeness | Can't ship lobby without mobile support |
+| 5 | CEO | Defer ranked matchmaking | Mechanical | P3 pragmatic | Too large for this plan, needs user accounts |
+| 6 | CEO | Defer chat feature | Mechanical | P3 pragmatic | Tangential to core game experience |
+| 7 | CEO | Defer replay sharing | Mechanical | P3 pragmatic | Nice to have, not blocking |
+| 8 | CEO | Accept client-only validation risk | Taste | P3 pragmatic | Hobby project, but subagent flagged this as strategic blind spot |
+| 9 | CEO | Firebase security rules for nickname sanitization | Mechanical | P5 explicit | XSS prevention, max 20 chars, textContent only |
+| 10 | CEO | Firebase transactions for concurrent moves | Mechanical | P5 explicit | Race condition prevention is non-negotiable |
+| 11 | Design | Flag all 11 missing UI states | Mechanical | P1 completeness | Every component needs loading/empty/error states specified |
+| 12 | Design | Post-game flow needs specification | Mechanical | P1 completeness | Highest-motivation moment for learning, currently dead end |
+| 13 | Design | Lobby-to-game transition needs specification | Mechanical | P5 explicit | Critical UX decision left to implementer |
+| 14 | Eng | Command/event layer before Phase 11 | Taste | P5 explicit | Subagent says current god-object architecture won't survive Firebase integration |
+| 15 | Eng | boardHistory memory optimization | Mechanical | P3 pragmatic | 300-move game stores 300 full board clones, use incremental diffs |
+| 16 | Eng | Wall-clock timer instead of setInterval | Mechanical | P5 explicit | setInterval drifts in background tabs |
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 1 | ISSUES_FOUND (via /autoplan) | 3 premises challenged, 5 expansion candidates, 8 error path gaps |
+| Outside Voice | Claude subagent | Independent strategy | 1 | 6 findings [subagent-only] | AI analysis accuracy, distribution strategy, no-backend assumption |
+| Design Review | Claude subagent | UI/UX gaps | 1 | ISSUES_FOUND [subagent-only] | 11 missing states, broken beginner journey, no post-game flow |
+| Eng Review | Claude subagent | Architecture & tests | 1 | ISSUES_FOUND [subagent-only] | God-object pattern, no command layer for Firebase, memory leak |
+
+**VERDICT:** REVIEWED WITH CONCERNS — 3 phases completed, Codex unavailable (single-model), 16 auto-decisions logged.
