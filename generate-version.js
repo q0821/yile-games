@@ -13,7 +13,8 @@ function getShortSha() {
   try {
     return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
   } catch (_) {
-    return 'dev';
+    const now = new Date();
+    return now.toISOString().replace(/[-:T]/g, '').slice(0, 12);
   }
 }
 

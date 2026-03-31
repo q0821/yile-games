@@ -3,6 +3,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+ARG ZEABUR_GIT_COMMIT_SHA=""
+ENV ZEABUR_GIT_COMMIT_SHA=${ZEABUR_GIT_COMMIT_SHA}
 RUN npm run build
 
 FROM nginx:alpine

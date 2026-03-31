@@ -681,8 +681,8 @@ const _origDoUndo = doUndo;
 function doUndoAndSave() { _origDoUndo(); saveGame(); }
 
 // ==================== PWA ====================
-const VERSION_INFO_URL = 'version.json?v=v2026.03.15-9c49be6';
-const VERSION_FALLBACK = 'v2026.03.15-9c49be6';
+const VERSION_INFO_URL = 'version.json?t=' + Date.now();
+const VERSION_FALLBACK = 'dev';
 
 async function applyAppVersion() {
   try {
