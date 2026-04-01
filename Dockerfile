@@ -1,0 +1,17 @@
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM caddy:alpine
+COPY --from=build /app/dist /srv
+COPY <<'EOF' /etc/caddy/Caddyfile
+:8080 {
+    root * /srv
+    file_server
+    try_files {path} /index.html
+}
+EOF
+EXPOSE 8080
