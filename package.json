@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node generate-version.js",
+    "build": "node generate-version.js && vite build",
     "preview": "vite preview",
     "test": "jest",
     "version:generate": "node generate-version.js"
