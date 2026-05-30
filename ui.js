@@ -501,3 +501,86 @@ export const GoUI = {
   updateScoringDisplay, hideGuidanceTooltip, showGuidanceTooltipAt,
   resizeCanvas, drawStone, drawBoard
 };
+
+// ── Momentum / score-lead chart (learning mode) ──────────────────────────────
+// blackLead > 0 means Black is ahead; the mid-line is an even game.
+function drawScoreChart(opts) {
+  const { analysisData, currentReviewMove } = opts || {};
+  const canvas = document.getElementById('scoreChart');
+  if (!canvas) return;
+  const data = analysisData || [];
+  const ctx = canvas.getContext('2d');
+  const cssW = canvas.clientWidth || 280;
+  const cssH = canvas.clientHeight || 110;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const padL = 30, padR = 6, padT = 8, padB = 8;
+  const plotW = cssW - padL - padR;
+  const plotH = cssH - padT - padB;
+  const n = data.length;
+
+  let maxAbs = 5;
+  for (const d of data) maxAbs = Math.max(maxAbs, Math.abs(d.blackLead || 0));
+  maxAbs = Math.ceil(maxAbs / 5) * 5;
+
+  const xFor = (i) => padL + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yFor = (v) => padT + plotH / 2 - (v / maxAbs) * (plotH / 2);
+
+  ctx.fillStyle = 'rgba(120,140,200,0.08)';
+  ctx.fillRect(padL, padT, plotW, plotH / 2);
+
+  ctx.strokeStyle = '#5a6a8e';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padL, yFor(0)); ctx.lineTo(padL + plotW, yFor(0)); ctx.stroke();
+
+  ctx.fillStyle = '#8899bb';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ctx.fillText('黑+' + maxAbs, padL - 3, yFor(maxAbs));
+  ctx.fillText('0', padL - 3, yFor(0));
+  ctx.fillText('白+' + maxAbs, padL - 3, yFor(-maxAbs));
+
+  if (n === 0) return;
+
+  ctx.strokeStyle = '#f0d060';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = xFor(i), y = yFor(d.blackLead || 0);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  data.forEach((d, i) => {
+    if (d.rating === 'bad') {
+      ctx.fillStyle = '#e05050';
+      ctx.beginPath(); ctx.arc(xFor(i), yFor(d.blackLead || 0), 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  });
+
+  if (currentReviewMove && currentReviewMove >= 1 && currentReviewMove <= n) {
+    const i = currentReviewMove - 1;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xFor(i), padT); ctx.lineTo(xFor(i), padT + plotH); ctx.stroke();
+  }
+}
+
+// Map a click x-position on the chart to a 1-based move number, or null.
+function chartXToMove(canvas, clientX, n) {
+  if (!canvas || n <= 0) return null;
+  const rect = canvas.getBoundingClientRect();
+  const cssW = canvas.clientWidth || rect.width;
+  const padL = 30, padR = 6;
+  const plotW = cssW - padL - padR;
+  const rel = (clientX - rect.left - padL) / plotW;
+  const i = Math.round(rel * (n - 1));
+  return Math.max(1, Math.min(n, i + 1));
+}
+
+GoUI.drawScoreChart = drawScoreChart;
+GoUI.chartXToMove = chartXToMove;

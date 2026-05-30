@@ -3,8 +3,20 @@
 
 import { GnuGoService } from './gnugo-service.js';
 import { getCaptureHints, getGamePhase, getGuidanceLabel } from './hints.js';
+import {
+  createBoard, tryPlaceStone, BLACK,
+  estimateBlackLead, computePointsLost, ratePointsLost,
+} from './rules.js';
+
+// Move-quality thresholds, expressed in points lost vs the engine's best move.
+const COACH_GOOD_PTS = 2;  // lose <= 2 pts  → 好手
+const COACH_BAD_PTS = 6;   // lose >  6 pts  → 惡手
+// Engine level used when asking GnuGo for its "best move" benchmark.
+const REVIEW_BEST_LEVEL = 10;
 
 export function makeAiController(app) {
+  let _coachBusy = false; // debounce for real-time coaching
+
   // ——— Internal helpers ———
   function initGnuGo() {
     return GnuGoService.ensureReady(app.setStatus);
@@ -133,7 +145,13 @@ export function makeAiController(app) {
     document.getElementById('analysisSummary').style.display = 'none';
     document.getElementById('analysisMoveInfo').style.display = 'none';
 
-    // Process one move per tick to keep the UI responsive
+    // Rebuild the game move-by-move so each position can be scored with pure JS
+    // (territory estimate). One GnuGo call per move gives the "best move" benchmark;
+    // points-lost vs that move drives the rating, and the running Black lead feeds
+    // the momentum chart.
+    let prevBoard = createBoard(app.size);
+    const runningCaptures = { black: 0, white: 0 };
+
     for (let i = 0; i < app.moveHistory.length; i++) {
       if (!app.isAnalyzing) break; // user may have exited review
 
@@ -142,25 +160,32 @@ export function makeAiController(app) {
       if (!m.pass) {
         try {
           const sgf = GnuGoService.buildSGFUpTo(app.moveHistory, app.size, app.komi, i);
-          const { move: aiMove } = await GnuGoService.play(10, sgf, i, app.size);
+          const { move: aiMove } = await GnuGoService.play(REVIEW_BEST_LEVEL, sgf, i, app.size);
 
-          let rating = 'good';
-          if (aiMove) {
-            const dist = Math.abs(aiMove[0] - m.x) + Math.abs(aiMove[1] - m.y);
-            if (dist === 0 || dist <= app.ANALYSIS_GOOD_DIST) {
-              rating = 'good';
-            } else if (dist <= app.ANALYSIS_BAD_DIST) {
-              rating = 'question';
-            } else {
-              rating = 'bad';
+          const pointsLost = computePointsLost(
+            prevBoard, app.size, m, aiMove, runningCaptures, app.gameRules, app.komi
+          );
+          const rating = ratePointsLost(pointsLost, COACH_GOOD_PTS, COACH_BAD_PTS);
+
+          // Advance the board and capture counts for the next iteration.
+          const placed = tryPlaceStone(prevBoard, app.size, m.x, m.y, m.player, null);
+          if (placed.valid) {
+            prevBoard = placed.newBoard;
+            if (placed.captured && placed.captured.length) {
+              if (m.player === BLACK) runningCaptures.black += placed.captured.length;
+              else runningCaptures.white += placed.captured.length;
             }
           }
-          app.analysisData.push({ move: m, aiSuggestion: aiMove, rating });
+
+          const blackLead = estimateBlackLead(prevBoard, app.size, runningCaptures, app.gameRules, app.komi);
+          app.analysisData.push({ move: m, aiSuggestion: aiMove, rating, pointsLost, blackLead });
         } catch {
-          app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
+          const blackLead = estimateBlackLead(prevBoard, app.size, runningCaptures, app.gameRules, app.komi);
+          app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral', pointsLost: 0, blackLead });
         }
       } else {
-        app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
+        const blackLead = estimateBlackLead(prevBoard, app.size, runningCaptures, app.gameRules, app.komi);
+        app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral', pointsLost: 0, blackLead });
       }
 
       app.analysisProgress = Math.round(((i + 1) / app.moveHistory.length) * 100);
@@ -196,6 +221,7 @@ export function makeAiController(app) {
     document.getElementById('badCount').textContent = bad;
 
     updateAnalysisMoveInfo();
+    app.drawScoreChart?.();
     app.drawBoard();
   }
 
@@ -214,10 +240,43 @@ export function makeAiController(app) {
       : d.rating === 'question' ? '⚠️ 疑問手'
       : d.rating === 'bad' ? '❌ 惡手' : '';
     let text = ratingText;
+    if (typeof d.pointsLost === 'number' && d.pointsLost >= 1 && d.rating !== 'good') {
+      text += `　約損失 ${d.pointsLost.toFixed(0)} 目`;
+    }
     if (d.aiSuggestion && d.rating !== 'good') {
       text += `　AI 建議：${app.COORD_LETTERS[d.aiSuggestion[1]]}${app.size - d.aiSuggestion[0]}`;
     }
     el.textContent = text;
+  }
+
+  // ——— Real-time coaching (in-game) ———
+  // Best-effort: after the human plays in pvc, quietly check whether the move
+  // lost a lot of points vs GnuGo's choice and surface a non-blocking tip.
+  async function checkLastMoveQuality() {
+    if (_coachBusy || app.gameMode !== 'pvc') return;
+    const n = app.moveHistory.length;
+    if (n === 0) return;
+    const m = app.moveHistory[n - 1];
+    if (!m || m.pass || m.player !== app.playerColor) return;
+    if (!GnuGoService.isReady()) return;
+
+    _coachBusy = true;
+    try {
+      const prevBoard = app.GoReview.getReviewBoard(app.moveHistory, n - 1, app.size);
+      const sgf = GnuGoService.buildSGFUpTo(app.moveHistory, app.size, app.komi, n - 1);
+      const { move: bestMove } = await GnuGoService.play(REVIEW_BEST_LEVEL, sgf, n - 1, app.size);
+      const pointsLost = computePointsLost(
+        prevBoard, app.size, m, bestMove, app.captures, app.gameRules, app.komi
+      );
+      if (pointsLost > COACH_BAD_PTS && bestMove) {
+        const coord = `${app.COORD_LETTERS[bestMove[1]]}${app.size - bestMove[0]}`;
+        app.showCoachTip?.({ pointsLost, coord, moveIndex: n - 1 });
+      }
+    } catch {
+      // never disrupt play
+    } finally {
+      _coachBusy = false;
+    }
   }
 
   return {
@@ -225,6 +284,7 @@ export function makeAiController(app) {
     requestGuidanceHints,
     requestAIMove,
     startAnalysis,
-    updateAnalysisMoveInfo
+    updateAnalysisMoveInfo,
+    checkLastMoveQuality,
   };
 }
