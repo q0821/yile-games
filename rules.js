@@ -238,7 +238,8 @@ export const GoRules = {
   EMPTY, BLACK, WHITE,
   createBoard, cloneBoard, opponent, inBounds, getNeighbors,
   getGroup, removeGroup, boardToString, tryPlaceStone,
-  getLegalMoves, calculateTerritory, estimateDeadStones, calculateScore
+  getLegalMoves, calculateTerritory, estimateDeadStones, calculateScore,
+  estimateBlackLead, leadForPlayer, computePointsLost, ratePointsLost
 };
 
 // ── Learning-mode helpers (review scoring & in-game coaching) ─────────────────

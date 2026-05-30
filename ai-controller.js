@@ -4,7 +4,7 @@
 import { GnuGoService } from './gnugo-service.js';
 import { getCaptureHints, getGamePhase, getGuidanceLabel } from './hints.js';
 import {
-  createBoard, tryPlaceStone, BLACK,
+  createBoard, tryPlaceStone, BLACK, WHITE,
   estimateBlackLead, computePointsLost, ratePointsLost,
 } from './rules.js';
 
@@ -150,7 +150,7 @@ export function makeAiController(app) {
     // points-lost vs that move drives the rating, and the running Black lead feeds
     // the momentum chart.
     let prevBoard = createBoard(app.size);
-    const runningCaptures = { black: 0, white: 0 };
+    const runningCaptures = { [BLACK]: 0, [WHITE]: 0 };
 
     for (let i = 0; i < app.moveHistory.length; i++) {
       if (!app.isAnalyzing) break; // user may have exited review
@@ -171,9 +171,8 @@ export function makeAiController(app) {
           const placed = tryPlaceStone(prevBoard, app.size, m.x, m.y, m.player, null);
           if (placed.valid) {
             prevBoard = placed.newBoard;
-            if (placed.captured && placed.captured.length) {
-              if (m.player === BLACK) runningCaptures.black += placed.captured.length;
-              else runningCaptures.white += placed.captured.length;
+            if (placed.captured) {
+              runningCaptures[m.player] += placed.captured;
             }
           }
 
