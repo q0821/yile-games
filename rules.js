@@ -248,7 +248,7 @@ export const GoRules = {
 // Dead stones are intentionally NOT removed (the mid-game heuristic is unreliable);
 // this keeps the running estimate stable across consecutive moves.
 export function estimateBlackLead(board, size, captures, rules, komi) {
-  const s = calculateScore(board, size, null, captures, rules, komi);
+  const s = calculateScore(board, size, new Set(), captures, rules, komi);
   return s.black - s.white;
 }
 

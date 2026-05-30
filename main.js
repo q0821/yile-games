@@ -283,6 +283,9 @@ function placeStone(x, y) {
   saveGame();
 
   if (willRequestAI) {
+    if (document.getElementById('realtimeCoach')?.checked) {
+      setTimeout(() => aiController.checkLastMoveQuality(), 0);
+    }
     setTimeout(() => aiController.requestAIMove(), AI_MOVE_DELAY_MS);
   }
 
