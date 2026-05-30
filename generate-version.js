@@ -34,6 +34,13 @@ const payload = {
 const versionPath = fs.existsSync('public') ? 'public/version.json' : 'version.json';
 fs.writeFileSync(versionPath, JSON.stringify(payload, null, 2) + '\n');
 
+// 將 CHANGELOG.md 複製到 public/，讓網頁可在執行時 fetch 並顯示
+try {
+  if (fs.existsSync('CHANGELOG.md') && fs.existsSync('public')) {
+    fs.copyFileSync('CHANGELOG.md', 'public/CHANGELOG.md');
+  }
+} catch (_) { /* changelog is optional */ }
+
 // 將版本號注入 sw.js，讓瀏覽器每次部署都偵測到 sw.js 內容有變化
 const swPath = fs.existsSync('public/sw.js') ? 'public/sw.js' : 'sw.js';
 let swContent = fs.readFileSync(swPath, 'utf8');

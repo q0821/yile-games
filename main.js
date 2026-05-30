@@ -793,18 +793,76 @@ function doUndoAndSave() { _origDoUndo(); saveGame(); }
 const VERSION_INFO_URL = 'version.json?t=' + Date.now();
 const VERSION_FALLBACK = 'dev';
 
+let _currentVersion = VERSION_FALLBACK;
+
 async function applyAppVersion() {
   try {
     const response = await fetch(VERSION_INFO_URL, { cache: 'no-store' });
     if (!response.ok) throw new Error('version fetch failed');
     const data = await response.json();
     const version = data?.version || VERSION_FALLBACK;
+    _currentVersion = version;
     document.getElementById('versionFooter').textContent = `版本：${version}`;
     return version;
   } catch (_) {
     document.getElementById('versionFooter').textContent = `版本：${VERSION_FALLBACK}`;
     return VERSION_FALLBACK;
   }
+}
+
+// ==================== CHANGELOG ====================
+// Minimal, escaped Markdown → HTML for the changelog modal (no deps).
+function renderMarkdown(md) {
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+  const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (/^###\s+/.test(line))      { closeList(); html += `<h3>${inline(line.replace(/^###\s+/, ''))}</h3>`; }
+    else if (/^##\s+/.test(line))  { closeList(); html += `<h2>${inline(line.replace(/^##\s+/, ''))}</h2>`; }
+    else if (/^#\s+/.test(line))   { closeList(); html += `<h1>${inline(line.replace(/^#\s+/, ''))}</h1>`; }
+    else if (/^---+$/.test(line))  { closeList(); html += '<hr>'; }
+    else if (/^[-*]\s+/.test(line)) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${inline(line.replace(/^[-*]\s+/, ''))}</li>`;
+    }
+    else if (line === '')          { closeList(); }
+    else                           { closeList(); html += `<p>${inline(line)}</p>`; }
+  }
+  closeList();
+  return html;
+}
+
+let _changelogLoaded = false;
+async function loadChangelog() {
+  if (_changelogLoaded) return;
+  const body = document.getElementById('changelogBody');
+  try {
+    const res = await fetch('CHANGELOG.md?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('changelog fetch failed');
+    const md = await res.text();
+    body.innerHTML = renderMarkdown(md);
+    _changelogLoaded = true;
+  } catch (_) {
+    body.textContent = '無法載入版本紀錄。';
+  }
+}
+
+function openChangelog() {
+  document.getElementById('changelogVersion').textContent = `目前版本：${_currentVersion}`;
+  document.getElementById('changelogModal').classList.add('show');
+  loadChangelog();
+}
+
+function closeChangelog() {
+  document.getElementById('changelogModal').classList.remove('show');
 }
 
 // ==================== GLOBAL ERROR HANDLING ====================
@@ -834,6 +892,8 @@ Object.assign(window, {
   startAnalysis,
   exportSGF,
   closeModal,
+  openChangelog,
+  closeChangelog,
   confirmScoring,
   cancelScoring,
   toggleSidebar,
