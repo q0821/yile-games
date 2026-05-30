@@ -330,20 +330,29 @@ export function drawBoard(deps, state) {
   }
 
   if (state.emotionEnabled && !state.isScoring) {
+    // Liberty count drawn directly with the canvas, not as emoji — colour-emoji
+    // fonts render unreliably on canvas in mobile browsers (esp. iOS Safari),
+    // so we render the气 count as a number tinted by danger level instead.
     const libertyMap = computeLibertyMap(state.displayBoard, state.size);
-    // Use ~65% of cellSize so emoji fill the stone; minimum 10px for readability
-    const fontSize = Math.max(10, Math.min(deps.cellSize * 0.65, 22));
+    const fontSize = Math.max(9, Math.min(deps.cellSize * 0.5, 18));
     ctx.save();
-    // Explicitly list colour-emoji fonts so mobile browsers don't fall back to text glyphs
-    ctx.font = `${fontSize}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
+    ctx.font = `bold ${fontSize}px -apple-system,"Segoe UI",Roboto,sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (let x = 0; x < state.size; x++) {
       for (let y = 0; y < state.size; y++) {
-        if (state.displayBoard[x][y] === EMPTY) continue;
+        const color = state.displayBoard[x][y];
+        if (color === EMPTY) continue;
         const libs = libertyMap[x][y];
-        const emoji = libs === 1 ? '😰' : libs === 2 ? '😐' : libs === 3 ? '🙂' : '😄';
-        ctx.fillText(emoji, deps.padding + y * deps.cellSize, deps.padding + x * deps.cellSize);
+        // Danger-graded colour: red (atari) → orange → yellow → green (safe)
+        ctx.fillStyle = libs === 1 ? '#ff5252' : libs === 2 ? '#ffa726'
+          : libs === 3 ? '#ffee58' : '#69f0ae';
+        const cx = deps.padding + y * deps.cellSize;
+        const cy = deps.padding + x * deps.cellSize;
+        // Subtle backing so the number stays legible on both stone colours
+        ctx.shadowColor = color === BLACK ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 2;
+        ctx.fillText(String(libs), cx, cy);
       }
     }
     ctx.restore();
