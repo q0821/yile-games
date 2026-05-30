@@ -163,6 +163,8 @@ const app = {
   showGuidanceTooltipAt: (hint) => showGuidanceTooltipAt(hint),
   clearGuidance: () => clearGuidance(),
   reviewGo: (n) => reviewGo(n),
+  drawScoreChart: () => drawScoreChartView(),
+  showCoachTip: (info) => showCoachTip(info),
   closeSidebar,
 };
 
@@ -487,7 +489,10 @@ function reviewGo(n) {
   if (!result.ok) return;
   applyStateFromStore();
   updateReviewInfo();
-  if (analysisData && !isAnalyzing) aiController.updateAnalysisMoveInfo();
+  if (analysisData && !isAnalyzing) {
+    aiController.updateAnalysisMoveInfo();
+    drawScoreChartView();
+  }
   drawBoard();
 }
 
@@ -498,6 +503,107 @@ function updateReviewInfo() {
 // ==================== AI REVIEW ANALYSIS ====================
 function startAnalysis() {
   aiController.startAnalysis();
+}
+
+// ==================== LEARNING MODE ====================
+let savedOriginalGame = null;
+let _coachTipTimer = null;
+
+// Render the momentum / score-lead chart from the latest review analysis.
+function drawScoreChartView() {
+  const canvas = document.getElementById('scoreChart');
+  if (!canvas) return;
+  if (!analysisData || analysisData.length === 0) {
+    canvas.style.display = 'none';
+    return;
+  }
+  canvas.style.display = 'block';
+  GoUI.drawScoreChart({ analysisData, currentReviewMove });
+}
+
+// Map a click on the chart to a move and jump there.
+function handleScoreChartClick(e) {
+  if (!analysisData || analysisData.length === 0) return;
+  const canvas = document.getElementById('scoreChart');
+  const n = analysisData.length;
+  const move = GoUI.chartXToMove(canvas, e.clientX, n);
+  if (move != null) reviewGo(move);
+}
+
+// Non-blocking in-game coaching tip after a costly move.
+function showCoachTip(info) {
+  const el = document.getElementById('coachTip');
+  if (!el) return;
+  el.innerHTML = `💡 這手大約損失 ${Math.round(info.pointsLost)} 目，AI 會下在 ${info.coord}。`
+    + ` <button onclick="doUndo()" style="margin-left:6px">重下</button>`
+    + ` <button onclick="dismissCoachTip()" style="margin-left:4px">忽略</button>`;
+  el.style.display = 'block';
+  if (_coachTipTimer) clearTimeout(_coachTipTimer);
+  _coachTipTimer = setTimeout(() => { el.style.display = 'none'; }, 8000);
+}
+
+function dismissCoachTip() {
+  const el = document.getElementById('coachTip');
+  if (el) el.style.display = 'none';
+}
+
+// Branch the game from the current review position so the player can try a
+// different move and keep playing the AI, without losing the original record.
+function replayFromHere() {
+  if (!isReviewing) return;
+  const cut = currentReviewMove;
+  savedOriginalGame = GameState.getSnapshot();
+  const original = savedOriginalGame;
+  const movesToReplay = original.moveHistory.slice(0, cut);
+  const sideToMove = (cut % 2 === 0) ? BLACK : WHITE;
+
+  GameState.exitReview();
+  GameState.startGame({
+    size: original.size,
+    gameMode: 'pvc',
+    playerColor: sideToMove,
+    aiLevel: original.aiLevel,
+    timerEnabled: false,
+    timerSeconds: { [BLACK]: 600, [WHITE]: 600 },
+    gameRules: original.gameRules,
+    komi: original.komi,
+  });
+  for (const m of movesToReplay) {
+    if (m.pass) GameState.applyPass();
+    else GameState.applyMove(m.x, m.y);
+  }
+  applyStateFromStore();
+
+  isAnalyzing = false;
+  analysisData = null;
+  document.getElementById('analysisPanel').style.display = 'none';
+  document.getElementById('analysisBtn').style.display = 'none';
+  document.getElementById('reviewBar').style.display = 'none';
+  document.getElementById('exitReviewBtn').style.display = 'none';
+  document.getElementById('reviewBtn').style.display = 'none';
+  document.getElementById('returnOriginalBtn').style.display = 'block';
+  drawScoreChartView();
+
+  setStatus('🔁 練習模式：換個下法試試，再與 AI 繼續對弈');
+  updateUI();
+  drawBoard();
+  if (gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver) {
+    setTimeout(() => aiController.requestAIMove(), AI_MOVE_DELAY_MS);
+  }
+}
+
+function returnToOriginal() {
+  if (!savedOriginalGame) return;
+  GameState.restoreSnapshot(savedOriginalGame);
+  savedOriginalGame = null;
+  applyStateFromStore();
+  document.getElementById('returnOriginalBtn').style.display = 'none';
+  if (gameOver && document.getElementById('reviewToggle').checked) {
+    document.getElementById('reviewBtn').style.display = 'block';
+  }
+  setStatus('已返回原始棋譜');
+  updateUI();
+  drawBoard();
 }
 
 // ==================== UI ====================

@@ -97,6 +97,10 @@
       <label class="toggle"><input type="checkbox" id="guidanceToggle"><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
+      <span>實戰即時提醒</span>
+      <label class="toggle"><input type="checkbox" id="realtimeCoach"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
       <span>棋子表情 😄</span>
       <label class="toggle"><input type="checkbox" id="emotionToggle"><span class="slider"></span></label>
     </div>
@@ -120,12 +124,14 @@
     <div id="aiThinkingOverlay" style="display:none"></div>
     <div class="guidance-tooltip" id="guidanceTooltip" style="display:none"></div>
     <div id="guidanceLegend" class="guidance-legend" style="display:none;"></div>
+    <div id="coachTip" style="display:none; width:100%; max-width:500px; margin-top:6px; padding:8px 10px; background:#3a2a2e; border:1px solid #a05050; border-radius:6px; color:#ffd9d9; font-size:13px;"></div>
     <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
       <div class="review-controls">
         <button onclick="reviewGo(0)" title="回到開始">⏮</button>
         <button onclick="reviewGo(currentReviewMove-1)" title="上一手">◀</button>
         <button onclick="reviewGo(currentReviewMove+1)" title="下一手">▶</button>
         <button onclick="reviewGo(moveHistory.length)" title="到最新">⏭</button>
+        <button onclick="replayFromHere()" title="從這手換個下法，與 AI 繼續對弈">↻ 從這手重下</button>
       </div>
       <div class="move-info" id="reviewInfo"></div>
     </div>
@@ -174,6 +180,7 @@
       <button onclick="exitReview()" id="exitReviewBtn" style="display:none">❌ 結束覆盤</button>
       <button onclick="startAnalysis()" id="analysisBtn" style="display:none">🤖 AI 分析</button>
       <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">💾 匯出 SGF</button>
+      <button onclick="returnToOriginal()" id="returnOriginalBtn" style="display:none">↩️ 返回原譜</button>
     </div>
     <!-- Analysis panel -->
     <div id="analysisPanel" class="analysis-panel" style="display:none;">
@@ -190,6 +197,7 @@
         <div class="score-row"><span>❌ 惡手</span><span id="badCount" class="count-bad">0</span></div>
       </div>
       <div id="analysisMoveInfo" class="analysis-move-info" style="display:none;"></div>
+      <canvas id="scoreChart" title="形勢曲線（點圖跳到該手）" style="width:100%;height:110px;margin-top:8px;display:none;cursor:pointer;"></canvas>
     </div>
 
     <!-- Scoring Panel -->
