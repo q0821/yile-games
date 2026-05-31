@@ -96,7 +96,13 @@ export function makeAiController(app) {
 
     try {
       const sgf = GnuGoService.buildSGF(app.moveHistory, app.size, app.komi);
+      // Give the AI a human-like pause (random 1–3s) so the player isn't rushed.
+      // GnuGo's own compute time counts toward it, so we only wait the remainder.
+      const thinkStart = Date.now();
+      const minThinkMs = 1000 + Math.floor(Math.random() * 2000);
       const result = await GnuGoService.play(app.aiLevel, sgf, app.moveHistory.length, app.size);
+      const remaining = minThinkMs - (Date.now() - thinkStart);
+      if (remaining > 0) await new Promise(r => setTimeout(r, remaining));
       app.GameState.sync({ isAIThinking: false });
       app.applyStateFromStore();
       app.updateUI();
