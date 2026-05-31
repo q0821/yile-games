@@ -461,16 +461,21 @@ function updateTimerDisplay() { GoTimer.updateDisplay(timerSeconds); }
 
 // ==================== REVIEW ====================
 // On mobile the right info panel is hidden, so move the analysis results panel
-// under the board (into board-wrapper) during review, and put it back after.
+// directly under the review bar (within board-wrapper) during review, and put
+// it back afterwards. Desktop keeps the panel in the info panel as before.
 let _analysisPanelHome = null;
 function moveAnalysisPanelToBoard() {
+  if (window.innerWidth > 900) return; // desktop: panel stays in the info panel
   const panel = document.getElementById('analysisPanel');
+  const reviewBar = document.getElementById('reviewBar');
   const wrapper = document.querySelector('.board-wrapper');
-  if (!panel || !wrapper || panel.parentNode === wrapper) return;
+  if (!panel || !reviewBar || !wrapper || panel.parentNode === wrapper) return;
   _analysisPanelHome = { parent: panel.parentNode, next: panel.nextSibling };
   panel.style.width = '100%';
   panel.style.maxWidth = '500px';
-  wrapper.appendChild(panel);
+  // Insert right after the review bar so progress + results sit where the
+  // player is already looking (above the Pass/undo action row).
+  wrapper.insertBefore(panel, reviewBar.nextSibling);
 }
 function restoreAnalysisPanel() {
   const panel = document.getElementById('analysisPanel');
