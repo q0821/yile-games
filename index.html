@@ -134,6 +134,10 @@
         <button onclick="replayFromHere()" title="從這手換個下法，與 AI 繼續對弈">↻ 從這手重下</button>
       </div>
       <div class="move-info" id="reviewInfo"></div>
+      <div class="review-controls" style="margin-top:6px;">
+        <button onclick="startAnalysis()" id="reviewAnalysisBtn">🤖 AI 分析</button>
+        <button onclick="exitReview()">❌ 結束覆盤</button>
+      </div>
     </div>
     <!-- Mobile action buttons -->
     <div class="mobile-action-bar" id="mobileActionBar">
@@ -224,7 +228,11 @@
     <h2 id="modalTitle">遊戲結束</h2>
     <p id="modalResult"></p>
     <p id="modalDetail" style="font-size:13px;color:#8899bb"></p>
-    <button class="primary" onclick="closeModal()">確定</button>
+    <div class="modal-actions">
+      <button class="primary" onclick="closeModal(); startNewGame()">🎮 再來一局</button>
+      <button onclick="closeModal(); enterReview()" id="modalReviewBtn">📖 去覆盤</button>
+      <button onclick="closeModal()">關閉</button>
+    </div>
   </div>
 </div>
 

@@ -219,6 +219,9 @@ export function makeAiController(app) {
     document.getElementById('questionCount').textContent = question;
     document.getElementById('badCount').textContent = bad;
 
+    const reviewAnalysisBtn = document.getElementById('reviewAnalysisBtn');
+    if (reviewAnalysisBtn) reviewAnalysisBtn.style.display = 'none';
+
     updateAnalysisMoveInfo();
     app.drawScoreChart?.();
     app.drawBoard();

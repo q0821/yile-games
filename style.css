@@ -408,6 +408,13 @@ button.danger:hover {
 }
 .modal p  { margin-bottom: 8px; font-size: 15px; }
 .modal button { margin-top: 14px; }
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.modal-actions button { margin-top: 0; width: 100%; }
 
 /* ===== Mobile sidebar ===== */
 .mobile-menu-btn {

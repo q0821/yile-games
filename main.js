@@ -406,8 +406,10 @@ function endGame(title, detail) {
   document.getElementById('modalTitle').textContent = '遊戲結束';
   document.getElementById('modalResult').textContent = title;
   document.getElementById('modalDetail').textContent = detail;
+  const reviewOn = document.getElementById('reviewToggle').checked;
+  document.getElementById('modalReviewBtn').style.display = reviewOn ? 'block' : 'none';
   document.getElementById('resultModal').classList.add('show');
-  if (document.getElementById('reviewToggle').checked) {
+  if (reviewOn) {
     document.getElementById('reviewBtn').style.display = 'block';
   }
   document.getElementById('exportSgfBtn').style.display = 'block';
@@ -458,18 +460,45 @@ function stopTimer() { GoTimer.stop(); }
 function updateTimerDisplay() { GoTimer.updateDisplay(timerSeconds); }
 
 // ==================== REVIEW ====================
+// On mobile the right info panel is hidden, so move the analysis results panel
+// under the board (into board-wrapper) during review, and put it back after.
+let _analysisPanelHome = null;
+function moveAnalysisPanelToBoard() {
+  const panel = document.getElementById('analysisPanel');
+  const wrapper = document.querySelector('.board-wrapper');
+  if (!panel || !wrapper || panel.parentNode === wrapper) return;
+  _analysisPanelHome = { parent: panel.parentNode, next: panel.nextSibling };
+  panel.style.width = '100%';
+  panel.style.maxWidth = '500px';
+  wrapper.appendChild(panel);
+}
+function restoreAnalysisPanel() {
+  const panel = document.getElementById('analysisPanel');
+  if (!panel || !_analysisPanelHome) return;
+  panel.style.width = '';
+  panel.style.maxWidth = '';
+  _analysisPanelHome.parent.insertBefore(panel, _analysisPanelHome.next);
+  _analysisPanelHome = null;
+}
+
 function enterReview() {
   if (!document.getElementById('reviewToggle').checked) return;
   const result = GameState.enterReview();
   if (!result.ok) return;
   applyStateFromStore();
+  moveAnalysisPanelToBoard();
   document.getElementById('reviewBar').style.display = 'block';
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('exitReviewBtn').style.display = 'block';
   document.getElementById('analysisBtn').style.display = 'block';
+  const reviewAnalysisBtn = document.getElementById('reviewAnalysisBtn');
   if (analysisData) {
     document.getElementById('analysisPanel').style.display = 'block';
     document.getElementById('analysisBtn').style.display = 'none';
+    if (reviewAnalysisBtn) reviewAnalysisBtn.style.display = 'none';
+    drawScoreChartView();
+  } else if (reviewAnalysisBtn) {
+    reviewAnalysisBtn.style.display = 'inline-block';
   }
   updateReviewInfo();
   drawBoard();
@@ -483,6 +512,7 @@ function exitReview() {
   document.getElementById('exitReviewBtn').style.display = 'none';
   document.getElementById('analysisBtn').style.display = 'none';
   document.getElementById('analysisPanel').style.display = 'none';
+  restoreAnalysisPanel();
   if (gameOver) document.getElementById('reviewBtn').style.display = 'block';
   drawBoard();
 }
@@ -655,6 +685,7 @@ function startNewGame() {
   document.getElementById('exitReviewBtn').style.display = 'none';
   document.getElementById('analysisBtn').style.display = 'none';
   document.getElementById('analysisPanel').style.display = 'none';
+  restoreAnalysisPanel();
   document.getElementById('exportSgfBtn').style.display = 'none';
   document.getElementById('resultModal').classList.remove('show');
 
