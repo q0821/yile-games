@@ -196,12 +196,14 @@
         <div id="analysisProgressText" class="analysis-progress-text">分析中...</div>
       </div>
       <div id="analysisSummary" style="display:none;">
-        <div class="score-row"><span>✅ 好手</span><span id="goodCount" class="count-good">0</span></div>
-        <div class="score-row"><span>⚠️ 疑問手</span><span id="questionCount" class="count-warn">0</span></div>
-        <div class="score-row"><span>❌ 惡手</span><span id="badCount" class="count-bad">0</span></div>
+        <div class="score-row"><span>✅ 和 AI 同手</span><span id="matchCount" class="count-good">0</span></div>
+        <div class="score-row"><span>🔍 與 AI 不同</span><span id="diffCount" class="count-warn">0</span></div>
+        <p style="font-size:11px;color:#778;margin-top:8px;line-height:1.5">
+          用 ◀ ▶ 逐手檢視，棋盤上會圈出 AI 在該局面的選擇。
+          「不同」不代表壞手——只是給你參考另一種下法。
+        </p>
       </div>
       <div id="analysisMoveInfo" class="analysis-move-info" style="display:none;"></div>
-      <canvas id="scoreChart" title="形勢曲線（點圖跳到該手）" style="width:100%;height:110px;margin-top:8px;display:none;cursor:pointer;"></canvas>
     </div>
 
     <!-- Scoring Panel -->

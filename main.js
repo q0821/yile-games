@@ -163,7 +163,6 @@ const app = {
   showGuidanceTooltipAt: (hint) => showGuidanceTooltipAt(hint),
   clearGuidance: () => clearGuidance(),
   reviewGo: (n) => reviewGo(n),
-  drawScoreChart: () => drawScoreChartView(),
   showCoachTip: (info) => showCoachTip(info),
   closeSidebar,
 };
@@ -501,7 +500,6 @@ function enterReview() {
     document.getElementById('analysisPanel').style.display = 'block';
     document.getElementById('analysisBtn').style.display = 'none';
     if (reviewAnalysisBtn) reviewAnalysisBtn.style.display = 'none';
-    drawScoreChartView();
   } else if (reviewAnalysisBtn) {
     reviewAnalysisBtn.style.display = 'inline-block';
   }
@@ -529,7 +527,6 @@ function reviewGo(n) {
   updateReviewInfo();
   if (analysisData && !isAnalyzing) {
     aiController.updateAnalysisMoveInfo();
-    drawScoreChartView();
   }
   drawBoard();
 }
@@ -547,32 +544,12 @@ function startAnalysis() {
 let savedOriginalGame = null;
 let _coachTipTimer = null;
 
-// Render the momentum / score-lead chart from the latest review analysis.
-function drawScoreChartView() {
-  const canvas = document.getElementById('scoreChart');
-  if (!canvas) return;
-  if (!analysisData || analysisData.length === 0) {
-    canvas.style.display = 'none';
-    return;
-  }
-  canvas.style.display = 'block';
-  GoUI.drawScoreChart({ analysisData, currentReviewMove });
-}
-
-// Map a click on the chart to a move and jump there.
-function handleScoreChartClick(e) {
-  if (!analysisData || analysisData.length === 0) return;
-  const canvas = document.getElementById('scoreChart');
-  const n = analysisData.length;
-  const move = GoUI.chartXToMove(canvas, e.clientX, n);
-  if (move != null) reviewGo(move);
-}
-
-// Non-blocking in-game coaching tip after a costly move.
+// Non-blocking in-game coaching tip: warns when the move just played put its
+// own group in atari (one liberty) — a concrete, certain danger signal.
 function showCoachTip(info) {
   const el = document.getElementById('coachTip');
   if (!el) return;
-  el.innerHTML = `💡 這手大約損失 ${Math.round(info.pointsLost)} 目，AI 會下在 ${info.coord}。`
+  el.innerHTML = `⚠️ ${info.coord} 這塊只剩 1 氣，下一手可能被吃。`
     + ` <button onclick="doUndo()" style="margin-left:6px">重下</button>`
     + ` <button onclick="dismissCoachTip()" style="margin-left:4px">忽略</button>`;
   el.style.display = 'block';
@@ -620,7 +597,6 @@ function replayFromHere() {
   document.getElementById('exitReviewBtn').style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('returnOriginalBtn').style.display = 'block';
-  drawScoreChartView();
 
   setStatus('🔁 練習模式：換個下法試試，再與 AI 繼續對弈');
   updateUI();

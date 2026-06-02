@@ -238,47 +238,5 @@ export const GoRules = {
   EMPTY, BLACK, WHITE,
   createBoard, cloneBoard, opponent, inBounds, getNeighbors,
   getGroup, removeGroup, boardToString, tryPlaceStone,
-  getLegalMoves, calculateTerritory, estimateDeadStones, calculateScore,
-  estimateBlackLead, leadForPlayer, computePointsLost, ratePointsLost
+  getLegalMoves, calculateTerritory, estimateDeadStones, calculateScore
 };
-
-// ── Learning-mode helpers (review scoring & in-game coaching) ─────────────────
-// Estimate how many points Black is ahead by on a (possibly mid-game) board.
-// Positive = Black leads, negative = White leads. Pure JS — no engine needed.
-// Dead stones are intentionally NOT removed (the mid-game heuristic is unreliable);
-// this keeps the running estimate stable across consecutive moves.
-export function estimateBlackLead(board, size, captures, rules, komi) {
-  const s = calculateScore(board, size, new Set(), captures, rules, komi);
-  return s.black - s.white;
-}
-
-// Convert a Black-perspective lead into the given player's perspective.
-export function leadForPlayer(blackLead, player) {
-  return player === BLACK ? blackLead : -blackLead;
-}
-
-// How many points worse the played move is versus the engine's best move,
-// from the mover's perspective. ~0 = as good as the AI; large positive = blunder.
-// `captures` is the running capture count BEFORE this move (used by Japanese rules).
-export function computePointsLost(prevBoard, size, move, bestMove, captures, rules, komi) {
-  if (!move || move.pass) return 0;
-  const player = move.player;
-  const actual = tryPlaceStone(prevBoard, size, move.x, move.y, player, null);
-  const boardActual = actual.valid ? actual.newBoard : prevBoard;
-  const leadActual = leadForPlayer(estimateBlackLead(boardActual, size, captures, rules, komi), player);
-  let leadBest = leadActual;
-  if (bestMove) {
-    const best = tryPlaceStone(prevBoard, size, bestMove[0], bestMove[1], player, null);
-    if (best.valid) {
-      leadBest = leadForPlayer(estimateBlackLead(best.newBoard, size, captures, rules, komi), player);
-    }
-  }
-  return leadBest - leadActual;
-}
-
-// Map a points-lost value to a rating bucket.
-export function ratePointsLost(pointsLost, goodPts, badPts) {
-  if (pointsLost <= goodPts) return 'good';
-  if (pointsLost <= badPts) return 'question';
-  return 'bad';
-}

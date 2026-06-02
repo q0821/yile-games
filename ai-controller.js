@@ -3,14 +3,8 @@
 
 import { GnuGoService } from './gnugo-service.js';
 import { getCaptureHints, getGamePhase, getGuidanceLabel } from './hints.js';
-import {
-  createBoard, tryPlaceStone, BLACK, WHITE,
-  estimateBlackLead, computePointsLost, ratePointsLost,
-} from './rules.js';
+import { getGroup } from './rules.js';
 
-// Move-quality thresholds, expressed in points lost vs the engine's best move.
-const COACH_GOOD_PTS = 2;  // lose <= 2 pts  → 好手
-const COACH_BAD_PTS = 6;   // lose >  6 pts  → 惡手
 // Engine level used when asking GnuGo for its "best move" benchmark.
 const REVIEW_BEST_LEVEL = 10;
 
@@ -146,18 +140,24 @@ export function makeAiController(app) {
     app.analysisProgress = 0;
 
     document.getElementById('analysisBtn').style.display = 'none';
-    document.getElementById('analysisPanel').style.display = 'block';
+    const reviewAnalysisBtn = document.getElementById('reviewAnalysisBtn');
+    if (reviewAnalysisBtn) reviewAnalysisBtn.style.display = 'none';
+    const panel = document.getElementById('analysisPanel');
+    panel.style.display = 'block';
     document.getElementById('analysisProgressBar').style.display = 'block';
     document.getElementById('analysisSummary').style.display = 'none';
     document.getElementById('analysisMoveInfo').style.display = 'none';
+    _updateAnalysisProgress();
+    // Make sure the panel (and its progress bar) is actually in view on mobile,
+    // where it sits below the board and may be off-screen.
+    try { panel.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
 
-    // Rebuild the game move-by-move so each position can be scored with pure JS
-    // (territory estimate). One GnuGo call per move gives the "best move" benchmark;
-    // points-lost vs that move drives the rating, and the running Black lead feeds
-    // the momentum chart.
-    let prevBoard = createBoard(app.size);
-    const runningCaptures = { [BLACK]: 0, [WHITE]: 0 };
-
+    // Honest review: GnuGo's only reliable signal is its recommended move (the
+    // `score`/territory function is broken in this WASM build and the mid-game
+    // territory estimate is unreliable). So for each move we just compare what
+    // the player actually played against GnuGo's top choice for that position:
+    //   match — you played exactly what GnuGo would
+    //   diff  — a different move (NOT necessarily worse; we show AI's pick)
     for (let i = 0; i < app.moveHistory.length; i++) {
       if (!app.isAnalyzing) break; // user may have exited review
 
@@ -167,30 +167,13 @@ export function makeAiController(app) {
         try {
           const sgf = GnuGoService.buildSGFUpTo(app.moveHistory, app.size, app.komi, i);
           const { move: aiMove } = await GnuGoService.play(REVIEW_BEST_LEVEL, sgf, i, app.size);
-
-          const pointsLost = computePointsLost(
-            prevBoard, app.size, m, aiMove, runningCaptures, app.gameRules, app.komi
-          );
-          const rating = ratePointsLost(pointsLost, COACH_GOOD_PTS, COACH_BAD_PTS);
-
-          // Advance the board and capture counts for the next iteration.
-          const placed = tryPlaceStone(prevBoard, app.size, m.x, m.y, m.player, null);
-          if (placed.valid) {
-            prevBoard = placed.newBoard;
-            if (placed.captured) {
-              runningCaptures[m.player] += placed.captured;
-            }
-          }
-
-          const blackLead = estimateBlackLead(prevBoard, app.size, runningCaptures, app.gameRules, app.komi);
-          app.analysisData.push({ move: m, aiSuggestion: aiMove, rating, pointsLost, blackLead });
+          const rating = (aiMove && aiMove[0] === m.x && aiMove[1] === m.y) ? 'match' : 'diff';
+          app.analysisData.push({ move: m, aiSuggestion: aiMove, rating });
         } catch {
-          const blackLead = estimateBlackLead(prevBoard, app.size, runningCaptures, app.gameRules, app.komi);
-          app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral', pointsLost: 0, blackLead });
+          app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
         }
       } else {
-        const blackLead = estimateBlackLead(prevBoard, app.size, runningCaptures, app.gameRules, app.komi);
-        app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral', pointsLost: 0, blackLead });
+        app.analysisData.push({ move: m, aiSuggestion: null, rating: 'neutral' });
       }
 
       app.analysisProgress = Math.round(((i + 1) / app.moveHistory.length) * 100);
@@ -215,28 +198,25 @@ export function makeAiController(app) {
     document.getElementById('analysisSummary').style.display = 'block';
     document.getElementById('analysisMoveInfo').style.display = 'block';
 
-    let good = 0, question = 0, bad = 0;
+    let match = 0, diff = 0;
     for (const d of app.analysisData) {
-      if (d.rating === 'good') good++;
-      else if (d.rating === 'question') question++;
-      else if (d.rating === 'bad') bad++;
+      if (d.rating === 'match') match++;
+      else if (d.rating === 'diff') diff++;
     }
-    document.getElementById('goodCount').textContent = good;
-    document.getElementById('questionCount').textContent = question;
-    document.getElementById('badCount').textContent = bad;
+    document.getElementById('matchCount').textContent = match;
+    document.getElementById('diffCount').textContent = diff;
 
     const reviewAnalysisBtn = document.getElementById('reviewAnalysisBtn');
     if (reviewAnalysisBtn) reviewAnalysisBtn.style.display = 'none';
 
     updateAnalysisMoveInfo();
-    app.drawScoreChart?.();
     app.drawBoard();
   }
 
   function updateAnalysisMoveInfo() {
     const el = document.getElementById('analysisMoveInfo');
     if (!app.analysisData || app.currentReviewMove === 0) {
-      el.textContent = '';
+      el.textContent = '逐手檢視：◀ ▶ 移動，看 AI 在每個局面會下哪裡。';
       return;
     }
     const d = app.analysisData[app.currentReviewMove - 1];
@@ -244,46 +224,34 @@ export function makeAiController(app) {
       el.textContent = 'Pass';
       return;
     }
-    const ratingText = d.rating === 'good' ? '✅ 好手'
-      : d.rating === 'question' ? '⚠️ 疑問手'
-      : d.rating === 'bad' ? '❌ 惡手' : '';
-    let text = ratingText;
-    if (typeof d.pointsLost === 'number' && d.pointsLost >= 1 && d.rating !== 'good') {
-      text += `　約損失 ${d.pointsLost.toFixed(0)} 目`;
+    if (d.rating === 'match') {
+      el.textContent = '✅ 和 AI 同手';
+    } else if (d.rating === 'diff' && d.aiSuggestion) {
+      el.textContent = `🔍 AI 會下在 ${app.COORD_LETTERS[d.aiSuggestion[1]]}${app.size - d.aiSuggestion[0]}（不代表你這手不好）`;
+    } else {
+      el.textContent = '';
     }
-    if (d.aiSuggestion && d.rating !== 'good') {
-      text += `　AI 建議：${app.COORD_LETTERS[d.aiSuggestion[1]]}${app.size - d.aiSuggestion[0]}`;
-    }
-    el.textContent = text;
   }
 
   // ——— Real-time coaching (in-game) ———
-  // Best-effort: after the human plays in pvc, quietly check whether the move
-  // lost a lot of points vs GnuGo's choice and surface a non-blocking tip.
-  async function checkLastMoveQuality() {
-    if (_coachBusy || app.gameMode !== 'pvc') return;
+  // We can't reliably score "how many points a move lost" (GnuGo's territory
+  // function is broken in this build), so instead of guessing we flag the one
+  // thing we CAN detect for certain with pure rules: the move just played left
+  // its own group in atari (a single liberty) — i.e. it's about to be captured.
+  // This is a concrete, honest warning that helps a learner.
+  function checkLastMoveQuality() {
+    if (app.gameMode !== 'pvc') return;
     const n = app.moveHistory.length;
     if (n === 0) return;
     const m = app.moveHistory[n - 1];
     if (!m || m.pass || m.player !== app.playerColor) return;
-    if (!GnuGoService.isReady()) return;
 
-    _coachBusy = true;
-    try {
-      const prevBoard = app.GoReview.getReviewBoard(app.moveHistory, n - 1, app.size);
-      const sgf = GnuGoService.buildSGFUpTo(app.moveHistory, app.size, app.komi, n - 1);
-      const { move: bestMove } = await GnuGoService.play(REVIEW_BEST_LEVEL, sgf, n - 1, app.size);
-      const pointsLost = computePointsLost(
-        prevBoard, app.size, m, bestMove, app.captures, app.gameRules, app.komi
-      );
-      if (pointsLost > COACH_BAD_PTS && bestMove) {
-        const coord = `${app.COORD_LETTERS[bestMove[1]]}${app.size - bestMove[0]}`;
-        app.showCoachTip?.({ pointsLost, coord, moveIndex: n - 1 });
-      }
-    } catch {
-      // never disrupt play
-    } finally {
-      _coachBusy = false;
+    const group = getGroup(app.board, app.size, m.x, m.y);
+    if (group.liberties && group.liberties.size === 1) {
+      app.showCoachTip?.({
+        kind: 'atari',
+        coord: `${app.COORD_LETTERS[m.y]}${app.size - m.x}`,
+      });
     }
   }
 
