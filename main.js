@@ -12,6 +12,7 @@ import { toggleSidebar, openSidebar, closeSidebar } from './sidebar.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
+import { playTitleReveal } from './ink-fx.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -788,8 +789,15 @@ Object.defineProperty(window, 'moveHistory', {
 registerEventHandlers(app);
 applyAppVersion();
 
+const _isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=v2026.03.15-9c49be6').catch(() => {});
+  if (_isLocalDev) {
+    // 開發環境不註冊 SW，並清掉既有註冊與快取，避免一直吃到舊資源
+    navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+    if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
+  } else {
+    navigator.serviceWorker.register('sw.js?v=v2026.03.15-9c49be6').catch(() => {});
+  }
 }
 
 // ==================== HOME / ROUTING ====================
@@ -871,15 +879,20 @@ function goHome() { location.hash = '#home'; }
 
 function applyRoute() {
   const hash = location.hash;
+  const title = document.querySelector('h1');
   if (hash === '#tsumego') {
     showScreen('tsumego');
+    if (title) title.style.visibility = 'visible';
     enterTsumegoMode();
   } else if (hash === '#play') {
     showScreen('play');
+    if (title) title.style.visibility = 'visible';
     enterPlayMode();
   } else {
     showScreen('home');
     renderHome();
+    // 進首頁時標題以水墨暈開浮現（WebGL；不支援/reduced-motion 則靜態顯示）
+    playTitleReveal(title, { force: true });
   }
 }
 
