@@ -93,10 +93,6 @@
       <label class="toggle"><input type="checkbox" id="reviewToggle" checked><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <span>新手引導</span>
-      <label class="toggle"><input type="checkbox" id="guidanceToggle"><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
       <span>實戰即時提醒</span>
       <label class="toggle"><input type="checkbox" id="realtimeCoach"><span class="slider"></span></label>
     </div>
@@ -122,8 +118,6 @@
     </div>
     <canvas id="board"></canvas>
     <div id="aiThinkingOverlay" style="display:none"></div>
-    <div class="guidance-tooltip" id="guidanceTooltip" style="display:none"></div>
-    <div id="guidanceLegend" class="guidance-legend" style="display:none;"></div>
     <div id="coachTip" style="display:none; width:100%; max-width:500px; margin-top:6px; padding:8px 10px; background:#3a2a2e; border:1px solid #a05050; border-radius:6px; color:#ffd9d9; font-size:13px;"></div>
     <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
       <div class="review-controls">
@@ -135,7 +129,6 @@
       </div>
       <div class="move-info" id="reviewInfo"></div>
       <div class="review-controls" style="margin-top:6px;">
-        <button onclick="startAnalysis()" id="reviewAnalysisBtn">🤖 AI 分析</button>
         <button onclick="exitReview()">❌ 結束覆盤</button>
       </div>
     </div>
@@ -182,28 +175,8 @@
       <button onclick="doResign()" class="danger">🏳️ 認輸</button>
       <button onclick="enterReview()" id="reviewBtn" style="display:none">📖 覆盤</button>
       <button onclick="exitReview()" id="exitReviewBtn" style="display:none">❌ 結束覆盤</button>
-      <button onclick="startAnalysis()" id="analysisBtn" style="display:none">🤖 AI 分析</button>
       <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">💾 匯出 SGF</button>
       <button onclick="returnToOriginal()" id="returnOriginalBtn" style="display:none">↩️ 返回原譜</button>
-    </div>
-    <!-- Analysis panel -->
-    <div id="analysisPanel" class="analysis-panel" style="display:none;">
-      <h4 class="analysis-title">🤖 AI 覆盤分析</h4>
-      <div id="analysisProgressBar" class="analysis-progress" style="display:none;">
-        <div class="analysis-progress-track">
-          <div id="analysisProgressFill" class="analysis-progress-fill"></div>
-        </div>
-        <div id="analysisProgressText" class="analysis-progress-text">分析中...</div>
-      </div>
-      <div id="analysisSummary" style="display:none;">
-        <div class="score-row"><span>✅ 和 AI 同手</span><span id="matchCount" class="count-good">0</span></div>
-        <div class="score-row"><span>🔍 與 AI 不同</span><span id="diffCount" class="count-warn">0</span></div>
-        <p style="font-size:11px;color:#778;margin-top:8px;line-height:1.5">
-          用 ◀ ▶ 逐手檢視，棋盤上會圈出 AI 在該局面的選擇。
-          「不同」不代表壞手——只是給你參考另一種下法。
-        </p>
-      </div>
-      <div id="analysisMoveInfo" class="analysis-move-info" style="display:none;"></div>
     </div>
 
     <!-- Scoring Panel -->

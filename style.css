@@ -590,22 +590,6 @@ button.danger:hover {
 }
 
 /* ===== Guidance tooltip ===== */
-.guidance-tooltip {
-  position: absolute;
-  background: var(--bg-panel);
-  color: var(--gold);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(192,148,58,0.5);
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 50;
-  box-shadow: var(--shadow-sm);
-  letter-spacing: 0.3px;
-}
-
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
   h1 { font-size: 20px; margin: 10px 0 6px; letter-spacing: 2px; }
@@ -616,65 +600,6 @@ button.danger:hover {
   .mobile-info-bar  { display: flex; }
   .mobile-action-bar { display: flex; }
   .mobile-status { display: block; }
-}
-
-/* ===== Analysis panel ===== */
-.analysis-panel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  margin-top: 12px;
-}
-.analysis-title {
-  color: var(--gold);
-  margin-bottom: 10px;
-  text-align: center;
-  font-size: 13px;
-  letter-spacing: 0.8px;
-}
-.analysis-progress { margin-bottom: 10px; }
-.analysis-progress-track {
-  background: var(--border);
-  border-radius: 4px;
-  height: 7px;
-  overflow: hidden;
-}
-.analysis-progress-fill {
-  background: linear-gradient(90deg, var(--gold-dim), var(--gold-mid));
-  height: 100%;
-  width: 0%;
-  transition: width 0.3s ease;
-  border-radius: 4px;
-}
-.analysis-progress-text {
-  font-size: 12px;
-  color: var(--text-dim);
-  text-align: center;
-  margin-top: 5px;
-}
-.count-good { color: var(--success); font-weight: 700; }
-.count-warn { color: var(--warning); font-weight: 700; }
-.count-bad  { color: var(--danger);  font-weight: 700; }
-.analysis-move-info {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--text-dim);
-  text-align: center;
-}
-
-/* ===== Guidance legend ===== */
-.guidance-legend {
-  width: 100%;
-  max-width: 500px;
-  margin-top: 8px;
-  padding: 10px 14px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 /* ===== Scrollbar ===== */

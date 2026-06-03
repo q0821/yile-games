@@ -13,12 +13,8 @@ import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 
 // ==================== CONSTANTS ====================
-const GUIDANCE_HINT_DELAY_MS = 150;
 const AI_MOVE_DELAY_MS       = 100;
 const AI_INIT_DELAY_MS       = 300;
-const ANALYSIS_STEP_DELAY_MS = 10;
-const ANALYSIS_GOOD_DIST     = 3;
-const ANALYSIS_BAD_DIST      = 7;
 const COORD_LETTERS = 'ABCDEFGHJKLMNOPQRST';
 
 const VALID_BOARD_SIZES = [9, 13, 19];
@@ -54,19 +50,11 @@ let timerSeconds = { [BLACK]: 600, [WHITE]: 600 };
 let isReviewing = false;
 let currentReviewMove = 0;
 
-let analysisData = null;
-let isAnalyzing = false;
-let analysisProgress = 0;
-
 let isScoring = false;
 let deadStones = new Set();
 let showingHint = false;
 
-let guidanceEnabled = false;
 let emotionEnabled = false;
-let guidanceHints = [];
-let guidanceTooltip = null;
-let guidanceLoading = false;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -93,8 +81,7 @@ function isGameBusy()    { return isGameBlocked() || isAIThinking; }
 const app = {
   // Constants
   EMPTY, BLACK, WHITE,
-  GUIDANCE_HINT_DELAY_MS, AI_MOVE_DELAY_MS, AI_INIT_DELAY_MS,
-  ANALYSIS_STEP_DELAY_MS, ANALYSIS_GOOD_DIST, ANALYSIS_BAD_DIST,
+  AI_MOVE_DELAY_MS, AI_INIT_DELAY_MS,
   COORD_LETTERS, STAR_POINTS,
 
   // State getters (re-read live values)
@@ -119,28 +106,14 @@ const app = {
   get isScoring()         { return isScoring; },
   get deadStones()        { return deadStones; },
   get showingHint()       { return showingHint; },
-  get guidanceEnabled()   { return guidanceEnabled; },
   get emotionEnabled()    { return emotionEnabled; },
-  get guidanceHints()     { return guidanceHints; },
-  get guidanceTooltip()   { return guidanceTooltip; },
-  get guidanceLoading()   { return guidanceLoading; },
-  get analysisData()      { return analysisData; },
-  get isAnalyzing()       { return isAnalyzing; },
-  get analysisProgress()  { return analysisProgress; },
   get canvas()            { return canvas; },
   get padding()           { return padding; },
   get cellSize()          { return cellSize; },
   get hoverPos()          { return hoverPos; },
 
   // State setters
-  set guidanceHints(v)    { guidanceHints = v; },
-  set guidanceTooltip(v)  { guidanceTooltip = v; },
-  set guidanceLoading(v)  { guidanceLoading = v; },
-  set guidanceEnabled(v)  { guidanceEnabled = v; },
   set emotionEnabled(v)   { emotionEnabled = v; },
-  set isAnalyzing(v)      { isAnalyzing = v; },
-  set analysisData(v)     { analysisData = v; },
-  set analysisProgress(v) { analysisProgress = v; },
   set hoverPos(v)         { hoverPos = v; },
 
   // References to modules
@@ -158,10 +131,6 @@ const app = {
   syncStatus: (...args) => syncStatus(...args),
   setStatus: (msg) => setStatus(msg),
   drawBoard: () => drawBoard(),
-  renderGuidanceLegend: () => renderGuidanceLegend(),
-  hideGuidanceTooltip: () => hideGuidanceTooltip(),
-  showGuidanceTooltipAt: (hint) => showGuidanceTooltipAt(hint),
-  clearGuidance: () => clearGuidance(),
   reviewGo: (n) => reviewGo(n),
   showCoachTip: (info) => showCoachTip(info),
   closeSidebar,
@@ -184,27 +153,6 @@ function clearHint() {
 
 function getCaptureHints(b, player) {
   return GoHints.getCaptureHints(b, size, player, koPoint);
-}
-
-// ==================== BEGINNER GUIDANCE ====================
-function requestGuidanceHints() {
-  aiController.requestGuidanceHints();
-}
-
-function renderGuidanceLegend() {
-  GoHints.renderGuidanceLegend(guidanceHints, { guidanceEnabled, gameOver, isReviewing, isScoring, size });
-}
-
-function clearGuidance() {
-  guidanceHints = [];
-  guidanceTooltip = null;
-  hideGuidanceTooltip();
-  renderGuidanceLegend();
-}
-
-function hideGuidanceTooltip() { GoUI.hideGuidanceTooltip(); }
-function showGuidanceTooltipAt(hint) {
-  GoUI.showGuidanceTooltipAt({ canvas, padding, cellSize }, hint);
 }
 
 // ==================== RENDERING ====================
@@ -232,13 +180,8 @@ function buildBoardViewState() {
     deadStones,
     lastMove: lastMoveToShow,
     scoreData,
-    analysisData,
-    isAnalyzing,
     showingHint,
     captureHints,
-    guidanceEnabled,
-    guidanceLoading,
-    guidanceHints,
     emotionEnabled,
     hoverPos
   };
@@ -266,7 +209,6 @@ function placeStone(x, y) {
   applyStateFromStore();
 
   showingHint = false;
-  clearGuidance();
 
   updateUI();
   const willRequestAI = gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver;
@@ -288,12 +230,6 @@ function placeStone(x, y) {
     setTimeout(() => aiController.requestAIMove(), AI_MOVE_DELAY_MS);
   }
 
-  if (guidanceEnabled && !gameOver) {
-    if (gameMode !== 'pvc' || currentPlayer === playerColor) {
-      setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
-    }
-  }
-
   return true;
 }
 
@@ -301,7 +237,6 @@ function doPass() {
   if (isGameBusy()) return;
 
   showingHint = false;
-  clearGuidance();
 
   const result = GameState.applyPass();
   if (!result.ok) return;
@@ -326,18 +261,11 @@ function doPass() {
   if (willRequestAI) {
     setTimeout(() => aiController.requestAIMove(), AI_MOVE_DELAY_MS);
   }
-
-  if (guidanceEnabled && !gameOver) {
-    if (gameMode !== 'pvc' || currentPlayer === playerColor) {
-      setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
-    }
-  }
 }
 
 function doUndo() {
   if (isGameBlocked()) return;
   showingHint = false;
-  clearGuidance();
   if (!document.getElementById('undoToggle').checked) {
     setStatus('悔棋功能已關閉，可在設定中開啟');
     return;
@@ -353,10 +281,6 @@ function doUndo() {
   drawBoard();
   setStatus('已退回一手');
   saveGame();
-
-  if (guidanceEnabled && !gameOver) {
-    setTimeout(() => requestGuidanceHints(), GUIDANCE_HINT_DELAY_MS);
-  }
 }
 
 function doResign() {
@@ -459,50 +383,14 @@ function stopTimer() { GoTimer.stop(); }
 function updateTimerDisplay() { GoTimer.updateDisplay(timerSeconds); }
 
 // ==================== REVIEW ====================
-// On mobile the right info panel is hidden, so move the analysis results panel
-// directly under the review bar (within board-wrapper) during review, and put
-// it back afterwards. Desktop keeps the panel in the info panel as before.
-let _analysisPanelHome = null;
-function moveAnalysisPanelToBoard() {
-  if (window.innerWidth > 900) return; // desktop: panel stays in the info panel
-  const panel = document.getElementById('analysisPanel');
-  const reviewBar = document.getElementById('reviewBar');
-  const wrapper = document.querySelector('.board-wrapper');
-  if (!panel || !reviewBar || !wrapper || panel.parentNode === wrapper) return;
-  _analysisPanelHome = { parent: panel.parentNode, next: panel.nextSibling };
-  panel.style.width = '100%';
-  panel.style.maxWidth = '500px';
-  // Insert right after the review bar so progress + results sit where the
-  // player is already looking (above the Pass/undo action row).
-  wrapper.insertBefore(panel, reviewBar.nextSibling);
-}
-function restoreAnalysisPanel() {
-  const panel = document.getElementById('analysisPanel');
-  if (!panel || !_analysisPanelHome) return;
-  panel.style.width = '';
-  panel.style.maxWidth = '';
-  _analysisPanelHome.parent.insertBefore(panel, _analysisPanelHome.next);
-  _analysisPanelHome = null;
-}
-
 function enterReview() {
   if (!document.getElementById('reviewToggle').checked) return;
   const result = GameState.enterReview();
   if (!result.ok) return;
   applyStateFromStore();
-  moveAnalysisPanelToBoard();
   document.getElementById('reviewBar').style.display = 'block';
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('exitReviewBtn').style.display = 'block';
-  document.getElementById('analysisBtn').style.display = 'block';
-  const reviewAnalysisBtn = document.getElementById('reviewAnalysisBtn');
-  if (analysisData) {
-    document.getElementById('analysisPanel').style.display = 'block';
-    document.getElementById('analysisBtn').style.display = 'none';
-    if (reviewAnalysisBtn) reviewAnalysisBtn.style.display = 'none';
-  } else if (reviewAnalysisBtn) {
-    reviewAnalysisBtn.style.display = 'inline-block';
-  }
   updateReviewInfo();
   drawBoard();
 }
@@ -513,9 +401,6 @@ function exitReview() {
   applyStateFromStore();
   document.getElementById('reviewBar').style.display = 'none';
   document.getElementById('exitReviewBtn').style.display = 'none';
-  document.getElementById('analysisBtn').style.display = 'none';
-  document.getElementById('analysisPanel').style.display = 'none';
-  restoreAnalysisPanel();
   if (gameOver) document.getElementById('reviewBtn').style.display = 'block';
   drawBoard();
 }
@@ -525,19 +410,11 @@ function reviewGo(n) {
   if (!result.ok) return;
   applyStateFromStore();
   updateReviewInfo();
-  if (analysisData && !isAnalyzing) {
-    aiController.updateAnalysisMoveInfo();
-  }
   drawBoard();
 }
 
 function updateReviewInfo() {
   GoUI.updateReviewInfo({ currentReviewMove, moveHistory, size });
-}
-
-// ==================== AI REVIEW ANALYSIS ====================
-function startAnalysis() {
-  aiController.startAnalysis();
 }
 
 // ==================== LEARNING MODE ====================
@@ -589,10 +466,6 @@ function replayFromHere() {
   }
   applyStateFromStore();
 
-  isAnalyzing = false;
-  analysisData = null;
-  document.getElementById('analysisPanel').style.display = 'none';
-  document.getElementById('analysisBtn').style.display = 'none';
   document.getElementById('reviewBar').style.display = 'none';
   document.getElementById('exitReviewBtn').style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
@@ -651,22 +524,12 @@ function startNewGame() {
   GameState.startGame({ size, gameMode, playerColor, aiLevel, timerEnabled, timerSeconds, gameRules, komi });
   applyStateFromStore();
 
-  analysisData = null;
-  isAnalyzing = false;
-  guidanceEnabled = document.getElementById('guidanceToggle').checked;
   emotionEnabled  = document.getElementById('emotionToggle').checked;
-  guidanceHints = [];
-  guidanceTooltip = null;
-  guidanceLoading = false;
-  hideGuidanceTooltip();
 
   document.getElementById('scoringPanel').style.display = 'none';
   document.getElementById('reviewBar').style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('exitReviewBtn').style.display = 'none';
-  document.getElementById('analysisBtn').style.display = 'none';
-  document.getElementById('analysisPanel').style.display = 'none';
-  restoreAnalysisPanel();
   document.getElementById('exportSgfBtn').style.display = 'none';
   document.getElementById('resultModal').classList.remove('show');
 
@@ -692,10 +555,6 @@ function startNewGame() {
         console.error('GnuGo init failed:', err);
         setStatus('⚠️ AI 引擎載入失敗，請重新整理頁面');
       });
-  }
-
-  if (guidanceEnabled) {
-    setTimeout(() => requestGuidanceHints(), 200);
   }
 }
 
@@ -901,7 +760,6 @@ Object.assign(window, {
   enterReview,
   exitReview,
   reviewGo,
-  startAnalysis,
   exportSGF,
   closeModal,
   openChangelog,

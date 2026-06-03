@@ -192,39 +192,6 @@ export function updateScoringDisplay(state, score) {
     : '和棋';
 }
 
-export function hideGuidanceTooltip() {
-  document.getElementById('guidanceTooltip').style.display = 'none';
-}
-
-export function showGuidanceTooltipAt(deps, hint) {
-  const el = document.getElementById('guidanceTooltip');
-  const rankNames = ['⭐ 最佳', '🔵 次佳', '🟢 可考慮'];
-  const cx = deps.padding + hint.y * deps.cellSize;
-  const cy = deps.padding + hint.x * deps.cellSize;
-  const rect = deps.canvas.getBoundingClientRect();
-
-  el.textContent = `${rankNames[hint.rank] || ''} — ${hint.label}（點擊落子）`;
-  el.style.display = 'block';
-
-  const elW = el.offsetWidth || 160;
-  const elH = el.offsetHeight || 32;
-  const margin = 6;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  let left = rect.left + window.scrollX + cx - elW / 2;
-  const isNearTop = cy < deps.cellSize * 2;
-  let top = isNearTop
-    ? rect.top + window.scrollY + cy + deps.cellSize + 5
-    : rect.top + window.scrollY + cy - elH - 5;
-
-  left = Math.max(margin, Math.min(left, vw + window.scrollX - elW - margin));
-  top = Math.max(margin + window.scrollY, Math.min(top, vh + window.scrollY - elH - margin));
-
-  el.style.left = left + 'px';
-  el.style.top = top + 'px';
-  el.style.transform = 'none';
-}
 
 export function resizeCanvas(deps, state) {
   const isMobile = window.innerWidth <= 900;
@@ -368,50 +335,6 @@ export function drawBoard(deps, state) {
     }
   }
 
-  if (state.isReviewing && state.analysisData && !state.isAnalyzing && state.currentReviewMove > 0) {
-    const d = state.analysisData[state.currentReviewMove - 1];
-    if (d && !d.move.pass) {
-      const mx = d.move.x, my = d.move.y;
-      const mcx = deps.padding + my * deps.cellSize;
-      const mcy = deps.padding + mx * deps.cellSize;
-      let markerColor = null;
-      let markerLabel = '';
-      if (d.rating === 'match') {
-        markerColor = '#4caf50'; markerLabel = '✓';
-      } else if (d.rating === 'diff') {
-        markerColor = '#64b5f6'; markerLabel = '◦';
-      }
-      if (markerColor) {
-        ctx.save();
-        ctx.fillStyle = markerColor;
-        ctx.font = `bold ${Math.max(12, deps.cellSize * 0.4)}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(markerLabel, mcx, mcy);
-        ctx.restore();
-      }
-      if (d.aiSuggestion && d.rating === 'diff') {
-        const [ax, ay] = d.aiSuggestion;
-        const acx = deps.padding + ay * deps.cellSize;
-        const acy = deps.padding + ax * deps.cellSize;
-        ctx.save();
-        ctx.globalAlpha = 0.5;
-        ctx.strokeStyle = '#4caf50';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(acx, acy, deps.cellSize * 0.38, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 0.8;
-        ctx.fillStyle = '#4caf50';
-        ctx.font = `bold ${Math.max(10, deps.cellSize * 0.3)}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('AI', acx, acy);
-        ctx.restore();
-      }
-    }
-  }
-
   if (state.showingHint && !state.gameOver && !state.isReviewing && !state.isScoring && !state.isAIThinking) {
     for (const [hx, hy] of state.captureHints || []) {
       const cx = deps.padding + hy * deps.cellSize;
@@ -433,66 +356,6 @@ export function drawBoard(deps, state) {
     }
   }
 
-  if (state.guidanceEnabled && !state.gameOver && !state.isReviewing && !state.isScoring) {
-    if (state.guidanceLoading) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(240,208,96,0.7)';
-      ctx.font = `${Math.max(12, deps.cellSize * 0.4)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🔄 AI 分析中...', canvas.width / 2, canvas.height - 10);
-      ctx.restore();
-    }
-    const rankStyles = [
-      { color: '#ffd700', marker: '⭐', rankLabel: '最佳' },
-      { color: '#4a9eff', marker: '🔵', rankLabel: '次佳' },
-      { color: '#4caf50', marker: '🟢', rankLabel: '可考慮' }
-    ];
-    for (const hint of state.guidanceHints || []) {
-      const cx = deps.padding + hint.y * deps.cellSize;
-      const cy = deps.padding + hint.x * deps.cellSize;
-      const style = rankStyles[hint.rank] || rankStyles[2];
-      ctx.save();
-      ctx.strokeStyle = style.color;
-      ctx.lineWidth = 2.5;
-      ctx.globalAlpha = 0.7;
-      ctx.beginPath();
-      ctx.arc(cx, cy, deps.cellSize * 0.4, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = style.color;
-      ctx.globalAlpha = 0.15;
-      ctx.beginPath();
-      ctx.arc(cx, cy, deps.cellSize * 0.38, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-      ctx.font = `${Math.max(12, deps.cellSize * 0.4)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(style.marker, cx, cy);
-      ctx.fillStyle = style.color;
-      ctx.font = `bold ${Math.max(9, deps.cellSize * 0.28)}px sans-serif`;
-      ctx.fillText(hint.label, cx, cy + deps.cellSize * 0.5);
-      ctx.restore();
-    }
-    if ((state.guidanceHints || []).length > 0) {
-      ctx.save();
-      const lx = canvas.width - 10;
-      const ly = 10;
-      ctx.textAlign = 'right';
-      ctx.textBaseline = 'top';
-      ctx.font = `bold ${Math.max(10, deps.cellSize * 0.3)}px sans-serif`;
-      for (let i = 0; i < rankStyles.length; i++) {
-        const s = rankStyles[i];
-        ctx.fillStyle = s.color;
-        ctx.fillText(`${s.marker} ${s.rankLabel}`, lx, ly + i * (deps.cellSize * 0.38));
-      }
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = `${Math.max(9, deps.cellSize * 0.22)}px sans-serif`;
-      ctx.fillText('點擊標記查看說明', lx, ly + 3 * (deps.cellSize * 0.38));
-      ctx.restore();
-    }
-  }
-
   if (state.hoverPos && !state.gameOver && !state.isReviewing && !state.isScoring && !state.isAIThinking) {
     const [hx, hy] = state.hoverPos;
     if (state.board[hx][hy] === EMPTY) {
@@ -505,6 +368,6 @@ export function drawBoard(deps, state) {
 
 export const GoUI = {
   updateHUD, setStatus, getStatusMessage, syncStatus, updateReviewInfo,
-  updateScoringDisplay, hideGuidanceTooltip, showGuidanceTooltipAt,
+  updateScoringDisplay,
   resizeCanvas, drawStone, drawBoard
 };

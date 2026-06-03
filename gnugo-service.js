@@ -191,50 +191,7 @@ export function play(level, sgf, expectedMoveCount, size) {
     _getWorker().postMessage({ type: 'play', id, payload: { level, sgf } });
   });
 }
-
-// ——— High-level helpers (all async) ———
-
-export async function getTopMoves(moveHistory, size, komi, currentPlayer, count) {
-  const hints = [];
-  const sgfBase = buildSGF(moveHistory, size, komi);
-  const firstResult = await play(10, sgfBase, moveHistory.length, size);
-  const first = firstResult.move;
-  if (!first) return hints;
-
-  const color = currentPlayer === 1 ? 'B' : 'W';
-  const oppColor = currentPlayer === 1 ? 'W' : 'B';
-
-  hints.push(first);
-
-  const sgfForSecond = appendToSgf(sgfBase, [
-    `;${color}[${moveToSgfCoord(first)}]`,
-    `;${oppColor}[]`
-  ]);
-  const secondResult = await play(10, sgfForSecond, moveHistory.length + 2, size);
-  const second = secondResult.move;
-  if (second && (second[0] !== first[0] || second[1] !== first[1])) {
-    hints.push(second);
-  }
-
-  if (count >= 3 && hints.length >= 2) {
-    const secondMove = hints[1];
-    const sgfForThird = appendToSgf(sgfBase, [
-      `;${color}[${moveToSgfCoord(first)}]`,
-      `;${oppColor}[]`,
-      `;${color}[${moveToSgfCoord(secondMove)}]`,
-      `;${oppColor}[]`
-    ]);
-    const thirdResult = await play(10, sgfForThird, moveHistory.length + 4, size);
-    const third = thirdResult.move;
-    if (third && !hints.some(m => m[0] === third[0] && m[1] === third[1])) {
-      hints.push(third);
-    }
-  }
-
-  return hints.slice(0, count);
-}
-
 export const GnuGoService = {
   ensureReady, isReady, buildSGF, buildSGFUpTo, appendToSgf,
-  moveToSgfCoord, parseMoveFromSgfResponse, play, clearPlayCache, getTopMoves
+  moveToSgfCoord, parseMoveFromSgfResponse, play, clearPlayCache
 };

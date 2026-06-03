@@ -34,16 +34,6 @@ export function registerEventHandlers(app) {
       return;
     }
 
-    if (app.guidanceEnabled && app.guidanceHints.length > 0) {
-      const hint = app.guidanceHints.find(h => h.x === x && h.y === y);
-      app.guidanceTooltip = hint || null;
-      if (hint) {
-        app.showGuidanceTooltipAt(hint);
-      } else {
-        app.hideGuidanceTooltip();
-      }
-    }
-
     app.placeStone(x, y);
   }
 
@@ -90,18 +80,6 @@ export function registerEventHandlers(app) {
     const isPvC = e.target.value === 'pvc';
     document.getElementById('playerColorGroup').style.display = isPvC ? 'block' : 'none';
     document.getElementById('aiStrengthGroup').style.display = isPvC ? 'block' : 'none';
-  });
-
-  document.getElementById('guidanceToggle').addEventListener('change', (e) => {
-    app.guidanceEnabled = e.target.checked;
-    if (app.guidanceEnabled && !app.gameOver && !app.isReviewing && !app.isScoring) {
-      app.aiController.requestGuidanceHints();
-    } else {
-      app.guidanceLoading = false;
-      app.clearGuidance();
-      app.drawBoard();
-    }
-    app.renderGuidanceLegend();
   });
 
   document.getElementById('emotionToggle').addEventListener('change', (e) => {
