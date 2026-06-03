@@ -110,7 +110,7 @@ export function updateHUD(state) {
     turnEl.textContent = '遊戲結束';
     turnEl.className = 'current-turn';
   } else if (normalizedState.isAIThinking) {
-    turnEl.textContent = '🤔 AI 思考中...';
+    turnEl.textContent = 'AI 思考中...';
     turnEl.className = 'current-turn';
   } else {
     turnEl.textContent = normalizedState.currentPlayer === BLACK ? '⚫ 黑方回合' : '⚪ 白方回合';
@@ -126,7 +126,7 @@ export function updateHUD(state) {
     mt.textContent = '遊戲結束';
     mt.className = 'turn-badge';
   } else if (normalizedState.isAIThinking) {
-    mt.textContent = '🤔 AI 思考中';
+    mt.textContent = 'AI 思考中';
     mt.className = 'turn-badge';
   } else {
     mt.textContent = normalizedState.currentPlayer === BLACK ? '⚫ 黑方' : '⚪ 白方';
@@ -148,8 +148,8 @@ export function getStatusMessage(state, fallbackMessage = '') {
   if (state.gameOver) return '遊戲結束 — 可覆盤或開始新局';
   if (state.isScoring) return '已自動估算死子，可點擊修正，然後確認結果';
   if (state.isReviewing) return '覆盤模式';
-  if (state.isAIThinking) return '🤔 GnuGo 思考中...';
-  return `${state.currentPlayer === BLACK ? '黑' : '白'}方回合`;
+  if (state.isAIThinking) return 'GnuGo 思考中...';
+  return `${state.currentPlayer === BLACK ? '⚫ 黑' : '⚪ 白'}方回合`;
 }
 
 export function syncStatus(state, fallbackMessage = '') {
@@ -219,8 +219,12 @@ export function resizeCanvas(deps, state) {
 }
 
 export function drawStone(deps, x, y, color, isDead) {
-  const cx = deps.padding + y * deps.cellSize;
-  const cy = deps.padding + x * deps.cellSize;
+  // origin 偏移：死活局部裁切時，deps.originRow/originCol 為視窗左上角的盤面座標；
+  // 對弈不傳 → 預設 0 → 行為與原本完全相同（x=row 對應垂直、y=col 對應水平）。
+  const ox = deps.originRow || 0;
+  const oy = deps.originCol || 0;
+  const cx = deps.padding + (y - oy) * deps.cellSize;
+  const cy = deps.padding + (x - ox) * deps.cellSize;
   const r = deps.cellSize * 0.44;
   const ctx = deps.ctx;
 

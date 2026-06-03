@@ -103,7 +103,7 @@ export function ensureReady(setStatus) {
   if (_workerLoadingPromise) return _workerLoadingPromise;
 
   const notify = typeof setStatus === 'function' ? setStatus : () => {};
-  notify('⏳ 載入 GnuGo AI 引擎...');
+  notify('載入 GnuGo AI 引擎...');
 
   const id = _nextId++;
   const worker = _getWorker();
@@ -115,7 +115,7 @@ export function ensureReady(setStatus) {
         _workerLoadingPromise = null;
         _workerReady = false;
         if (_worker) { _worker.terminate(); _worker = null; }
-        notify('⚠️ AI 引擎載入逾時，請重新整理頁面');
+        notify('AI 引擎載入逾時，請重新整理頁面');
         reject(new Error('GnuGo init timed out'));
       }
     }, INIT_TIMEOUT_MS);
@@ -128,7 +128,7 @@ export function ensureReady(setStatus) {
         const safeToOverwrite = !currentStatus
           || currentStatus.startsWith('選擇設定後')
           || currentStatus === '請開始新遊戲'
-          || currentStatus === '⏳ 載入 GnuGo AI 引擎...'
+          || currentStatus === '載入 GnuGo AI 引擎...'
           || currentStatus.startsWith('已恢復棋局');
         if (safeToOverwrite) notify('GnuGo AI 引擎載入完成！');
         resolve();
@@ -136,7 +136,7 @@ export function ensureReady(setStatus) {
       reject: (err) => {
         clearTimeout(timeoutId);
         _workerLoadingPromise = null;
-        notify('⚠️ AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
+        notify('AI 引擎載入失敗，請確認 gnugo.wasm 檔案存在');
         reject(err);
       }
     });

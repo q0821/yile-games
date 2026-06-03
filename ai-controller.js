@@ -18,7 +18,7 @@ export function makeAiController(app) {
       try {
         await initGnuGo();
       } catch {
-        app.setStatus('⚠️ AI 引擎尚未載入，請稍候再試');
+        app.setStatus('AI 引擎尚未載入，請稍候再試');
         app.GameState.sync({ isAIThinking: false });
         app.applyStateFromStore();
         app.updateUI();
@@ -61,7 +61,7 @@ export function makeAiController(app) {
       app.GameState.sync({ isAIThinking: false });
       app.applyStateFromStore();
       app.updateUI();
-      app.setStatus('⚠️ AI 發生錯誤，請點擊「開始新遊戲」重試');
+      app.setStatus('AI 發生錯誤，請點擊「開始新遊戲」重試');
     }
   }
 

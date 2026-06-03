@@ -429,7 +429,8 @@ button.danger:hover {
   background: linear-gradient(135deg, var(--gold-dim), var(--gold-mid));
   color: #1a1a2e;
   border: none;
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   box-shadow: 0 3px 14px var(--gold-glow);
   align-items: center;
@@ -478,7 +479,7 @@ button.danger:hover {
   background: var(--bg-input);
   color: var(--text-dim);
   border: 1px solid var(--border);
-  font-size: 17px;
+  font-size: 13px;
   cursor: pointer;
   line-height: 40px;
   text-align: center;
@@ -667,3 +668,159 @@ button.danger:hover {
   font-size: 12px;
 }
 .changelog-body strong { color: var(--text); }
+
+/* ===== Home screen (mode menu) ===== */
+.home-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 560px;
+  padding: 24px 16px;
+  gap: 20px;
+}
+.home-tagline {
+  color: var(--text-dim);
+  font-size: 15px;
+  letter-spacing: 2px;
+}
+.home-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+.home-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 20px 22px;
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+.home-card:hover {
+  border-color: var(--gold-dim);
+  box-shadow: 0 4px 20px var(--gold-glow);
+  transform: translateY(-2px);
+}
+.home-card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+.home-card-desc {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.home-card-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--success);
+  font-weight: 600;
+}
+.home-back {
+  width: auto;
+  margin: 0 0 10px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+}
+
+/* ===== Tsumego (Life & Death) practice ===== */
+.tsumego-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 700px;
+  padding: 8px 16px 24px;
+  gap: 12px;
+}
+.tsumego-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.tsumego-header h2 {
+  color: var(--gold);
+  font-size: 20px;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+.tsumego-back {
+  width: auto;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+}
+.tsumego-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+.tsumego-level {
+  flex: 1 1 auto;
+  margin: 0;
+  white-space: nowrap;
+}
+.tsumego-level.active {
+  background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-mid) 100%);
+  color: #1a1a2e;
+  font-weight: 700;
+  border-color: transparent;
+}
+.tsumego-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.tsumego-solved-tag {
+  margin-left: auto;
+  color: var(--success);
+  font-weight: 600;
+}
+#tsumegoBoard {
+  display: block;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  touch-action: manipulation;
+  max-width: 100%;
+}
+.tsumego-status {
+  min-height: 22px;
+  font-size: 15px;
+  color: var(--text);
+  text-align: center;
+}
+.tsumego-status.correct { color: var(--success); font-weight: 700; }
+.tsumego-status.wrong   { color: var(--danger); font-weight: 600; }
+.tsumego-status.answer  { color: #3aa0ff; font-weight: 600; }
+.tsumego-controls {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.tsumego-controls button {
+  flex: 1;
+  margin: 0;
+}
+.tsumego-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+@media (max-width: 900px) {
+  .tsumego-screen { padding: 8px 10px 20px; }
+  .tsumego-header h2 { font-size: 18px; }
+  .tsumego-meta { font-size: 13px; gap: 10px; }
+}

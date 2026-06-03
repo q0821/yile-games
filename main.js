@@ -11,6 +11,7 @@ import { GnuGoService } from './gnugo-service.js';
 import { toggleSidebar, openSidebar, closeSidebar } from './sidebar.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
+import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -426,7 +427,7 @@ let _coachTipTimer = null;
 function showCoachTip(info) {
   const el = document.getElementById('coachTip');
   if (!el) return;
-  el.innerHTML = `⚠️ ${info.coord} 這塊只剩 1 氣，下一手可能被吃。`
+  el.innerHTML = `${info.coord} 這塊只剩 1 氣，下一手可能被吃。`
     + ` <button onclick="doUndo()" style="margin-left:6px">重下</button>`
     + ` <button onclick="dismissCoachTip()" style="margin-left:4px">忽略</button>`;
   el.style.display = 'block';
@@ -471,7 +472,7 @@ function replayFromHere() {
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('returnOriginalBtn').style.display = 'block';
 
-  setStatus('🔁 練習模式：換個下法試試，再與 AI 繼續對弈');
+  setStatus('練習模式：換個下法試試，再與 AI 繼續對弈');
   updateUI();
   drawBoard();
   if (gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver) {
@@ -538,7 +539,7 @@ function startNewGame() {
 
   const aiStartsGame = gameMode === 'pvc' && playerColor === WHITE && !gameOver;
   updateUI();
-  syncStatus(aiStartsGame ? '🤔 GnuGo 思考中...' : '');
+  syncStatus(aiStartsGame ? 'GnuGo 思考中...' : '');
   drawBoard();
   clearSave();
   saveGame();
@@ -553,7 +554,7 @@ function startNewGame() {
       })
       .catch((err) => {
         console.error('GnuGo init failed:', err);
-        setStatus('⚠️ AI 引擎載入失敗，請重新整理頁面');
+        setStatus('AI 引擎載入失敗，請重新整理頁面');
       });
   }
 }
@@ -640,7 +641,7 @@ function loadGame() {
         })
         .catch((err) => {
           console.error('GnuGo init failed:', err);
-          setStatus('⚠️ AI 引擎載入失敗，請重新整理頁面');
+          setStatus('AI 引擎載入失敗，請重新整理頁面');
         });
     }
     return true;
@@ -740,13 +741,13 @@ function closeChangelog() {
 window.addEventListener('error', (e) => {
   if (!e.filename || !e.filename.includes(location.hostname)) return;
   console.error('Uncaught error:', e.error || e.message);
-  setStatus(`⚠️ 操作失敗：${e.message || '未知錯誤'}。遊戲已自動儲存，可重新整理頁面。`);
+  setStatus(`操作失敗：${e.message || '未知錯誤'}。遊戲已自動儲存，可重新整理頁面。`);
 });
 
 window.addEventListener('unhandledrejection', (e) => {
   console.error('Unhandled promise rejection:', e.reason);
   const msg = e.reason?.message || String(e.reason) || '未知錯誤';
-  setStatus(`⚠️ 操作失敗：${msg}。遊戲已自動儲存，可重新整理頁面。`);
+  setStatus(`操作失敗：${msg}。遊戲已自動儲存，可重新整理頁面。`);
 });
 
 // ==================== EXPOSE TO HTML onclick handlers ====================
@@ -791,6 +792,97 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js?v=v2026.03.15-9c49be6').catch(() => {});
 }
 
-if (!loadGame()) {
-  startNewGame();
+// ==================== HOME / ROUTING ====================
+// 以 location.hash 為單一路由來源：
+//   ''/'#home' → 首頁、'#play' → 對弈、'#tsumego' → 死活練習。
+// 對弈只在首次進入「對弈」時初始化（保留 loadGame 自動恢復未完成對局）。
+const HOME_ITEMS = [
+  { id: 'play',    title: '對弈',     desc: '與電腦對弈或雙人對局',     hash: '#play' },
+  { id: 'tsumego', title: '死活練習', desc: '題庫做活／殺棋，提升棋力', hash: '#tsumego' },
+];
+
+let playInited = false;
+
+function hasUnfinishedGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    return !!(s && s.board && !s.gameOver && (s.moveHistory || []).length > 0);
+  } catch (_) { return false; }
 }
+
+function homeItemHint(id) {
+  if (id === 'play') return hasUnfinishedGame() ? '有進行中的對局，可繼續' : '';
+  if (id === 'tsumego') {
+    const n = tsumegoSolvedTotal();
+    return n > 0 ? `已解 ${n} 題` : '';
+  }
+  return '';
+}
+
+function renderHome() {
+  const menu = document.getElementById('homeMenu');
+  menu.innerHTML = '';
+  for (const item of HOME_ITEMS) {
+    const card = document.createElement('button');
+    card.className = 'home-card';
+    card.type = 'button';
+
+    const title = document.createElement('span');
+    title.className = 'home-card-title';
+    title.textContent = item.title;
+    card.appendChild(title);
+
+    const desc = document.createElement('span');
+    desc.className = 'home-card-desc';
+    desc.textContent = item.desc;
+    card.appendChild(desc);
+
+    const hint = homeItemHint(item.id);
+    if (hint) {
+      const tag = document.createElement('span');
+      tag.className = 'home-card-hint';
+      tag.textContent = hint;
+      card.appendChild(tag);
+    }
+
+    card.addEventListener('click', () => { location.hash = item.hash; });
+    menu.appendChild(card);
+  }
+}
+
+function showScreen(name) {
+  document.getElementById('homeScreen').style.display = name === 'home' ? 'flex' : 'none';
+  document.querySelector('.game-container').style.display = name === 'play' ? '' : 'none';
+  document.getElementById('tsumegoScreen').style.display = name === 'tsumego' ? 'flex' : 'none';
+  const menuBtn = document.getElementById('mobileMenuBtn');
+  if (menuBtn) menuBtn.style.display = name === 'play' ? '' : 'none';
+}
+
+function enterPlayMode() {
+  if (!playInited) {
+    playInited = true;
+    if (!loadGame()) startNewGame();
+  }
+}
+
+function goHome() { location.hash = '#home'; }
+
+function applyRoute() {
+  const hash = location.hash;
+  if (hash === '#tsumego') {
+    showScreen('tsumego');
+    enterTsumegoMode();
+  } else if (hash === '#play') {
+    showScreen('play');
+    enterPlayMode();
+  } else {
+    showScreen('home');
+    renderHome();
+  }
+}
+
+window.goHome = goHome;
+window.addEventListener('hashchange', applyRoute);
+applyRoute();

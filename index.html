@@ -15,22 +15,29 @@
 <link rel="stylesheet" href="style.css?v=v2026.03.15-9c49be6">
 </head>
 <body>
-  <h1>圍棋對弈 ⚪</h1>
+  <h1>圍棋對弈</h1>
 
 <!-- Mobile menu button -->
-<button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleSidebar()">☰</button>
+<button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleSidebar()">選單</button>
 
 <!-- Mobile sidebar overlay -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 <div class="sidebar" id="sidebar">
-  <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+  <button class="sidebar-close" onclick="closeSidebar()">關閉</button>
   <div id="sidebarContent"></div>
+</div>
+
+<!-- Home screen: mode menu -->
+<div class="home-screen" id="homeScreen" style="display:none">
+  <p class="home-tagline">選擇練習模式</p>
+  <div class="home-menu" id="homeMenu"></div>
 </div>
 
 <div class="game-container">
   <!-- Left Panel: Settings -->
   <div class="panel" id="settingsPanel">
-    <h3>⚙️ 遊戲設定</h3>
+    <button class="home-back" onclick="goHome()">回首頁</button>
+    <h3>遊戲設定</h3>
     <div class="control-group">
       <label>棋盤大小</label>
       <select id="boardSize">
@@ -69,7 +76,7 @@
       </select>
     </div>
 
-    <h3>🔧 功能開關</h3>
+    <h3>功能開關</h3>
     <div class="toggle-row">
       <span>計時器</span>
       <label class="toggle"><input type="checkbox" id="timerToggle"><span class="slider"></span></label>
@@ -101,10 +108,10 @@
       <label class="toggle"><input type="checkbox" id="emotionToggle"><span class="slider"></span></label>
     </div>
     <div class="control-group" style="margin-top:4px">
-      <button onclick="showHintOnce()" id="hintBtn">💡 吃子提示</button>
+      <button onclick="showHintOnce()" id="hintBtn">吃子提示</button>
     </div>
 
-    <button class="primary" onclick="closeSidebar(); startNewGame()" style="margin-top:12px">🎮 開始新遊戲</button>
+    <button class="primary" onclick="closeSidebar(); startNewGame()" style="margin-top:12px">開始新遊戲</button>
   </div>
 
   <!-- Center: Board -->
@@ -121,30 +128,30 @@
     <div id="coachTip" style="display:none; width:100%; max-width:500px; margin-top:6px; padding:8px 10px; background:#3a2a2e; border:1px solid #a05050; border-radius:6px; color:#ffd9d9; font-size:13px;"></div>
     <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
       <div class="review-controls">
-        <button onclick="reviewGo(0)" title="回到開始">⏮</button>
-        <button onclick="reviewGo(currentReviewMove-1)" title="上一手">◀</button>
-        <button onclick="reviewGo(currentReviewMove+1)" title="下一手">▶</button>
-        <button onclick="reviewGo(moveHistory.length)" title="到最新">⏭</button>
-        <button onclick="replayFromHere()" title="從這手換個下法，與 AI 繼續對弈">↻ 從這手重下</button>
+        <button onclick="reviewGo(0)" title="回到開始">最初</button>
+        <button onclick="reviewGo(currentReviewMove-1)" title="上一手">上一手</button>
+        <button onclick="reviewGo(currentReviewMove+1)" title="下一手">下一手</button>
+        <button onclick="reviewGo(moveHistory.length)" title="到最新">最新</button>
+        <button onclick="replayFromHere()" title="從這手換個下法，與 AI 繼續對弈">從這手重下</button>
       </div>
       <div class="move-info" id="reviewInfo"></div>
       <div class="review-controls" style="margin-top:6px;">
-        <button onclick="exitReview()">❌ 結束覆盤</button>
+        <button onclick="exitReview()">結束覆盤</button>
       </div>
     </div>
     <!-- Mobile action buttons -->
     <div class="mobile-action-bar" id="mobileActionBar">
-      <button onclick="doPass()">🤚 虛手（Pass）</button>
-      <button onclick="doUndo()">↩️ 悔棋</button>
-      <button onclick="showHintOnce()">💡 提示</button>
-      <button onclick="doResign()" class="danger">🏳️ 認輸</button>
+      <button onclick="doPass()">虛手（Pass）</button>
+      <button onclick="doUndo()">悔棋</button>
+      <button onclick="showHintOnce()">提示</button>
+      <button onclick="doResign()" class="danger">認輸</button>
     </div>
     <div class="mobile-status" id="mobileStatus"></div>
   </div>
 
   <!-- Right Panel: Game Info -->
   <div class="panel" id="infoPanel">
-    <h3>📊 對局資訊</h3>
+    <h3>對局資訊</h3>
     <div class="current-turn black" id="turnDisplay">⚫ 黑方回合</div>
 
     <div id="timerArea" style="display:none;">
@@ -170,18 +177,18 @@
     <div class="status-msg" id="statusMsg">選擇設定後，點擊「開始新遊戲」來開始對弈</div>
 
     <div style="margin-top:12px">
-      <button onclick="doPass()">🤚 虛手（Pass）</button>
-      <button onclick="doUndo()" id="undoBtn">↩️ 悔棋</button>
-      <button onclick="doResign()" class="danger">🏳️ 認輸</button>
-      <button onclick="enterReview()" id="reviewBtn" style="display:none">📖 覆盤</button>
-      <button onclick="exitReview()" id="exitReviewBtn" style="display:none">❌ 結束覆盤</button>
-      <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">💾 匯出 SGF</button>
-      <button onclick="returnToOriginal()" id="returnOriginalBtn" style="display:none">↩️ 返回原譜</button>
+      <button onclick="doPass()">虛手（Pass）</button>
+      <button onclick="doUndo()" id="undoBtn">悔棋</button>
+      <button onclick="doResign()" class="danger">認輸</button>
+      <button onclick="enterReview()" id="reviewBtn" style="display:none">覆盤</button>
+      <button onclick="exitReview()" id="exitReviewBtn" style="display:none">結束覆盤</button>
+      <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">匯出 SGF</button>
+      <button onclick="returnToOriginal()" id="returnOriginalBtn" style="display:none">返回原譜</button>
     </div>
 
     <!-- Scoring Panel -->
     <div class="scoring-panel" id="scoringPanel" style="display:none">
-      <h4>📐 數目結果</h4>
+      <h4>數目結果</h4>
       <div class="score-row"><span>⚫ 黑方</span><span id="blackScore">0</span></div>
       <div class="score-row" style="font-size:12px;color:#8899bb"><span id="blackScoreLabel">　棋子+目</span><span id="blackDetail"></span></div>
       <div class="score-row"><span>⚪ 白方</span><span id="whiteScore">0</span></div>
@@ -191,9 +198,31 @@
         <span style="font-weight:bold;color:#f0d060" id="resultText"></span>
       </div>
       <p style="font-size:11px;color:#667;margin-top:8px">點擊棋盤上的死子將其標記</p>
-      <button onclick="confirmScoring()" class="primary" style="margin-top:6px">✅ 確認結果</button>
+      <button onclick="confirmScoring()" class="primary" style="margin-top:6px">確認結果</button>
       <button onclick="cancelScoring()">取消數目</button>
     </div>
+  </div>
+</div>
+
+<!-- Tsumego (Life & Death) practice screen -->
+<div class="tsumego-screen" id="tsumegoScreen" style="display:none">
+  <div class="tsumego-header">
+    <button class="tsumego-back" id="tsumegoHome">回首頁</button>
+    <h2>死活練習</h2>
+  </div>
+  <div class="tsumego-levels" id="tsumegoLevels"></div>
+  <div class="tsumego-meta">
+    <span id="tsumegoProblemNo"></span>
+    <span id="tsumegoToPlay"></span>
+    <span class="tsumego-solved-tag" id="tsumegoSolvedTag"></span>
+  </div>
+  <canvas id="tsumegoBoard"></canvas>
+  <div class="tsumego-status" id="tsumegoStatus"></div>
+  <div class="tsumego-controls">
+    <button id="tsumegoPrev">上一題</button>
+    <button id="tsumegoRedo">重做</button>
+    <button id="tsumegoReveal">看答案</button>
+    <button id="tsumegoNext">下一題</button>
   </div>
 </div>
 
@@ -204,8 +233,8 @@
     <p id="modalResult"></p>
     <p id="modalDetail" style="font-size:13px;color:#8899bb"></p>
     <div class="modal-actions">
-      <button class="primary" onclick="closeModal(); startNewGame()">🎮 再來一局</button>
-      <button onclick="closeModal(); enterReview()" id="modalReviewBtn">📖 去覆盤</button>
+      <button class="primary" onclick="closeModal(); startNewGame()">再來一局</button>
+      <button onclick="closeModal(); enterReview()" id="modalReviewBtn">去覆盤</button>
       <button onclick="closeModal()">關閉</button>
     </div>
   </div>
@@ -214,7 +243,7 @@
 <!-- Changelog Modal -->
 <div class="modal-overlay" id="changelogModal">
   <div class="modal changelog-modal">
-    <h2>📋 版本紀錄</h2>
+    <h2>版本紀錄</h2>
     <p id="changelogVersion" style="font-size:13px;color:#8899bb"></p>
     <div id="changelogBody" class="changelog-body">載入中...</div>
     <button class="primary" onclick="closeChangelog()">關閉</button>
