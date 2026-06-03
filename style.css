@@ -1,54 +1,95 @@
 /* ===== CSS Variables ===== */
+/* 視覺語言：水墨文人質感 — 溫潤墨色底、宣紙暖白字、朱砂印泥紅點綴、宋體。 */
 :root {
-  --bg-deep:    #0c0f1a;
-  --bg-main:    #1a1a2e;
-  --bg-panel:   #161f38;
-  --bg-card:    #1e2b48;
-  --bg-input:   #232d48;
-  --border:     #2a3a5e;
-  --border-hl:  #3a4a7e;
-  --gold:       #f0d060;
-  --gold-mid:   #d4a84a;
-  --gold-dim:   #c0943a;
-  --gold-glow:  rgba(192,148,58,0.25);
-  --text:       #e0e8f0;
-  --text-dim:   #7a8fae;
-  --text-muted: #3a4a6e;
-  --success:    #4caf50;
-  --warning:    #ff9800;
-  --danger:     #ef5350;
-  --radius-sm:  6px;
-  --radius:     10px;
-  --radius-lg:  16px;
-  --shadow:     0 4px 24px rgba(0,0,0,0.6);
-  --shadow-sm:  0 2px 8px rgba(0,0,0,0.35);
+  --bg-deep:    #0d0b09;
+  --bg-main:    #15110d;   /* 暖墨頁底 */
+  --bg-panel:   #1d1813;
+  --bg-card:    #241e16;   /* 微微抬起的暖色面 */
+  --bg-input:   #2a231a;
+  --border:     #3a3026;   /* 暖色細邊 */
+  --border-hl:  #5b4c37;
+  /* 古銅暖金（取代原本的遊戲感亮金）作為主要強調 */
+  --gold:       #cdb079;
+  --gold-mid:   #b8975a;
+  --gold-dim:   #9c7e44;
+  --gold-glow:  rgba(205,176,121,0.20);
+  /* 朱砂／印泥紅 — 傳統書法用色，作為文化點綴 */
+  --seal:       #b23a2e;
+  --seal-bright:#c8462f;
+  --text:       #ece3d2;   /* 宣紙暖白 */
+  --text-dim:   #9c8e76;
+  --text-muted: #5a4e3c;
+  --success:    #7d9a4e;
+  --warning:    #d49a3c;
+  --danger:     #c0503e;
+  --radius-sm:  4px;
+  --radius:     8px;
+  --radius-lg:  14px;
+  --shadow:     0 8px 40px rgba(0,0,0,0.55);
+  --shadow-sm:  0 2px 10px rgba(0,0,0,0.4);
   --transition: 0.2s ease;
+  --font-serif: 'Noto Serif TC', 'Songti TC', 'Source Han Serif TC', 'STSong', serif;
+  /* 水墨背景圖（gpt-image 生成，已轉 WebP） */
+  --bg-app-image: url('img/bg-app.webp');
 }
 
 /* ===== Reset & Base ===== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+  font-family: var(--font-serif);
   background: var(--bg-main);
+  /* 由上到下：暖暈 → 暗罩（保文字可讀）→ 水墨底圖 */
   background-image:
-    radial-gradient(ellipse 80% 50% at 15% 0%,   rgba(80,80,200,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 70% 50% at 85% 100%, rgba(192,148,58,0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 90% 55% at 20% -5%,  rgba(205,176,121,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 80% 55% at 85% 105%, rgba(178,58,46,0.05) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(21,17,13,0.42) 0%, rgba(21,17,13,0.62) 100%),
+    var(--bg-app-image);
+  background-size: auto, auto, auto, cover;
+  background-position: center top, center bottom, center, center;
+  background-repeat: no-repeat;
+  background-attachment: scroll, scroll, fixed, fixed;
   color: var(--text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
-  margin: 18px 0 8px;
-  font-size: 28px;
-  color: var(--gold);
-  text-shadow: 0 0 24px rgba(240,208,96,0.35), 0 2px 6px rgba(0,0,0,0.5);
-  letter-spacing: 3px;
-  font-weight: 700;
+  position: relative;
+  margin: 26px 0 14px;
+  font-family: var(--font-serif);
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: 10px;
+  text-indent: 10px;          /* 補回字距造成的視覺偏移 */
+  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
 }
+/* 標題下方一道墨線 + 朱砂印 */
+h1::after {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 2px;
+  margin: 12px auto 0;
+  background: linear-gradient(90deg, transparent, var(--seal) 30%, var(--seal) 70%, transparent);
+  opacity: 0.85;
+}
+/* 毛筆字標題（圖）— 加 .brush-title 即用生成的書法圖取代宋體字 */
+h1.brush-title {
+  width: min(440px, 76vw);
+  height: 104px;
+  text-indent: -9999px;
+  overflow: hidden;
+  text-shadow: none;
+  background: url('img/title-weiqi.webp') center/contain no-repeat;
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.55));
+  /* 預設可見：暈開動畫由 JS 在進首頁時短暫隱藏→播放→還原；任何路徑結束都保證留著標題 */
+}
+h1.brush-title::after { display: none; }  /* 毛筆版不要那道穿字的朱砂線 */
 
 /* ===== Layout ===== */
 .game-container {
@@ -77,18 +118,17 @@ h1 {
   position: absolute;
   top: 0; left: 16px; right: 16px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(192,148,58,0.45), transparent);
+  background: linear-gradient(90deg, transparent, rgba(205,176,121,0.4), transparent);
   border-radius: 1px;
 }
 
 .panel h3 {
   color: var(--gold);
-  margin-top: 18px;
+  margin-top: 20px;
   margin-bottom: 14px;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 3px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 10px;
 }
@@ -105,9 +145,9 @@ canvas {
   cursor: pointer;
   border-radius: var(--radius);
   box-shadow:
-    0 8px 32px rgba(0,0,0,0.65),
-    0 0 0 1px rgba(192,148,58,0.18),
-    0 0 48px rgba(192,148,58,0.07);
+    0 10px 40px rgba(0,0,0,0.7),
+    0 0 0 1px rgba(205,176,121,0.16),
+    0 0 56px rgba(205,176,121,0.06);
   display: block;
   max-width: 100%;
   touch-action: manipulation;
@@ -142,7 +182,7 @@ select {
   color: var(--text);
   outline: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%237a8fae' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239c8e76' d='M5 6L0 0h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 28px;
@@ -163,15 +203,15 @@ button:active { transform: scale(0.97); }
 
 button.primary {
   background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-mid) 100%);
-  color: #1a1a2e;
+  color: #15110d;
   font-weight: 700;
   border: none;
   box-shadow: 0 2px 12px var(--gold-glow);
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 button.primary:hover {
   background: linear-gradient(135deg, var(--gold-mid) 0%, var(--gold) 100%);
-  box-shadow: 0 4px 20px rgba(192,148,58,0.5);
+  box-shadow: 0 4px 22px rgba(205,176,121,0.4);
 }
 
 button.danger {
@@ -619,6 +659,7 @@ button.danger:hover {
   letter-spacing: 0.5px;
 }
 .version-link {
+  width: auto;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -629,9 +670,13 @@ button.danger:hover {
   margin: 0;
   text-decoration: underline dotted;
   text-underline-offset: 3px;
-  transition: color 0.15s;
 }
-.version-link:hover { color: var(--gold-dim); }
+/* 不要 hover 效果（避免吃到全域 button:hover 的整條亮帶） */
+.version-link:hover {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+}
 
 /* Changelog modal */
 .changelog-modal {
@@ -680,56 +725,81 @@ button.danger:hover {
   gap: 20px;
 }
 .home-tagline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   color: var(--text-dim);
   font-size: 15px;
-  letter-spacing: 2px;
+  letter-spacing: 6px;
+  text-indent: 6px;
+}
+.home-tagline::before,
+.home-tagline::after {
+  content: '';
+  width: 36px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-hl), transparent);
 }
 .home-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
   width: 100%;
 }
 .home-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
+  aspect-ratio: 4 / 3;
   margin: 0;
-  padding: 20px 22px;
-  text-align: left;
-  background: var(--bg-card);
+  padding: 20px;
+  text-align: center;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.018), transparent 60%),
+    var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
 }
 .home-card:hover {
   border-color: var(--gold-dim);
-  box-shadow: 0 4px 20px var(--gold-glow);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
   transform: translateY(-2px);
 }
 .home-card-title {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 900;
   color: var(--gold);
-  letter-spacing: 1px;
+  letter-spacing: 4px;
 }
 .home-card-desc {
   font-size: 14px;
   color: var(--text-dim);
+  letter-spacing: 1px;
 }
 .home-card-hint {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: 12px;
-  color: var(--success);
+  color: var(--seal-bright);
   font-weight: 600;
+  letter-spacing: 1px;
 }
 .home-back {
   width: auto;
   margin: 0 0 10px;
   padding: 6px 14px;
   border-radius: var(--radius-sm);
+}
+/* 窄螢幕：方塊疊成單欄，放寬高度比避免過扁 */
+@media (max-width: 520px) {
+  .home-menu { grid-template-columns: 1fr; }
+  .home-card { aspect-ratio: 16 / 9; }
 }
 
 /* ===== Tsumego (Life & Death) practice ===== */
@@ -750,9 +820,9 @@ button.danger:hover {
 }
 .tsumego-header h2 {
   color: var(--gold);
-  font-size: 20px;
-  letter-spacing: 2px;
-  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 4px;
+  font-weight: 900;
 }
 .tsumego-back {
   width: auto;
@@ -773,7 +843,7 @@ button.danger:hover {
 }
 .tsumego-level.active {
   background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-mid) 100%);
-  color: #1a1a2e;
+  color: #15110d;
   font-weight: 700;
   border-color: transparent;
 }
