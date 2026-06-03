@@ -1,0 +1,24 @@
+{
+  "source": "sanderland/tsumego",
+  "license": "MIT",
+  "levels": [
+    {
+      "id": "beginner",
+      "name": "入門",
+      "file": "beginner.json",
+      "count": 1083
+    },
+    {
+      "id": "intermediate",
+      "name": "中級",
+      "file": "intermediate.json",
+      "count": 1595
+    },
+    {
+      "id": "advanced",
+      "name": "進階",
+      "file": "advanced.json",
+      "count": 1230
+    }
+  ]
+}

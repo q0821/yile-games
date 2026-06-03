@@ -6,7 +6,8 @@
     "build": "node generate-version.js && vite build",
     "preview": "vite preview",
     "test": "jest",
-    "version:generate": "node generate-version.js"
+    "version:generate": "node generate-version.js",
+    "tsumego:generate": "node build-tsumego.js"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",

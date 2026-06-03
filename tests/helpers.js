@@ -129,4 +129,19 @@ function sandboxWithTimer() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer };
+/** Returns a sandbox with GoRules + Tsumego loaded. */
+function sandboxWithTsumego() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
+  loadIntoContext(ctx, localRequire, './tsumego.js');
+  return ctx;
+}
+
+/** Returns a sandbox with TsumegoProgress loaded (pure reducers; no DOM needed). */
+function sandboxWithTsumegoProgress() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './tsumego-progress.js');
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress };
