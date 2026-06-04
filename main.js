@@ -764,18 +764,24 @@ Object.defineProperty(window, 'moveHistory', {
 
 // ==================== INIT ====================
 registerEventHandlers(app);
-applyAppVersion();
 
 const _isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-if ('serviceWorker' in navigator) {
-  if (_isLocalDev) {
-    // 開發環境不註冊 SW，並清掉既有註冊與快取，避免一直吃到舊資源
-    navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
-    if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
-  } else {
-    navigator.serviceWorker.register('sw.js?v=v2026.03.15-9c49be6').catch(() => {});
-  }
+if ('serviceWorker' in navigator && _isLocalDev) {
+  // 開發環境不註冊 SW，並清掉既有註冊與快取，避免一直吃到舊資源
+  navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+  if (window.caches) caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
 }
+
+// 先取得當前版本，再以「帶當前版號的 query」註冊 SW。
+// 舊版寫死 'sw.js?v=v2026.03.15-9c49be6'：query 永不改變 → 瀏覽器更新檢查時被 HTTP 快取
+// 餵回舊 sw.js bytes，新 SW 永遠裝不上去。舊 SW 會把 /img/* 漏接成 fallback HTML，
+// 導致標題圖載入失敗、首頁毛筆字消失。改用 version.json 的當前版號，每次部署 query 都變，
+// 強制瀏覽器抓新 sw.js，新 SW 才能接管（skipWaiting + clients.claim）。
+applyAppVersion().then((version) => {
+  if ('serviceWorker' in navigator && !_isLocalDev) {
+    navigator.serviceWorker.register('sw.js?v=' + version).catch(() => {});
+  }
+});
 
 // ==================== HOME / ROUTING ====================
 // 以 location.hash 為單一路由來源：
