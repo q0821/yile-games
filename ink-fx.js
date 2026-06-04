@@ -11,7 +11,7 @@
  */
 import { Renderer, Program, Mesh, Triangle, Texture } from 'ogl';
 
-const TITLE_SRC = '/img/title-ink.webp';
+const TITLE_SRC = '/img/title-ink.webp?v=2'; // ?v=2：避開 CDN poisoned cache（見 style.css 註解）
 const DURATION = 1300; // ms
 
 const vertex = /* glsl */ `

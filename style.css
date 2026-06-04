@@ -84,7 +84,9 @@ h1.brush-title {
   text-shadow: none;
   /* 真正帶 alpha 的墨色透明圖：白底已去除、筆畫即墨色，毋需任何 blend mode。
      （舊版用 white 底圖 + mix-blend-mode: multiply 假透明，iOS WebKit 會整塊算透明 → 標題消失） */
-  background: url('/img/title-ink.webp') center/contain no-repeat;
+  /* ?v=2：避開先前 CDN 將此 URL 快取成 HTML 的 poisoned entry（換 cache key 強制回源）。
+     圖片內容若再變動，遞增此版號即可。 */
+  background: url('/img/title-ink.webp?v=2') center/contain no-repeat;
   /* 預設可見：暈開動畫由 JS 在進首頁時短暫隱藏→播放→還原；任何路徑結束都保證留著標題 */
 }
 h1.brush-title::after { display: none; }  /* 毛筆版不要那道穿字的朱砂線 */
