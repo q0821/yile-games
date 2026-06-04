@@ -134,7 +134,6 @@ const app = {
   setStatus: (msg) => setStatus(msg),
   drawBoard: () => drawBoard(),
   reviewGo: (n) => reviewGo(n),
-  showCoachTip: (info) => showCoachTip(info),
   closeSidebar,
 };
 
@@ -226,9 +225,6 @@ function placeStone(x, y) {
   saveGame();
 
   if (willRequestAI) {
-    if (document.getElementById('realtimeCoach')?.checked) {
-      setTimeout(() => aiController.checkLastMoveQuality(), 0);
-    }
     setTimeout(() => aiController.requestAIMove(), AI_MOVE_DELAY_MS);
   }
 
@@ -421,25 +417,6 @@ function updateReviewInfo() {
 
 // ==================== LEARNING MODE ====================
 let savedOriginalGame = null;
-let _coachTipTimer = null;
-
-// Non-blocking in-game coaching tip: warns when the move just played put its
-// own group in atari (one liberty) — a concrete, certain danger signal.
-function showCoachTip(info) {
-  const el = document.getElementById('coachTip');
-  if (!el) return;
-  el.innerHTML = `${info.coord} 這塊只剩 1 氣，下一手可能被吃。`
-    + ` <button onclick="doUndo()" style="margin-left:6px">重下</button>`
-    + ` <button onclick="dismissCoachTip()" style="margin-left:4px">忽略</button>`;
-  el.style.display = 'block';
-  if (_coachTipTimer) clearTimeout(_coachTipTimer);
-  _coachTipTimer = setTimeout(() => { el.style.display = 'none'; }, 8000);
-}
-
-function dismissCoachTip() {
-  const el = document.getElementById('coachTip');
-  if (el) el.style.display = 'none';
-}
 
 // Branch the game from the current review position so the player can try a
 // different move and keep playing the AI, without losing the original record.

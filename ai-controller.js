@@ -1,8 +1,7 @@
-// ai-controller.js — AI move requests and in-game atari coaching.
+// ai-controller.js — AI move requests.
 // Imported by main.js; accesses shared mutable state via the `app` context object.
 
 import { GnuGoService } from './gnugo-service.js';
-import { getGroup } from './rules.js';
 
 export function makeAiController(app) {
   // ——— Internal helpers ———
@@ -65,31 +64,8 @@ export function makeAiController(app) {
     }
   }
 
-  // ——— Real-time coaching (in-game) ———
-  // We can't reliably score "how many points a move lost" (GnuGo's territory
-  // function is broken in this build), so instead of guessing we flag the one
-  // thing we CAN detect for certain with pure rules: the move just played left
-  // its own group in atari (a single liberty) — i.e. it's about to be captured.
-  // This is a concrete, honest warning that helps a learner.
-  function checkLastMoveQuality() {
-    if (app.gameMode !== 'pvc') return;
-    const n = app.moveHistory.length;
-    if (n === 0) return;
-    const m = app.moveHistory[n - 1];
-    if (!m || m.pass || m.player !== app.playerColor) return;
-
-    const group = getGroup(app.board, app.size, m.x, m.y);
-    if (group.liberties && group.liberties.size === 1) {
-      app.showCoachTip?.({
-        kind: 'atari',
-        coord: `${app.COORD_LETTERS[m.y]}${app.size - m.x}`,
-      });
-    }
-  }
-
   return {
     initGnuGo,
     requestAIMove,
-    checkLastMoveQuality,
   };
 }
