@@ -1,36 +1,36 @@
 /* ===== CSS Variables ===== */
-/* 視覺語言：水墨文人質感 — 溫潤墨色底、宣紙暖白字、朱砂印泥紅點綴、宋體。 */
+/* 視覺語言：亮色宣紙水墨 — 暖宣紙底、深墨色字、朱砂印泥紅點綴、宋體。 */
 :root {
-  --bg-deep:    #0d0b09;
-  --bg-main:    #15110d;   /* 暖墨頁底 */
-  --bg-panel:   #1d1813;
-  --bg-card:    #241e16;   /* 微微抬起的暖色面 */
-  --bg-input:   #2a231a;
-  --border:     #3a3026;   /* 暖色細邊 */
-  --border-hl:  #5b4c37;
-  /* 古銅暖金（取代原本的遊戲感亮金）作為主要強調 */
-  --gold:       #cdb079;
-  --gold-mid:   #b8975a;
-  --gold-dim:   #9c7e44;
-  --gold-glow:  rgba(205,176,121,0.20);
+  --bg-deep:    #d8ccb2;
+  --bg-main:    #ece2cd;   /* 暖宣紙頁底 */
+  --bg-panel:   #f4ecda;
+  --bg-card:    #f7f0e0;   /* 微微抬起的紙面 */
+  --bg-input:   #e7dcc4;
+  --border:     #cabd9f;   /* 暖色細邊 */
+  --border-hl:  #ab9670;
+  /* 古銅暖金（在亮底上加深以維持對比）作為主要強調 */
+  --gold:       #856219;
+  --gold-mid:   #6f5217;
+  --gold-dim:   #5a4213;
+  --gold-glow:  rgba(133,98,25,0.22);
   /* 朱砂／印泥紅 — 傳統書法用色，作為文化點綴 */
   --seal:       #b23a2e;
-  --seal-bright:#c8462f;
-  --text:       #ece3d2;   /* 宣紙暖白 */
-  --text-dim:   #9c8e76;
-  --text-muted: #5a4e3c;
-  --success:    #7d9a4e;
-  --warning:    #d49a3c;
-  --danger:     #c0503e;
+  --seal-bright:#9c2f20;
+  --text:       #2c2417;   /* 深墨色字 */
+  --text-dim:   #6a5c44;
+  --text-muted: #9a8a6c;
+  --success:    #5c7a30;
+  --warning:    #b07818;
+  --danger:     #b23a2e;
   --radius-sm:  4px;
   --radius:     8px;
   --radius-lg:  14px;
-  --shadow:     0 8px 40px rgba(0,0,0,0.55);
-  --shadow-sm:  0 2px 10px rgba(0,0,0,0.4);
+  --shadow:     0 8px 36px rgba(60,46,24,0.22);
+  --shadow-sm:  0 2px 10px rgba(60,46,24,0.16);
   --transition: 0.2s ease;
   --font-serif: 'Noto Serif TC', 'Songti TC', 'Source Han Serif TC', 'STSong', serif;
-  /* 水墨背景圖（gpt-image 生成，已轉 WebP） */
-  --bg-app-image: url('img/bg-app.webp');
+  /* 亮色水墨背景圖（gpt-image 生成） */
+  --bg-app-image: url('img/bg-light.webp');
 }
 
 /* ===== Reset & Base ===== */
@@ -39,16 +39,12 @@
 body {
   font-family: var(--font-serif);
   background: var(--bg-main);
-  /* 由上到下：暖暈 → 暗罩（保文字可讀）→ 水墨底圖 */
-  background-image:
-    radial-gradient(ellipse 90% 55% at 20% -5%,  rgba(205,176,121,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse 80% 55% at 85% 105%, rgba(178,58,46,0.05) 0%, transparent 55%),
-    linear-gradient(180deg, rgba(21,17,13,0.42) 0%, rgba(21,17,13,0.62) 100%),
-    var(--bg-app-image);
-  background-size: auto, auto, auto, cover;
-  background-position: center top, center bottom, center, center;
+  /* 亮色宣紙底圖（亮底不需暗罩） */
+  background-image: var(--bg-app-image);
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
-  background-attachment: scroll, scroll, fixed, fixed;
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
   display: flex;
@@ -85,8 +81,8 @@ h1.brush-title {
   text-indent: -9999px;
   overflow: hidden;
   text-shadow: none;
-  background: url('img/title-weiqi.webp') center/contain no-repeat;
-  filter: drop-shadow(0 2px 10px rgba(0,0,0,0.55));
+  background: url('img/title-blackonwhite.webp') center/contain no-repeat;
+  mix-blend-mode: multiply;   /* 白底 × 頁面 = 頁面、黑字 × 頁面 = 黑字 → 白底自然透明 */
   /* 預設可見：暈開動畫由 JS 在進首頁時短暫隱藏→播放→還原；任何路徑結束都保證留著標題 */
 }
 h1.brush-title::after { display: none; }  /* 毛筆版不要那道穿字的朱砂線 */
@@ -203,7 +199,7 @@ button:active { transform: scale(0.97); }
 
 button.primary {
   background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-mid) 100%);
-  color: #15110d;
+  color: #f7efde;   /* 深古銅底用淺字，對比高 */
   font-weight: 700;
   border: none;
   box-shadow: 0 2px 12px var(--gold-glow);
@@ -211,17 +207,18 @@ button.primary {
 }
 button.primary:hover {
   background: linear-gradient(135deg, var(--gold-mid) 0%, var(--gold) 100%);
-  box-shadow: 0 4px 22px rgba(205,176,121,0.4);
+  box-shadow: 0 4px 22px rgba(133,98,25,0.35);
 }
 
 button.danger {
-  background: rgba(120,40,40,0.5);
-  color: #ffaaaa;
-  border-color: rgba(150,60,60,0.6);
+  background: rgba(178,58,46,0.10);
+  color: var(--seal);
+  border-color: rgba(178,58,46,0.45);
+  font-weight: 600;
 }
 button.danger:hover {
-  background: rgba(150,60,60,0.7);
-  border-color: rgba(180,80,80,0.8);
+  background: rgba(178,58,46,0.20);
+  border-color: rgba(178,58,46,0.7);
 }
 
 /* ===== Toggle switch ===== */
@@ -281,8 +278,8 @@ button.danger:hover {
 .info-row:nth-child(even) { background: rgba(255,255,255,0.025); }
 .info-row .label { color: var(--text-dim); }
 .info-row .value { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
-.black-indicator { color: #d0d8e8; }
-.white-indicator { color: #fff; }
+.black-indicator { color: var(--text); }
+.white-indicator { color: var(--text-dim); }
 
 .current-turn {
   text-align: center;
@@ -812,20 +809,26 @@ button.danger:hover {
   padding: 8px 16px 24px;
   gap: 12px;
 }
-.tsumego-header {
+/* 共用模式 header（對弈 / 死活）：回首頁 + 模式標題，統一框架與間距 */
+.mode-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
+  max-width: 720px;
+  margin: 0 auto 6px;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
-.tsumego-header h2 {
+.mode-title {
   color: var(--gold);
   font-size: 22px;
   letter-spacing: 4px;
   font-weight: 900;
 }
-.tsumego-back {
+.mode-back {
   width: auto;
+  flex-shrink: 0;
   margin: 0;
   padding: 6px 14px;
   border-radius: var(--radius-sm);
@@ -837,13 +840,14 @@ button.danger:hover {
   width: 100%;
 }
 .tsumego-level {
-  flex: 1 1 auto;
+  flex: 1;            /* 三顆並排等分，不再全寬堆疊 */
+  width: auto;        /* 覆蓋全域 button{width:100%} */
   margin: 0;
   white-space: nowrap;
 }
 .tsumego-level.active {
   background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-mid) 100%);
-  color: #15110d;
+  color: #f7efde;     /* 深古銅底用淺字才有對比 */
   font-weight: 700;
   border-color: transparent;
 }

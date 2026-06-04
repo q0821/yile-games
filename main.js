@@ -12,7 +12,7 @@ import { toggleSidebar, openSidebar, closeSidebar } from './sidebar.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
-import { playTitleReveal } from './ink-fx.js';
+import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -864,6 +864,8 @@ function showScreen(name) {
   document.getElementById('homeScreen').style.display = name === 'home' ? 'flex' : 'none';
   document.querySelector('.game-container').style.display = name === 'play' ? '' : 'none';
   document.getElementById('tsumegoScreen').style.display = name === 'tsumego' ? 'flex' : 'none';
+  const playHeader = document.getElementById('playHeader');
+  if (playHeader) playHeader.style.display = name === 'play' ? 'flex' : 'none';
   const menuBtn = document.getElementById('mobileMenuBtn');
   if (menuBtn) menuBtn.style.display = name === 'play' ? '' : 'none';
 }
@@ -877,7 +879,7 @@ function enterPlayMode() {
 
 function goHome() { location.hash = '#home'; }
 
-function applyRoute() {
+function applyRoute(animateTitle) {
   const hash = location.hash;
   const title = document.querySelector('h1');
   if (hash === '#tsumego') {
@@ -891,11 +893,14 @@ function applyRoute() {
   } else {
     showScreen('home');
     renderHome();
-    // 進首頁時標題以水墨暈開浮現（WebGL；不支援/reduced-motion 則靜態顯示）
-    playTitleReveal(title, { force: true });
+    // 首次載入進首頁時標題水墨暈開；經由過渡切換進來則直接靜態顯示（過渡本身已是揭示）
+    if (animateTitle) playTitleReveal(title, { force: true });
+    else if (title) title.style.visibility = 'visible';
   }
 }
 
 window.goHome = goHome;
-window.addEventListener('hashchange', applyRoute);
-applyRoute();
+// 畫面切換用墨暈過渡；過渡覆蓋到中點時才換 DOM
+window.addEventListener('hashchange', () => playTransition(() => applyRoute(false)));
+applyRoute(true);   // 初始載入：標題暈開、不走過渡
+startAmbient();     // 背景墨雲飄動（桌機）

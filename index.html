@@ -36,10 +36,15 @@
   <div class="home-menu" id="homeMenu"></div>
 </div>
 
+<!-- Mode header (shared style with tsumego) -->
+<div class="mode-header" id="playHeader" style="display:none">
+  <button class="mode-back" onclick="goHome()">回首頁</button>
+  <h2 class="mode-title">對弈</h2>
+</div>
+
 <div class="game-container" style="display:none">
   <!-- Left Panel: Settings -->
   <div class="panel" id="settingsPanel">
-    <button class="home-back" onclick="goHome()">回首頁</button>
     <h3>遊戲設定</h3>
     <div class="control-group">
       <label>棋盤大小</label>
@@ -128,7 +133,7 @@
     </div>
     <canvas id="board"></canvas>
     <div id="aiThinkingOverlay" style="display:none"></div>
-    <div id="coachTip" style="display:none; width:100%; max-width:500px; margin-top:6px; padding:8px 10px; background:#3a2a2e; border:1px solid #a05050; border-radius:6px; color:#ffd9d9; font-size:13px;"></div>
+    <div id="coachTip" style="display:none; width:100%; max-width:500px; margin-top:6px; padding:8px 10px; background:rgba(178,58,46,0.10); border:1px solid rgba(178,58,46,0.45); border-radius:6px; color:#8a2a20; font-size:13px;"></div>
     <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
       <div class="review-controls">
         <button onclick="reviewGo(0)" title="回到開始">最初</button>
@@ -209,9 +214,9 @@
 
 <!-- Tsumego (Life & Death) practice screen -->
 <div class="tsumego-screen" id="tsumegoScreen" style="display:none">
-  <div class="tsumego-header">
-    <button class="tsumego-back" id="tsumegoHome">回首頁</button>
-    <h2>死活練習</h2>
+  <div class="mode-header">
+    <button class="mode-back" id="tsumegoHome">回首頁</button>
+    <h2 class="mode-title">死活練習</h2>
   </div>
   <div class="tsumego-levels" id="tsumegoLevels"></div>
   <div class="tsumego-meta">
