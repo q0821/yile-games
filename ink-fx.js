@@ -11,7 +11,7 @@
  */
 import { Renderer, Program, Mesh, Triangle, Texture } from 'ogl';
 
-const TITLE_SRC = 'img/title-blackonwhite.webp';
+const TITLE_SRC = '/img/title-ink.webp';
 const DURATION = 1300; // ms
 
 const vertex = /* glsl */ `
@@ -48,9 +48,8 @@ const fragment = /* glsl */ `
   void main() {
     vec4 tex = texture2D(tMap, vUv);
 
-    // 純白底黑字 → 以「夠黑」當筆畫遮罩（取代 alpha），白底自然為透明
-    float ink = 1.0 - dot(tex.rgb, vec3(0.299, 0.587, 0.114));
-    float baseA = smoothstep(0.32, 0.62, ink);
+    // 帶 alpha 的墨色透明圖：直接用 alpha 當筆畫遮罩（墨色已在 rgb）
+    float baseA = tex.a;
 
     // 噪聲場決定暈開順序
     float field = fbm(vUv * 3.5) * 0.8 + fbm(vUv * 9.0 + uTime * 0.15) * 0.2;
@@ -226,7 +225,7 @@ const NOISE_GLSL = /* glsl */ `
 
 /* ============================ 背景墨雲飄動 ============================ */
 
-const BG_SRC = 'img/bg-light.webp';
+const BG_SRC = '/img/bg-light.webp';
 
 const ambientFrag = /* glsl */ `
   precision highp float;
