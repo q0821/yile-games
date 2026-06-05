@@ -124,16 +124,29 @@ export async function analyzeLocal(state, region, { visits = 24, maxTimeMs = 600
   const analysis = await client().analyze(buildArgs(state, { visits, maxTimeMs }));
   const winrate = analysis?.rootWinRate ?? null;
   const ownership = analysis?.ownership || null;
-  const moves = analysis?.moves || [];
+  const size = state.size;
+  const policy = analysis?.policy || null;
 
-  // moves x=col,y=row（web）→ 本專案 row=m.y、col=m.x；只留 region 內，取 order 最小（最佳）。
-  let best = null;
-  for (const m of moves) {
-    const row = m.y, col = m.x;
-    if (row < region.minRow || row > region.maxRow || col < region.minCol || col > region.maxCol) continue;
-    if (!best || m.order < best.order) best = m;
+  // 在 region 內挑 KataGo 最想下的局部手。
+  // 不用搜尋出的 moves 清單：近乎空盤時 KataGo 把 visits 花在滿盤大場，候選常整批落在
+  // region 外（→ 整題立刻 pass、後續手走不下去）。改用 dense 的 policy（每點都有先驗、
+  // illegal 標 -1，index = row*size+col）在 region 內挑最高合法點，保證有局部手；且實測
+  // 當 KataGo 真的偏好某局部手時，policy 最高點即同一點。
+  let best = null;  // { row, col, p }
+  if (policy) {
+    for (let r = region.minRow; r <= region.maxRow; r++) {
+      for (let c = region.minCol; c <= region.maxCol; c++) {
+        const p = policy[r * size + c];   // illegal（占位/自殺/劫）= -1
+        if (p < 0) continue;
+        if (!best || p > best.p) best = { row: r, col: c, p };
+      }
+    }
   }
-  const move = best ? { x: best.y, y: best.x } : { pass: true };
+  // 收手門檻：局部已底定時，region 內最高 policy 會掉到雜訊水準（實測「一手即定」題 <0.015、
+  // 有真實後續手者 >=0.029）。低於門檻就 pass，讓 AI 不在空處補無意義填子、也讓一手定型的題
+  // 老實回報「無後續手」。
+  const SETTLED_POLICY = 0.02;
+  const move = (best && best.p >= SETTLED_POLICY) ? { x: best.row, y: best.col } : { pass: true };
   return { move, winrate, ownership };
 }
 

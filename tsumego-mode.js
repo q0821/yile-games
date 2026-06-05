@@ -472,11 +472,15 @@ async function playoutStep(seq) {
     return;
   }
 
-  // AI（對手）回合：下局部最佳手；無局部手或超過上限 → 收手交還玩家
+  // AI（對手）回合：下局部最佳手；局部已底定（pass）或超過上限 → 收手交還玩家
   if (result.move.pass || playoutPlies >= PLAYOUT_MAX_PLIES) {
     aiBusy = false;
     playoutTurn = toPlayColor;
-    setStatusMsg('AI 在局部無手可下，換你（或可收手）', 'answer');
+    // playoutPlies===0 代表 AI 第一手就收手＝這題一手即定、沒有需要驗證的後續攻防
+    const msg = playoutPlies === 0
+      ? '這題一手即定生死，沒有需要驗證的後續手（看陰影即結果，可按停手）'
+      : '局部大致底定，AI 收手——可繼續落子或按停手';
+    setStatusMsg(msg, 'answer');
     updatePlayoutBtn();
     render();
     return;
