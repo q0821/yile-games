@@ -130,7 +130,7 @@
       <button onclick="showHintOnce()" id="hintBtn">吃子提示</button>
     </div>
 
-    <button class="primary" onclick="closeSidebar(); startNewGame()" style="margin-top:12px">開始新遊戲</button>
+    <button class="primary" onclick="closeSidebar(); newGame()" style="margin-top:12px">開始新遊戲</button>
   </div>
 
   <!-- Center: Board -->
@@ -145,14 +145,16 @@
     <canvas id="board"></canvas>
     <div id="aiThinkingOverlay" style="display:none"></div>
     <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
+      <input type="range" id="reviewSlider" class="review-slider" min="0" value="0" step="1"
+             oninput="reviewGo(+this.value)" aria-label="覆盤進度">
       <div class="review-controls">
         <button onclick="reviewGo(0)" title="回到開始">最初</button>
         <button onclick="reviewGo(currentReviewMove-1)" title="上一手">上一手</button>
         <button onclick="reviewGo(currentReviewMove+1)" title="下一手">下一手</button>
         <button onclick="reviewGo(moveHistory.length)" title="到最新">最新</button>
-        <button onclick="replayFromHere()" title="從這手換個下法，與 AI 繼續對弈">從這手重下</button>
       </div>
       <div class="move-info" id="reviewInfo"></div>
+      <button class="review-replay" onclick="replayFromHere()" title="從這手換個下法，與電腦繼續對弈">從這手換個下法重練</button>
       <div class="review-controls" style="margin-top:6px;">
         <button onclick="exitReview()">結束覆盤</button>
       </div>
@@ -254,8 +256,9 @@
     <h2 id="modalTitle">遊戲結束</h2>
     <p id="modalResult"></p>
     <p id="modalDetail" style="font-size:13px;color:#8899bb"></p>
+    <p id="modalSummary" class="modal-summary"></p>
     <div class="modal-actions">
-      <button class="primary" onclick="closeModal(); startNewGame()">再來一局</button>
+      <button class="primary" onclick="closeModal(); newGame()">再來一局</button>
       <button onclick="closeModal(); enterReview()" id="modalReviewBtn">去覆盤</button>
       <button onclick="closeModal()">關閉</button>
     </div>

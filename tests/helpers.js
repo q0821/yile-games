@@ -144,4 +144,12 @@ function sandboxWithTsumegoProgress() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress };
+/** Returns a sandbox with GoRules + GoReview loaded. */
+function sandboxWithReview() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
+  loadIntoContext(ctx, localRequire, './review.js');
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview };

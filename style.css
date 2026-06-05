@@ -443,6 +443,55 @@ button.danger:hover {
   margin-top: 6px;
   padding: 4px 0;
 }
+/* 覆盤進度條：拖曳快速跳手 */
+.review-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  margin: 2px 0 2px;
+  border-radius: 3px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.review-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 32%, var(--gold) 0%, var(--gold-dim) 80%);
+  border: 1px solid var(--gold-dim);
+  box-shadow: 0 1px 3px rgba(60,46,24,0.35);
+}
+.review-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 1px solid var(--gold-dim);
+}
+/* 從這手換個下法重練：覆盤的核心練習入口，做得醒目一點 */
+.review-replay {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--bg-input);
+  border-color: var(--gold-dim);
+  color: var(--gold-dim);
+  font-weight: 700;
+}
+.review-replay:hover {
+  background: var(--gold-dim);
+  color: #f7efde;
+  border-color: var(--gold-dim);
+}
+/* 結果彈窗：客觀對局摘要 */
+.modal-summary {
+  font-size: 12px !important;
+  color: var(--text-muted) !important;
+  line-height: 1.6;
+}
 
 /* ===== Scoring panel ===== */
 .scoring-panel {

@@ -345,6 +345,16 @@ function endGame(title, detail) {
   document.getElementById('modalTitle').textContent = '遊戲結束';
   document.getElementById('modalResult').textContent = title;
   document.getElementById('modalDetail').textContent = detail;
+  // 客觀對局摘要（純規則，不做形勢/勝率臆測）
+  const sm = document.getElementById('modalSummary');
+  if (sm) {
+    const s = GoReview.summarizeGame(moveHistory, size);
+    let txt = `全 ${s.totalMoves} 手・黑提 ${s.blackCaptured} 子、白提 ${s.whiteCaptured} 子`;
+    if (s.biggest) {
+      txt += `・最大一次：第 ${s.biggest.moveNumber} 手${s.biggest.byPlayer === BLACK ? '黑' : '白'}提 ${s.biggest.count} 子`;
+    }
+    sm.textContent = txt;
+  }
   const reviewOn = document.getElementById('reviewToggle').checked;
   document.getElementById('modalReviewBtn').style.display = reviewOn ? 'block' : 'none';
   document.getElementById('resultModal').classList.add('show');
@@ -505,6 +515,14 @@ function syncStatus(message = '') {
 }
 
 // ==================== NEW GAME ====================
+// 進行中對局誤觸保護：有落子且尚未結束時，先確認再開新局，避免清掉進度。
+function newGame() {
+  if (moveHistory.length > 0 && !gameOver) {
+    if (!window.confirm('目前有進行中的對局，開新局會清掉它。確定要重新開始嗎？')) return;
+  }
+  startNewGame();
+}
+
 function startNewGame() {
   const rawSize = parseInt(document.getElementById('boardSize').value);
   size = VALID_BOARD_SIZES.includes(rawSize) ? rawSize : 19;
@@ -750,6 +768,7 @@ window.addEventListener('unhandledrejection', (e) => {
 // index.html uses onclick="..." so we expose top-level names on window.
 Object.assign(window, {
   startNewGame,
+  newGame,
   doPass: doPassAndSave,
   doUndo: doUndoAndSave,
   doResign,
@@ -758,6 +777,8 @@ Object.assign(window, {
   enterReview,
   exitReview,
   reviewGo,
+  replayFromHere,
+  returnToOriginal,
   exportSGF,
   closeModal,
   openChangelog,

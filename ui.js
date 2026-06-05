@@ -157,6 +157,11 @@ export function syncStatus(state, fallbackMessage = '') {
 }
 
 export function updateReviewInfo(state) {
+  const slider = document.getElementById('reviewSlider');
+  if (slider) {
+    slider.max = state.moveHistory.length;
+    slider.value = state.currentReviewMove;
+  }
   const info = document.getElementById('reviewInfo');
   if (state.currentReviewMove === 0) {
     info.textContent = '開始位置';
