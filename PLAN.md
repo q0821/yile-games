@@ -350,7 +350,7 @@ gogame/
 | 13 | Design | Lobby-to-game transition needs specification | Mechanical | P5 explicit | Critical UX decision left to implementer |
 | 14 | Eng | Command/event layer before Phase 11 | Taste | P5 explicit | Subagent says current god-object architecture won't survive Firebase integration |
 | 15 | Eng | boardHistory memory optimization | Mechanical | P3 pragmatic | 300-move game stores 300 full board clones, use incremental diffs |
-| 16 | Eng | Wall-clock timer instead of setInterval | Mechanical | P5 explicit | setInterval drifts in background tabs |
+| 16 | Eng | Wall-clock timer instead of setInterval | Mechanical | P5 explicit | setInterval drifts in background tabs（✅ 已實作 2026-06-05，S12） |
 
 ## GSTACK REVIEW REPORT
 
