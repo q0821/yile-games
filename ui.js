@@ -113,7 +113,7 @@ export function updateHUD(state) {
     turnEl.textContent = 'AI 思考中...';
     turnEl.className = 'current-turn';
   } else {
-    turnEl.textContent = normalizedState.currentPlayer === BLACK ? '⚫ 黑方回合' : '⚪ 白方回合';
+    turnEl.textContent = normalizedState.currentPlayer === BLACK ? '黑方回合' : '白方回合';
     turnEl.className = 'current-turn ' + (normalizedState.currentPlayer === BLACK ? 'black' : 'white');
   }
 
@@ -129,7 +129,7 @@ export function updateHUD(state) {
     mt.textContent = 'AI 思考中';
     mt.className = 'turn-badge';
   } else {
-    mt.textContent = normalizedState.currentPlayer === BLACK ? '⚫ 黑方' : '⚪ 白方';
+    mt.textContent = normalizedState.currentPlayer === BLACK ? '黑方' : '白方';
     mt.className = 'turn-badge ' + (normalizedState.currentPlayer === BLACK ? 'black' : 'white');
   }
 
@@ -149,7 +149,7 @@ export function getStatusMessage(state, fallbackMessage = '') {
   if (state.isScoring) return '已自動估算死子，可點擊修正，然後確認結果';
   if (state.isReviewing) return '覆盤模式';
   if (state.isAIThinking) return 'GnuGo 思考中...';
-  return `${state.currentPlayer === BLACK ? '⚫ 黑' : '⚪ 白'}方回合`;
+  return `${state.currentPlayer === BLACK ? '黑' : '白'}方回合`;
 }
 
 export function syncStatus(state, fallbackMessage = '') {
@@ -166,7 +166,7 @@ export function updateReviewInfo(state) {
   const move = state.moveHistory[state.currentReviewMove - 1];
   const letters = 'ABCDEFGHJKLMNOPQRST';
   const moveStr = move.pass ? 'Pass' : `${letters[move.y]}${state.size - move.x}`;
-  info.textContent = `第 ${state.currentReviewMove} 手 / ${state.moveHistory.length} - ${move.player === BLACK ? '⚫' : '⚪'} ${moveStr}`;
+  info.textContent = `第 ${state.currentReviewMove} 手 / ${state.moveHistory.length} - ${move.player === BLACK ? '黑' : '白'} ${moveStr}`;
 }
 
 export function updateScoringDisplay(state, score) {
@@ -186,9 +186,9 @@ export function updateScoringDisplay(state, score) {
   document.getElementById('whiteScore').textContent = score.white.toFixed(1);
   const diff = score.black - score.white;
   document.getElementById('resultText').textContent = diff > 0
-    ? `⚫ 黑勝 ${diff.toFixed(1)} 目`
+    ? `黑勝 ${diff.toFixed(1)} 目`
     : diff < 0
-    ? `⚪ 白勝 ${Math.abs(diff).toFixed(1)} 目`
+    ? `白勝 ${Math.abs(diff).toFixed(1)} 目`
     : '和棋';
 }
 

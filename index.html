@@ -122,9 +122,9 @@
   <div class="board-wrapper">
     <!-- Mobile compact info bar -->
     <div class="mobile-info-bar" id="mobileInfoBar">
-      <div class="turn-badge black" id="mobileTurn">⚫ 黑方</div>
-      <div class="info-item">⚫ <span id="mobileBlackCap">0</span></div>
-      <div class="info-item">⚪ <span id="mobileWhiteCap">0</span></div>
+      <div class="turn-badge black" id="mobileTurn">黑方</div>
+      <div class="info-item"><span class="stone-dot black" aria-label="黑"></span> <span id="mobileBlackCap">0</span></div>
+      <div class="info-item"><span class="stone-dot white" aria-label="白"></span> <span id="mobileWhiteCap">0</span></div>
       <div class="info-item">第 <span id="mobileMoveCount">0</span> 手</div>
     </div>
     <canvas id="board"></canvas>
@@ -156,21 +156,21 @@
   <!-- Right Panel: Game Info -->
   <div class="panel" id="infoPanel">
     <h3>對局資訊</h3>
-    <div class="current-turn black" id="turnDisplay">⚫ 黑方回合</div>
+    <div class="current-turn black" id="turnDisplay">黑方回合</div>
 
     <div id="timerArea" style="display:none;">
-      <div class="info-row"><span class="label">⚫ 黑方時間</span></div>
+      <div class="info-row"><span class="label"><span class="stone-dot black"></span> 黑方時間</span></div>
       <div class="timer-display" id="blackTimer">10:00</div>
-      <div class="info-row"><span class="label">⚪ 白方時間</span></div>
+      <div class="info-row"><span class="label"><span class="stone-dot white"></span> 白方時間</span></div>
       <div class="timer-display" id="whiteTimer">10:00</div>
     </div>
 
     <div class="info-row">
-      <span class="label">⚫ 黑方提子</span>
+      <span class="label"><span class="stone-dot black"></span> 黑方提子</span>
       <span class="value black-indicator" id="blackCaptures">0</span>
     </div>
     <div class="info-row">
-      <span class="label">⚪ 白方提子</span>
+      <span class="label"><span class="stone-dot white"></span> 白方提子</span>
       <span class="value white-indicator" id="whiteCaptures">0</span>
     </div>
     <div class="info-row">
@@ -194,9 +194,9 @@
     <!-- Scoring Panel -->
     <div class="scoring-panel" id="scoringPanel" style="display:none">
       <h4>數目結果</h4>
-      <div class="score-row"><span>⚫ 黑方</span><span id="blackScore">0</span></div>
+      <div class="score-row"><span><span class="stone-dot black"></span> 黑方</span><span id="blackScore">0</span></div>
       <div class="score-row" style="font-size:12px;color:#8899bb"><span id="blackScoreLabel">　棋子+目</span><span id="blackDetail"></span></div>
-      <div class="score-row"><span>⚪ 白方</span><span id="whiteScore">0</span></div>
+      <div class="score-row"><span><span class="stone-dot white"></span> 白方</span><span id="whiteScore">0</span></div>
       <div class="score-row" style="font-size:12px;color:#8899bb"><span id="whiteScoreLabel">　棋子+目（含貼目）</span><span id="whiteDetail"></span></div>
       <div class="score-row" style="border-top:1px solid #3a4a6e;padding-top:8px;margin-top:4px">
         <span style="font-weight:bold">結果</span>

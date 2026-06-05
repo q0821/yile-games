@@ -291,7 +291,7 @@ function doUndo() {
 function doResign() {
   if (isGameBlocked()) return;
   const winner = opponent(currentPlayer);
-  endGame(`${winner === BLACK ? '⚫ 黑方' : '⚪ 白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`);
+  endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`);
 }
 
 // End the game by counting territory, without needing the double-pass dance.
@@ -323,7 +323,7 @@ function updateScoringDisplay() {
 function confirmScoring() {
   const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
   const diff = score.black - score.white;
-  const winner = diff > 0 ? '⚫ 黑方' : '⚪ 白方';
+  const winner = diff > 0 ? '黑方' : '白方';
   const detail = `黑 ${score.black.toFixed(1)} vs 白 ${score.white.toFixed(1)}（含貼目 ${komi}）`;
   GameState.confirmScoring();
   applyStateFromStore();
@@ -376,7 +376,7 @@ function closeModal() {
 // ==================== TIMER ====================
 function _timerOnTimeout(losingPlayer) {
   const winner = opponent(losingPlayer);
-  endGame(`${winner === BLACK ? '⚫ 黑方' : '⚪ 白方'}勝`, `${losingPlayer === BLACK ? '黑' : '白'}方超時`);
+  endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${losingPlayer === BLACK ? '黑' : '白'}方超時`);
 }
 
 function initTimer() {
