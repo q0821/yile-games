@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KataGo Spike</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #ece2cd; color: #2c2417; }
+  h1 { font-size: 18px; }
+  button { font-size: 16px; padding: 10px 16px; margin: 4px 4px 12px 0; border-radius: 8px; border: 1px solid #ab9670; background: #856219; color: #f7f0e0; }
+  #backend { font-size: 22px; font-weight: 800; margin: 8px 0; }
+  pre { background: #f7f0e0; border: 1px solid #cabd9f; border-radius: 8px; padding: 10px; font-size: 14px; white-space: pre-wrap; min-height: 200px; }
+</style>
+</head>
+<body>
+  <h1>KataGo Spike — 單次 eval / 低搜尋延遲實測</h1>
+  <p>模型：katago-small.bin.gz（b6c96, 3.8MB）。點按鈕開始，數字會顯示在下方。</p>
+  <button id="runWebgpu">測 WebGPU</button>
+  <button id="runWasm">測 WASM</button>
+  <div id="backend">backend: -</div>
+  <pre id="out"></pre>
+  <script type="module" src="/katago-spike.js"></script>
+</body>
+</html>
