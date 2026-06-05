@@ -190,11 +190,17 @@ export function updateScoringDisplay(state, score) {
 
   document.getElementById('whiteScore').textContent = score.white.toFixed(1);
   const diff = score.black - score.white;
-  document.getElementById('resultText').textContent = diff > 0
+  const resultStr = diff > 0
     ? `黑勝 ${diff.toFixed(1)} 目`
     : diff < 0
     ? `白勝 ${Math.abs(diff).toFixed(1)} 目`
     : '和棋';
+  document.getElementById('resultText').textContent = resultStr;
+  // 手機數目結果列（不開選單也看得到）
+  const mobileResult = document.getElementById('mobileScoreResult');
+  if (mobileResult) {
+    mobileResult.textContent = `黑 ${score.black.toFixed(1)}　白 ${score.white.toFixed(1)}（含貼目）　→　${resultStr}`;
+  }
 }
 
 

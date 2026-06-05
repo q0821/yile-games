@@ -735,6 +735,24 @@ button.danger:hover {
   background: var(--bg-card);
   border-color: var(--border);
 }
+/* 手機數目結果列：桌機用右側 scoringPanel，故桌機隱藏；手機由 JS 切換顯示 */
+@media (min-width: 901px) {
+  .mobile-scoring-bar { display: none !important; }
+}
+.mobile-scoring-bar {
+  width: 100%;
+  max-width: 500px;
+  margin-top: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  text-align: center;
+}
+.mobile-scoring-result { font-size: 15px; font-weight: 700; color: var(--gold-dim); }
+.mobile-scoring-hint { font-size: 12px; color: var(--text-muted); margin: 4px 0 8px; }
+.mobile-scoring-actions { display: flex; gap: 8px; }
+.mobile-scoring-actions button { flex: 1; margin: 0; min-height: 44px; }
 
 .mobile-status {
   display: none;

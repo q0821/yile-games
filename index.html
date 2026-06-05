@@ -170,10 +170,19 @@
       <button onclick="doPass()">虛手（Pass）</button>
       <button onclick="doUndo()">悔棋</button>
       <button onclick="showHintOnce()">提示</button>
-      <button onclick="finishGame()">結束對局</button>
+      <button onclick="finishGame()">申請數目</button>
       <button onclick="doResign()" class="danger">認輸</button>
     </div>
     <div class="mobile-status" id="mobileStatus"></div>
+    <!-- Mobile scoring result bar（手機限定，數目時直接顯示結果＋確認/取消，不必開選單） -->
+    <div class="mobile-scoring-bar" id="mobileScoringBar" style="display:none">
+      <div class="mobile-scoring-result" id="mobileScoreResult"></div>
+      <div class="mobile-scoring-hint">已自動估算死子；點棋盤上的死子可修正</div>
+      <div class="mobile-scoring-actions">
+        <button class="primary" onclick="confirmScoring()">確認結果</button>
+        <button onclick="cancelScoring()">取消數目</button>
+      </div>
+    </div>
   </div>
 
   <!-- Right Panel: Game Info -->
@@ -206,7 +215,7 @@
     <div style="margin-top:12px">
       <button onclick="doPass()">虛手（Pass）</button>
       <button onclick="doUndo()" id="undoBtn">悔棋</button>
-      <button onclick="finishGame()" id="finishBtn">結束對局（數目）</button>
+      <button onclick="finishGame()" id="finishBtn">申請數目</button>
       <button onclick="doResign()" class="danger">認輸</button>
       <button onclick="enterReview()" id="reviewBtn" style="display:none">覆盤</button>
       <button onclick="exitReview()" id="exitReviewBtn" style="display:none">結束覆盤</button>

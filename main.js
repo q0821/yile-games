@@ -254,7 +254,7 @@ function doPass() {
   // the AI was the one that just passed — guide the player on how to finish.
   const aiJustPassed = gameMode === 'pvc' && !willRequestAI && currentPlayer === playerColor && !gameOver;
   if (aiJustPassed) {
-    setStatus('AI 虛手了 — 你也虛手即可數目，或按「結束對局」直接計算結果');
+    setStatus('AI 虛手了 — 你也虛手即可數目，或按「申請數目」直接計算結果');
   } else {
     syncStatus();
   }
@@ -300,7 +300,7 @@ function doResign() {
 function finishGame() {
   if (isGameBusy()) return;
   if (moveHistory.length === 0) {
-    setStatus('還沒有落子，無法結束對局');
+    setStatus('還沒有落子，無法數目');
     return;
   }
   endGameByScoring();
@@ -311,6 +311,7 @@ function endGameByScoring() {
   applyStateFromStore();
   stopTimer();
   document.getElementById('scoringPanel').style.display = 'block';
+  document.getElementById('mobileScoringBar').style.display = 'block';
   setStatus('已自動估算死子，可點擊修正，然後確認結果');
   updateScoringDisplay();
   drawBoard();
@@ -329,6 +330,7 @@ function confirmScoring() {
   GameState.confirmScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
+  document.getElementById('mobileScoringBar').style.display = 'none';
   endGame(`${winner}勝`, detail);
 }
 
@@ -336,6 +338,7 @@ function cancelScoring() {
   GameState.cancelScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
+  document.getElementById('mobileScoringBar').style.display = 'none';
   setStatus('已取消數目');
   drawBoard();
 }
@@ -604,6 +607,7 @@ function startNewGame() {
   emotionEnabled  = document.getElementById('emotionToggle').checked;
 
   document.getElementById('scoringPanel').style.display = 'none';
+  document.getElementById('mobileScoringBar').style.display = 'none';
   document.getElementById('reviewBar').style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('exitReviewBtn').style.display = 'none';
