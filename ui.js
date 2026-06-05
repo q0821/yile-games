@@ -375,8 +375,100 @@ export function drawBoard(deps, state) {
   }
 }
 
+// ——— 覆盤分析（2c）：每手影響文字 + 勝率曲線 ———
+// analysis[k] = { wr: 黑勝率 0..1, lead: 黑領先目數 }（KataGo，黑方觀點）。
+
+const _pct = (w) => `${Math.round(w * 100)}%`;
+
+// 依勝率落差分類（誠實、以勝率為主訊號；目數為估計）
+function _classifyLoss(wrLoss) {
+  if (wrLoss >= 0.10) return { tag: '疑問手', cls: 'bad' };
+  if (wrLoss >= 0.04) return { tag: '可再想', cls: 'warn' };
+  return { tag: '', cls: 'good' };
+}
+
+export function updateReviewAnalysisInfo(state) {
+  const el = document.getElementById('reviewAnalysisInfo');
+  if (!el) return;
+  const { currentReviewMove: m, moveHistory, analysis } = state;
+  if (!analysis || !analysis[m]) { el.textContent = ''; el.className = 'move-info'; return; }
+
+  if (m === 0) {
+    el.textContent = `本局開始 — 黑勝率 ${_pct(analysis[0].wr)}`;
+    el.className = 'move-info';
+    return;
+  }
+  const move = moveHistory[m - 1];
+  const after = analysis[m];
+  const before = analysis[m - 1] || after;
+  const isBlack = move.player === BLACK;
+  // 該手玩家的勝率損失（正＝下完後對自己變差）；黑看 wr 下降、白看 wr 上升
+  const wrLoss = isBlack ? before.wr - after.wr : after.wr - before.wr;
+  const leadLoss = isBlack ? before.lead - after.lead : after.lead - before.lead;
+  const who = isBlack ? '黑' : '白';
+  const { tag, cls } = _classifyLoss(wrLoss);
+  let txt = `第 ${m} 手（${who}）— 黑勝率 ${_pct(after.wr)}`;
+  if (wrLoss > 0.005) {
+    txt += `；這手約失 ${(wrLoss * 100).toFixed(0)}% 勝率`;
+    if (leadLoss > 0.5) txt += `（≈ ${leadLoss.toFixed(1)} 目，估計）`;
+    if (tag) txt += ` · ${tag}`;
+  }
+  el.textContent = txt;
+  el.className = 'move-info ' + cls;
+}
+
+export function drawWinrateGraph(canvas, analysis, cursor) {
+  if (!canvas || !analysis || analysis.length === 0) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const N = analysis.length - 1; // 位置 0..N
+  ctx.clearRect(0, 0, W, H);
+
+  // 底 + 中線（50%）
+  ctx.fillStyle = '#f4ecda';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#cabd9f';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H / 2); ctx.lineTo(W, H / 2); ctx.stroke();
+
+  const xAt = (k) => (N === 0 ? 0 : (k / N) * (W - 2) + 1);
+  const yAt = (wr) => (1 - wr) * (H - 2) + 1; // wr=1（黑全勝）在上
+
+  // 黑勝率折線
+  ctx.strokeStyle = '#2c2417';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let k = 0; k <= N; k++) {
+    const p = analysis[k];
+    if (!p) continue;
+    const x = xAt(k), y = yAt(p.wr);
+    if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // 標出勝率大跌的關鍵手（紅點）
+  ctx.fillStyle = '#b23a2e';
+  for (let k = 1; k <= N; k++) {
+    const a = analysis[k], b = analysis[k - 1];
+    if (!a || !b) continue;
+    if (Math.abs(a.wr - b.wr) >= 0.12) {
+      ctx.beginPath(); ctx.arc(xAt(k), yAt(a.wr), 3, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // 游標（目前這手）
+  if (cursor >= 0 && cursor <= N) {
+    ctx.strokeStyle = '#856219';
+    ctx.lineWidth = 1.5;
+    const cx = xAt(cursor);
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  }
+}
+
 export const GoUI = {
   updateHUD, setStatus, getStatusMessage, syncStatus, updateReviewInfo,
+  updateReviewAnalysisInfo, drawWinrateGraph,
   updateScoringDisplay,
   resizeCanvas, drawStone, drawBoard
 };

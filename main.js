@@ -13,6 +13,7 @@ import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
+import * as KataGo from './katago-service.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -441,10 +442,70 @@ function reviewGo(n) {
 
 function updateReviewInfo() {
   GoUI.updateReviewInfo({ currentReviewMove, moveHistory, size });
+  if (reviewAnalysis) {
+    GoUI.updateReviewAnalysisInfo({ currentReviewMove, moveHistory, analysis: reviewAnalysis });
+    GoUI.drawWinrateGraph(document.getElementById('winrateGraph'), reviewAnalysis, currentReviewMove);
+  }
 }
 
 // ==================== LEARNING MODE ====================
 let savedOriginalGame = null;
+
+// 覆盤分析（2c）：每個位置（第 0..N 手後）的黑方勝率/分數，由 KataGo 逐手算出。
+// reviewAnalysis[k] = { wr: 黑勝率 0..1, lead: 黑領先目數 }。null = 尚未分析。
+let reviewAnalysis = null;
+let reviewAnalyzing = false;
+
+function clearReviewAnalysis() {
+  reviewAnalysis = null;
+  const g = document.getElementById('winrateGraph');
+  if (g) g.style.display = 'none';
+  const info = document.getElementById('reviewAnalysisInfo');
+  if (info) info.textContent = '';
+}
+
+// 用 KataGo 誠實逐手分析本局（opt-in；低 visits；黑方觀點，不宣稱精確目數）。
+async function analyzeReview() {
+  if (!isReviewing || reviewAnalyzing) return;
+  reviewAnalyzing = true;
+  const btn = document.getElementById('analyzeReviewBtn');
+  if (btn) btn.disabled = true;
+  const N = moveHistory.length;
+  const results = new Array(N + 1).fill(null);
+  try {
+    await KataGo.ensureReady(setStatus);
+    for (let k = 0; k <= N; k++) {
+      setStatus(`分析中… ${k}/${N}`);
+      const b = GoReview.getReviewBoard(moveHistory, k, size);
+      const player = (k % 2 === 0) ? BLACK : WHITE; // 第 k 手後輪到誰
+      const a = await KataGo.evaluate({
+        board: b, size, currentPlayer: player,
+        moveHistory: moveHistory.slice(0, k), komi, gameRules,
+      }, { visits: 12 });
+      results[k] = { wr: a.rootWinRate, lead: a.rootScoreLead };
+    }
+    reviewAnalysis = results;
+    setStatus('分析完成 — 逐手切換看勝率與失分，或點曲線跳手');
+    const g = document.getElementById('winrateGraph');
+    if (g) g.style.display = 'block';
+    updateReviewInfo();
+  } catch (err) {
+    console.error('Review analysis error:', err);
+    setStatus('分析失敗：' + (err && err.message ? err.message : String(err)));
+  } finally {
+    reviewAnalyzing = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+function onWinrateGraphClick(e) {
+  if (!reviewAnalysis) return;
+  const canvas = e.currentTarget;
+  const rect = canvas.getBoundingClientRect();
+  const frac = rect.width > 0 ? (e.clientX - rect.left) / rect.width : 0;
+  const N = moveHistory.length;
+  reviewGo(Math.max(0, Math.min(N, Math.round(frac * N))));
+}
 
 // Branch the game from the current review position so the player can try a
 // different move and keep playing the AI, without losing the original record.
@@ -477,6 +538,7 @@ function replayFromHere() {
   document.getElementById('exitReviewBtn').style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('returnOriginalBtn').style.display = 'block';
+  clearReviewAnalysis();
 
   setStatus('練習模式：換個下法試試，再與 AI 繼續對弈');
   updateUI();
@@ -547,6 +609,7 @@ function startNewGame() {
   document.getElementById('exitReviewBtn').style.display = 'none';
   document.getElementById('exportSgfBtn').style.display = 'none';
   document.getElementById('resultModal').classList.remove('show');
+  clearReviewAnalysis();
 
   stopTimer();
   if (timerEnabled) { initTimer(); startTimer(); }
@@ -779,6 +842,8 @@ Object.assign(window, {
   reviewGo,
   replayFromHere,
   returnToOriginal,
+  analyzeReview,
+  onWinrateGraphClick,
   exportSGF,
   closeModal,
   openChangelog,

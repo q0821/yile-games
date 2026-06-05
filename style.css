@@ -486,6 +486,28 @@ button.danger:hover {
   color: #f7efde;
   border-color: var(--gold-dim);
 }
+/* 覆盤分析（2c）：分析按鈕、勝率曲線、每手失分文字 */
+.review-analysis { margin-top: 8px; }
+#analyzeReviewBtn {
+  width: 100%;
+  background: var(--bg-input);
+  border-color: var(--border-hl);
+  color: var(--gold-dim);
+  font-weight: 700;
+}
+#analyzeReviewBtn:disabled { opacity: 0.6; cursor: default; }
+.winrate-graph {
+  width: 100%;
+  height: auto;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  cursor: pointer;
+}
+.move-info.good { color: var(--success); }
+.move-info.warn { color: var(--warning); }
+.move-info.bad  { color: var(--danger); font-weight: 700; }
 /* 結果彈窗：客觀對局摘要 */
 .modal-summary {
   font-size: 12px !important;

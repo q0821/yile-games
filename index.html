@@ -154,6 +154,12 @@
         <button onclick="reviewGo(moveHistory.length)" title="到最新">最新</button>
       </div>
       <div class="move-info" id="reviewInfo"></div>
+      <div class="review-analysis">
+        <button id="analyzeReviewBtn" onclick="analyzeReview()" title="用 KataGo 逐手分析本局勝率與失分">分析本局（KataGo）</button>
+        <canvas id="winrateGraph" class="winrate-graph" width="500" height="90" style="display:none"
+                onclick="onWinrateGraphClick(event)" title="點擊跳到該手"></canvas>
+        <div class="move-info" id="reviewAnalysisInfo"></div>
+      </div>
       <button class="review-replay" onclick="replayFromHere()" title="從這手換個下法，與電腦繼續對弈">從這手換個下法重練</button>
       <div class="review-controls" style="margin-top:6px;">
         <button onclick="exitReview()">結束覆盤</button>

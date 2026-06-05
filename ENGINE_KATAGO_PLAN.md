@@ -108,7 +108,9 @@ vendor web-katrain 引擎 + b6c96(3.8MB) 進 gogame，部署 `/katago-spike.html
 
 - **2a 服務封裝** `katago-service.js`：init/載入狀態、`genmove`（低 visits→最佳手）、`evaluate`（勝率/領地）。對齊現有 `gnugo-service` 介面，方便替換。
 - **2b 對弈用 KataGo 當對手**：強度＝visits（初/中/高＝不同思考量）；首手前需等模型載入（~一次性下載，要有載入 UX）。
-- **2c 誠實覆盤分析（最高學習價值）**：每手勝率 + 失分（勝率落差）+ 領地圖 + 勝率曲線 → 誠實復活先前移除的失目/形勢/領地。
+- **2c 誠實覆盤分析（最高學習價值）**〔✅ MVP 完成 2026-06-05〕：覆盤「分析本局」逐手用 KataGo 算
+  **黑方勝率 + 失分估計 + 勝率曲線（可點跳手、紅點標關鍵手）**。黑方觀點（worker rootWinRate=blackWinProb）。
+  低 visits(12)、opt-in、結果快取。**待跟進（2c-2）**：領地/ownership 覆蓋層、精確目數。
 - **2d 讓子（S6）**：有強引擎後變得有意義。
 - **2e 死活 S7**：強引擎當防守方，判定可靠。
 - **GnuGo 去留**：評估保留當離線/輕量 fallback 或淘汰。
