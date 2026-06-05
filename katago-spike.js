@@ -3,7 +3,7 @@
 import { getKataGoEngineClient } from './katago-engine/engine/katago/client.ts';
 import { publicUrl } from './katago-engine/utils/publicUrl.ts';
 import { BLACK, WHITE, EMPTY } from './rules.js';
-import { genmove as katagoGenmove } from './katago-service.js';
+import { genmove as katagoGenmove, evaluate as katagoEvaluate } from './katago-service.js';
 
 const out = document.getElementById('out');
 const backendEl = document.getElementById('backend');
@@ -89,3 +89,34 @@ async function verifyOrientation() {
 document.getElementById('runWebgpu').addEventListener('click', () => run('webgpu'));
 document.getElementById('runWasm').addEventListener('click', () => run('wasm'));
 document.getElementById('verifyBtn')?.addEventListener('click', verifyOrientation);
+
+// ——— 勝率診斷：分辨「0% 勝率」是系統性 bug 還是局面特定 ———
+async function diagnoseWinrate() {
+  out.textContent = '';
+  backendEl.textContent = 'backend: 診斷勝率中…';
+  try {
+    const mk = (N, fill) => Array.from({ length: N }, (_, r) => Array.from({ length: N }, (_, c) => fill(r, c)));
+    const ev = async (label, board, N, komi, player) => {
+      const a = await katagoEvaluate({ board, size: N, currentPlayer: player, moveHistory: [], komi, gameRules: 'chinese' }, { visits: 12 });
+      log(`${label}: 黑勝率 ${(a.rootWinRate * 100).toFixed(1)}%、黑領先 ${a.rootScoreLead.toFixed(1)} 目`);
+      return a;
+    };
+    backendEl.textContent = 'backend: ' + getKataGoEngineClient().getEngineInfo().backend;
+    log('— 決定性測試（全黑應≈100%、全白應≈0%）—');
+    await ev('全黑盤 9x9 (komi7.5)', mk(9, () => BLACK), 9, 7.5, WHITE);
+    await ev('全白盤 9x9 (komi7.5)', mk(9, () => WHITE), 9, 7.5, BLACK);
+    log('— komi/方向 —');
+    await ev('空盤 9x9 komi 7.5', mk(9, () => EMPTY), 9, 7.5, BLACK);
+    await ev('空盤 9x9 komi 0', mk(9, () => EMPTY), 9, 0, BLACK);
+    await ev('空盤 19x19 komi 7.5', mk(19, () => EMPTY), 19, 7.5, BLACK);
+    log('— 黑佔上半、白佔下半（黑多）9x9 —');
+    const half = mk(9, (r) => (r <= 3 ? BLACK : r >= 5 ? WHITE : EMPTY));
+    await ev('黑上白下 (komi7.5)', half, 9, 7.5, BLACK);
+    log('—— 完成。把數字回報即可 ——');
+  } catch (err) {
+    backendEl.textContent = 'backend: 失敗';
+    log('錯誤：' + (err && err.message ? err.message : String(err)));
+    console.error(err);
+  }
+}
+document.getElementById('diagBtn')?.addEventListener('click', diagnoseWinrate);
