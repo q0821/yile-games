@@ -111,4 +111,30 @@ export async function evaluate(state, { visits = 16, maxTimeMs = 8000 } = {}) {
   return client().analyze(buildArgs(state, { visits, maxTimeMs }));
 }
 
-export const KataGoService = { ensureReady, isReady, getBackend, genmove, evaluate };
+/**
+ * 局部應手（供死活後續手 S7）：限制 KataGo 只在 region 範圍內選手，一次 analyze 同時取得
+ * 「局部最佳手 + 該盤面 root 勝率 + ownership」，避免空盤大部分區域讓引擎跑去佔大場。
+ *
+ * @param {object} region 本專案座標 { minRow, maxRow, minCol, maxCol }（皆含端點）
+ * @returns {{ move:{x:number,y:number}|{pass:true}, winrate:number|null, ownership:(Float32Array|number[]|null) }}
+ *          move 為本專案座標（x=row、y=col）；winrate=rootWinRate（黑勝率）；ownership index = row*size+col。
+ */
+export async function analyzeLocal(state, region, { visits = 24, maxTimeMs = 6000 } = {}) {
+  await ensureReady(state.onStatus);
+  const analysis = await client().analyze(buildArgs(state, { visits, maxTimeMs }));
+  const winrate = analysis?.rootWinRate ?? null;
+  const ownership = analysis?.ownership || null;
+  const moves = analysis?.moves || [];
+
+  // moves x=col,y=row（web）→ 本專案 row=m.y、col=m.x；只留 region 內，取 order 最小（最佳）。
+  let best = null;
+  for (const m of moves) {
+    const row = m.y, col = m.x;
+    if (row < region.minRow || row > region.maxRow || col < region.minCol || col > region.maxCol) continue;
+    if (!best || m.order < best.order) best = m;
+  }
+  const move = best ? { x: best.y, y: best.x } : { pass: true };
+  return { move, winrate, ownership };
+}
+
+export const KataGoService = { ensureReady, isReady, getBackend, genmove, evaluate, analyzeLocal };

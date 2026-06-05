@@ -7,7 +7,7 @@
  *
  * 棋子沿用 ui.js 的 drawStone（透過 deps.originRow/originCol 偏移），保持視覺一致。
  */
-import { EMPTY } from './rules.js';
+import { EMPTY, WHITE } from './rules.js';
 import { drawStone } from './ui.js';
 
 const STAR_19 = [
@@ -111,6 +111,23 @@ export function drawTsumego(deps, view) {
     }
   }
 
+  // ——— KataGo 領地覆蓋層（後續手 play-out，重用 2c-2 配色）：畫在棋子下方 ———
+  // ownership index = row*size+col（+1 黑、-1 白），與 ui.js / katago-service 一致。
+  if (view.ownership) {
+    const own = view.ownership;
+    const sq = cs * 0.52;
+    for (let r = vp.minRow; r <= vp.maxRow; r++) {
+      for (let c = vp.minCol; c <= vp.maxCol; c++) {
+        const o = own[r * size + c];
+        if (o == null) continue;
+        const a = Math.min(0.5, Math.abs(o) * 0.5);
+        if (a < 0.06) continue;
+        ctx.fillStyle = o > 0 ? `rgba(20,16,12,${a})` : `rgba(250,248,242,${a})`;
+        ctx.fillRect(sx(c) - sq / 2, sy(r) - sq / 2, sq, sq);
+      }
+    }
+  }
+
   // ——— 棋子（重用 drawStone，帶 origin 偏移）———
   const stoneDeps = { ctx, canvas: deps.canvas, padding: pad, cellSize: cs, originRow: vp.minRow, originCol: vp.minCol };
   for (let r = vp.minRow; r <= vp.maxRow; r++) {
@@ -154,6 +171,13 @@ export function drawTsumego(deps, view) {
       ctx.beginPath();
       ctx.arc(x, y, cs * 0.34, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (m.type === 'aimove') {
+      // AI 最後一手：在棋子中央點一個對比色小圓（黑子上白點、白子上黑點）
+      const isWhiteStone = view.board[m.row] && view.board[m.row][m.col] === WHITE;
+      ctx.fillStyle = isWhiteStone ? '#000' : '#fff';
+      ctx.beginPath();
+      ctx.arc(x, y, cs * 0.14, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
   ctx.lineWidth = 1;

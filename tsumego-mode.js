@@ -7,9 +7,10 @@
  *
  * 題庫資料由 build-tsumego.js 產生於 public/tsumego/（index.json + 各級別檔）。
  */
-import { BLACK, WHITE, EMPTY } from './rules.js';
+import { BLACK, WHITE, EMPTY, opponent, cloneBoard, tryPlaceStone } from './rules.js';
 import { parseProblem, buildBoardFromProblem, checkAnswer, computeViewport } from './tsumego.js';
 import { resizeTsumegoCanvas, drawTsumego } from './tsumego-ui.js';
+import { analyzeLocal } from './katago-service.js';
 import {
   loadProgress, saveProgress, recordResult, setLastIndex, getLastIndex,
   solvedCount, isSolved, firstTryRate, streak, bestStreak, dailyCount,
@@ -39,10 +40,24 @@ let curProblem = null;
 let curBoard = null;
 let viewport = null;
 let toPlayColor = BLACK;
-let status = 'playing';    // playing | correct | wrong | revealed
+let status = 'playing';    // playing | correct | wrong | revealed | playout
 let wrongThisProblem = false;
 let markers = [];
 let hover = null;
+
+// ——— 後續手 play-out（S7）狀態：解對第一手後，opt-in 對 KataGo 在局部走完，顯示誠實評估 ———
+const PLAYOUT_MAX_PLIES = 40;
+let playoutOn = false;        // 是否在 play-out 中
+let playoutSeq = 0;           // 序號 guard：切題/退出後讓未回的 analyze 作廢
+let playoutTurn = BLACK;      // 目前該誰下（BLACK/WHITE）
+let playoutHistory = [];      // [{ x:row, y:col, player }]，給 KataGo recent-move 特徵
+let playoutStartBoard = null; // 進 play-out 當下（解對第一手）的盤面快照，退出可還原
+let playoutKo = null;         // 劫爭點 [row,col]
+let playoutPlies = 0;
+let aiBusy = false;           // AI 思考中，鎖玩家落子
+let evalWinrate = null;       // KataGo rootWinRate（黑勝率 0..1）；全局值不顯示，保留除錯
+let evalOwnership = null;     // KataGo ownership（index = row*size+col）或 null
+let playoutHintShown = false; // ownership 說明只在第一個玩家回合提示一次
 
 // 練習模式與播放清單（order = 要走訪的題目 index 陣列；sequential 時為 0..total-1）
 let practiceMode = 'sequential';   // sequential | random | unsolved | review
@@ -69,6 +84,7 @@ function cacheDom() {
     next: $('tsumegoNext'),
     redo: $('tsumegoRedo'),
     reveal: $('tsumegoReveal'),
+    playout: $('tsumegoPlayout'),
     home: $('tsumegoHome')
   };
 }
@@ -165,7 +181,11 @@ function buildOrder(mode) {
 }
 
 function view() {
-  return { board: curBoard, size: curProblem.size, viewport, toPlayColor, markers, hover };
+  return {
+    board: curBoard, size: curProblem.size, viewport, toPlayColor, markers, hover,
+    // play-out 才帶 ownership 覆蓋層；非 play-out 為 null（不畫）
+    ownership: playoutOn ? evalOwnership : null,
+  };
 }
 
 function render() {
@@ -187,6 +207,23 @@ function updateMeta() {
   dom.prev.disabled = orderPos <= 0;
   dom.next.disabled = orderPos >= total - 1;
   updateStats();
+  updatePlayoutBtn();
+}
+
+/** 後續手按鈕：解對後顯示「試著走完」；play-out 中顯示「停手」；其餘隱藏。 */
+function updatePlayoutBtn() {
+  if (!dom.playout) return;
+  if (status === 'playout') {
+    dom.playout.style.display = '';
+    dom.playout.textContent = '停手';
+    dom.playout.disabled = aiBusy;
+  } else if (status === 'correct') {
+    dom.playout.style.display = '';
+    dom.playout.textContent = '試著走完';
+    dom.playout.disabled = false;
+  } else {
+    dom.playout.style.display = 'none';
+  }
 }
 
 function labelOf(mode) {
@@ -247,6 +284,7 @@ function showProblem() {
   wrongThisProblem = false;
   markers = [];
   hover = null;
+  resetPlayout();
 
   progress = setLastIndex(progress, curLevelId, curIndex);
   saveProgress(progress);
@@ -257,7 +295,9 @@ function showProblem() {
 }
 
 function onCellClick(row, col) {
-  if (!curProblem || status === 'correct') return;
+  if (!curProblem) return;
+  if (status === 'playout') { onPlayoutClick(row, col); return; }
+  if (status === 'correct') return;
   if (!inViewport(row, col)) return;
   if (curBoard[row][col] !== EMPTY) return;
 
@@ -295,6 +335,11 @@ function onCellClick(row, col) {
 
 function reveal() {
   if (!curProblem) return;
+  // play-out 進行中按「看答案」：先收掉 play-out（還原盤面、停掉在途 AI），再顯示正解
+  if (playoutOn) {
+    if (playoutStartBoard) curBoard = buildBoardFromProblem(curProblem);
+    resetPlayout();
+  }
   markers = curProblem.answers.map(a => ({ row: a.row, col: a.col, type: 'answer' }));
   status = 'revealed';
   if (!isSolved(progress, curLevelId, curRaw.id)) {
@@ -306,17 +351,175 @@ function reveal() {
   }
   const n = curProblem.answers.length;
   setStatusMsg(n > 1 ? `正解（藍圈，共 ${n} 個關鍵點任一即可）` : '正解（藍圈處）', 'answer');
+  updatePlayoutBtn();
   render();
 }
 
 function redo() {
   if (!curProblem) return;
+  resetPlayout();
   curBoard = buildBoardFromProblem(curProblem);
   status = 'playing';
   markers = [];
   hover = null;
   defaultStatusMsg();
+  updatePlayoutBtn();
   render();
+}
+
+// ——— 後續手 play-out（S7）———
+
+/** 退出 / 切題時把 play-out 狀態歸零（讓在途 analyze 作廢）。 */
+function resetPlayout() {
+  playoutOn = false;
+  playoutSeq++;            // 讓尚未回來的 analyze 認出自己過期
+  aiBusy = false;
+  playoutHistory = [];
+  playoutStartBoard = null;
+  playoutKo = null;
+  playoutPlies = 0;
+  evalWinrate = null;
+  evalOwnership = null;
+  playoutHintShown = false;
+}
+
+const OWNERSHIP_HINT = '陰影＝KataGo 估的地盤歸屬（深＝黑、淺＝白）。看你的目標棋串歸誰';
+
+/** 進入 play-out：以解對第一手的盤面為起點，KataGo 當對手先應手。 */
+function startPlayout() {
+  if (status !== 'correct' || !curProblem) return;
+  playoutOn = true;
+  status = 'playout';
+  playoutSeq++;
+  const seq = playoutSeq;
+  playoutStartBoard = cloneBoard(curBoard);
+  playoutKo = null;
+  playoutPlies = 0;
+  evalWinrate = null;
+  evalOwnership = null;
+  markers = [];
+  // 把玩家的正解第一手放進 history（給 KataGo recent-move 特徵）
+  const first = (curProblem.answers || [])[0];
+  playoutHistory = first ? [{ x: first.row, y: first.col, player: toPlayColor }] : [];
+  playoutTurn = opponent(toPlayColor);  // 玩家已下第一手，換對手
+  setStatusMsg('AI 應手中…', '');
+  updatePlayoutBtn();
+  render();
+  playoutStep(seq);
+}
+
+/** 退出 play-out，盤面還原到解對第一手。 */
+function exitPlayout() {
+  if (curProblem && playoutStartBoard) curBoard = playoutStartBoard;
+  resetPlayout();
+  status = 'correct';
+  markers = [];
+  setStatusMsg('已收手。可「重做」或下一題', 'correct');
+  updatePlayoutBtn();
+  render();
+}
+
+function synthState(player) {
+  return {
+    board: curBoard,
+    size: curProblem.size,
+    currentPlayer: player,
+    moveHistory: playoutHistory,
+    komi: 7.5,
+    gameRules: 'chinese',
+    onStatus: (m) => { if (playoutOn) setStatusMsg(m, ''); },
+  };
+}
+
+/**
+ * 一步推進：分析目前盤面 → 顯示誠實評估（勝率＋ownership）。
+ * 若輪到 AI（對手），下出局部最佳手後遞迴（再分析玩家面對的盤面、顯示新評估）。
+ * seq guard：切題/退出後過期的回呼直接丟棄。
+ */
+async function playoutStep(seq) {
+  if (!playoutOn || seq !== playoutSeq) return;
+  const aiToMove = playoutTurn !== toPlayColor;
+  aiBusy = aiToMove;
+  if (aiToMove) { setStatusMsg('AI 思考中…', ''); updatePlayoutBtn(); render(); }
+
+  let result;
+  try {
+    result = await analyzeLocal(synthState(playoutTurn), viewport, { visits: 32 });
+  } catch (err) {
+    console.error('Tsumego play-out analyze failed:', err);
+    if (seq === playoutSeq) {
+      resetPlayout();
+      status = 'correct';
+      setStatusMsg('AI 載入/分析失敗，已收手，稍後再試', 'wrong');
+      updatePlayoutBtn();
+      render();
+    }
+    return;
+  }
+  if (!playoutOn || seq !== playoutSeq) return;  // 已切題/退出
+
+  evalWinrate = result.winrate;       // 全局勝率不顯示（空盤主導、會誤導）；保留供除錯
+  evalOwnership = result.ownership;    // 逐點領地＝唯一誠實的局部訊號，畫成覆蓋層
+  const youColor = toPlayColor === BLACK ? '黑' : '白';
+
+  if (!aiToMove) {
+    // 玩家面對的盤面：畫出 ownership 覆蓋層，等玩家落子
+    aiBusy = false;
+    setStatusMsg(playoutHintShown ? `輪到你（${youColor}）` : OWNERSHIP_HINT, 'answer');
+    playoutHintShown = true;
+    updatePlayoutBtn();
+    render();
+    return;
+  }
+
+  // AI（對手）回合：下局部最佳手；無局部手或超過上限 → 收手交還玩家
+  if (result.move.pass || playoutPlies >= PLAYOUT_MAX_PLIES) {
+    aiBusy = false;
+    playoutTurn = toPlayColor;
+    setStatusMsg('AI 在局部無手可下，換你（或可收手）', 'answer');
+    updatePlayoutBtn();
+    render();
+    return;
+  }
+  const res = tryPlaceStone(curBoard, curProblem.size, result.move.x, result.move.y, playoutTurn, playoutKo);
+  if (!res.valid) {
+    // KataGo 理論上只給合法手；保險起見視為收手
+    aiBusy = false;
+    playoutTurn = toPlayColor;
+    setStatusMsg('換你', 'answer');
+    updatePlayoutBtn();
+    render();
+    return;
+  }
+  curBoard = res.newBoard;
+  playoutKo = res.newKo;
+  playoutPlies++;
+  playoutHistory.push({ x: result.move.x, y: result.move.y, player: playoutTurn });
+  markers = [{ row: result.move.x, col: result.move.y, type: 'aimove' }];
+  playoutTurn = toPlayColor;
+  // 遞迴：分析玩家面對的新盤面、顯示新評估
+  return playoutStep(seq);
+}
+
+/** play-out 中玩家落子（走真實規則，提子/自殺/劫由 tryPlaceStone 處理）。 */
+function onPlayoutClick(row, col) {
+  if (!playoutOn || aiBusy) return;
+  if (!inViewport(row, col)) return;
+  if (curBoard[row][col] !== EMPTY) return;
+  const res = tryPlaceStone(curBoard, curProblem.size, row, col, toPlayColor, playoutKo);
+  if (!res.valid) {
+    setStatusMsg('不能下在這裡（自殺或劫）', 'wrong');
+    render();
+    return;
+  }
+  curBoard = res.newBoard;
+  playoutKo = res.newKo;
+  playoutPlies++;
+  playoutHistory.push({ x: row, y: col, player: toPlayColor });
+  markers = [];
+  playoutTurn = opponent(toPlayColor);
+  const seq = playoutSeq;
+  playoutStep(seq);
 }
 
 function go(delta) {
@@ -367,7 +570,8 @@ function wireEvents() {
 
   let moveRaf = null;
   dom.canvas.addEventListener('mousemove', (e) => {
-    if (status !== 'playing') { if (hover) { hover = null; render(); } return; }
+    const canHover = status === 'playing' || (status === 'playout' && !aiBusy);
+    if (!canHover) { if (hover) { hover = null; render(); } return; }
     if (moveRaf) return;
     moveRaf = requestAnimationFrame(() => {
       moveRaf = null;
@@ -381,6 +585,10 @@ function wireEvents() {
   dom.next.addEventListener('click', () => go(1));
   dom.redo.addEventListener('click', redo);
   dom.reveal.addEventListener('click', reveal);
+  dom.playout.addEventListener('click', () => {
+    if (status === 'playout') exitPlayout();
+    else if (status === 'correct') startPlayout();
+  });
   dom.home.addEventListener('click', () => { location.hash = '#home'; });
 
   window.addEventListener('resize', () => { if (isActive()) render(); });

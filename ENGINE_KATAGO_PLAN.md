@@ -112,7 +112,9 @@ vendor web-katrain 引擎 + b6c96(3.8MB) 進 gogame，部署 `/katago-spike.html
   **黑方勝率 + 失分估計 + 勝率曲線（可點跳手、紅點標關鍵手）**。黑方觀點（worker rootWinRate=blackWinProb）。
   低 visits(12)、opt-in、結果快取。**待跟進（2c-2）**：領地/ownership 覆蓋層、精確目數。
 - **2d 讓子（S6）**：有強引擎後變得有意義。
-- **2e 死活 S7**：強引擎當防守方，判定可靠。
+- **2e 死活 S7**〔✅ 完成 2026-06-05〕：解對第一手後 opt-in「試著走完」，KataGo 當對手**只在 viewport 局部應手**
+  （`katago-service.analyzeLocal` 把候選手過濾至 region），玩家落子走 `rules.js`；持續顯示**領地覆蓋層**（重用 2c-2，
+  搬進 `tsumego-ui`）。**不秀整盤勝率/二元判定**（空盤主導會誤導），只呈現逐點 ownership 這個誠實的局部訊號。
 - **GnuGo 去留**：評估保留當離線/輕量 fallback 或淘汰。
 
 > 模型下載 3.8MB（一次性、瀏覽器快取）；可考慮加「啟用 AI 分析」開關，未啟用就不下載，避免拖慢純對弈。
