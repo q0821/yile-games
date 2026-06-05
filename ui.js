@@ -303,6 +303,25 @@ export function drawBoard(deps, state) {
     }
   }
 
+  // 覆盤領地覆蓋層（2c-2）：KataGo ownership（+1 黑、-1 白），畫在棋子下方。
+  // ownership 索引 = row*size + col（= 本專案 x*size + y）。
+  if (state.ownership && !state.isScoring) {
+    const own = state.ownership;
+    const s = deps.cellSize * 0.52;
+    for (let x = 0; x < state.size; x++) {
+      for (let y = 0; y < state.size; y++) {
+        const o = own[x * state.size + y];
+        if (o == null) continue;
+        const a = Math.min(0.5, Math.abs(o) * 0.5);
+        if (a < 0.06) continue;
+        const cx = deps.padding + y * deps.cellSize;
+        const cy = deps.padding + x * deps.cellSize;
+        ctx.fillStyle = o > 0 ? `rgba(20,16,12,${a})` : `rgba(250,248,242,${a})`;
+        ctx.fillRect(cx - s / 2, cy - s / 2, s, s);
+      }
+    }
+  }
+
   for (let x = 0; x < state.size; x++) {
     for (let y = 0; y < state.size; y++) {
       if (state.displayBoard[x][y] !== EMPTY) {

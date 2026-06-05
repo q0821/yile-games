@@ -496,6 +496,19 @@ button.danger:hover {
   font-weight: 700;
 }
 #analyzeReviewBtn:disabled { opacity: 0.6; cursor: default; }
+#ownershipBtn {
+  width: 100%;
+  margin-top: 6px;
+  background: var(--bg-card);
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+#ownershipBtn.active {
+  background: var(--bg-input);
+  border-color: var(--gold-dim);
+  color: var(--gold-dim);
+  font-weight: 700;
+}
 .winrate-graph {
   width: 100%;
   height: auto;

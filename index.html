@@ -161,6 +161,7 @@
       <div class="move-info" id="reviewInfo"></div>
       <div class="review-analysis">
         <button id="analyzeReviewBtn" onclick="analyzeReview()" title="用 KataGo 逐手分析本局勝率與失分">分析本局（KataGo）</button>
+        <button id="ownershipBtn" onclick="toggleReviewOwnership()" style="display:none" title="在盤面上色顯示誰圍住哪">顯示領地</button>
         <canvas id="winrateGraph" class="winrate-graph" width="500" height="90" style="display:none"
                 onclick="onWinrateGraphClick(event)" title="點擊跳到該手"></canvas>
         <div class="move-info" id="reviewAnalysisInfo"></div>

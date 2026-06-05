@@ -185,7 +185,9 @@ function buildBoardViewState() {
     showingHint,
     captureHints,
     emotionEnabled,
-    hoverPos
+    hoverPos,
+    ownership: (isReviewing && reviewOwnershipOn && reviewAnalysis && reviewAnalysis[currentReviewMove])
+      ? reviewAnalysis[currentReviewMove].ownership : null,
   };
 }
 
@@ -458,13 +460,25 @@ let savedOriginalGame = null;
 // reviewAnalysis[k] = { wr: 黑勝率 0..1, lead: 黑領先目數 }。null = 尚未分析。
 let reviewAnalysis = null;
 let reviewAnalyzing = false;
+let reviewOwnershipOn = false;
 
 function clearReviewAnalysis() {
   reviewAnalysis = null;
+  reviewOwnershipOn = false;
   const g = document.getElementById('winrateGraph');
   if (g) g.style.display = 'none';
   const info = document.getElementById('reviewAnalysisInfo');
   if (info) info.textContent = '';
+  const ob = document.getElementById('ownershipBtn');
+  if (ob) { ob.style.display = 'none'; ob.classList.remove('active'); }
+}
+
+function toggleReviewOwnership() {
+  if (!reviewAnalysis) return;
+  reviewOwnershipOn = !reviewOwnershipOn;
+  const ob = document.getElementById('ownershipBtn');
+  if (ob) ob.classList.toggle('active', reviewOwnershipOn);
+  drawBoard();
 }
 
 // 用 KataGo 誠實逐手分析本局（opt-in；低 visits；黑方觀點，不宣稱精確目數）。
@@ -485,12 +499,14 @@ async function analyzeReview() {
         board: b, size, currentPlayer: player,
         moveHistory: moveHistory.slice(0, k), komi, gameRules,
       }, { visits: 12 });
-      results[k] = { wr: a.rootWinRate, lead: a.rootScoreLead };
+      results[k] = { wr: a.rootWinRate, lead: a.rootScoreLead, ownership: a.ownership };
     }
     reviewAnalysis = results;
     setStatus('分析完成 — 逐手切換看勝率與失分，或點曲線跳手');
     const g = document.getElementById('winrateGraph');
     if (g) g.style.display = 'block';
+    const ob = document.getElementById('ownershipBtn');
+    if (ob) ob.style.display = '';
     updateReviewInfo();
   } catch (err) {
     console.error('Review analysis error:', err);
@@ -848,6 +864,7 @@ Object.assign(window, {
   returnToOriginal,
   analyzeReview,
   onWinrateGraphClick,
+  toggleReviewOwnership,
   exportSGF,
   closeModal,
   openChangelog,
