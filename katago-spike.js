@@ -2,6 +2,8 @@
 // 這是 throwaway 測試頁，驗證路 B 可行性後會移除（見 ENGINE_KATAGO_PLAN.md）。
 import { getKataGoEngineClient } from './katago-engine/engine/katago/client.ts';
 import { publicUrl } from './katago-engine/utils/publicUrl.ts';
+import { BLACK, WHITE, EMPTY } from './rules.js';
+import { genmove as katagoGenmove } from './katago-service.js';
 
 const out = document.getElementById('out');
 const backendEl = document.getElementById('backend');
@@ -52,5 +54,38 @@ async function run(backendPref) {
   }
 }
 
+// ——— 座標方位驗證：白可一手提掉黑 4 子，genmove 應回傳唯一提子點 (row1,col6) ———
+async function verifyOrientation() {
+  out.textContent = '';
+  backendEl.textContent = 'backend: 驗證座標中…';
+  try {
+    const N = 19;
+    const board = Array.from({ length: N }, () => Array.from({ length: N }, () => EMPTY));
+    const set = (r, c, v) => { board[r][c] = v; };
+    // 黑 4 子（被叫吃）：(0,3..6)
+    [[0,3],[0,4],[0,5],[0,6]].forEach(([r,c]) => set(r,c,BLACK));
+    // 白包圍，留唯一氣 (1,6)
+    [[0,2],[0,7],[1,3],[1,4],[1,5]].forEach(([r,c]) => set(r,c,WHITE));
+    const state = {
+      board, size: N, currentPlayer: WHITE,
+      moveHistory: [], komi: 7.5, gameRules: 'chinese',
+      onStatus: (m) => log(m),
+    };
+    log('局面：黑 (0,3)(0,4)(0,5)(0,6) 被叫吃，唯一氣＝(row1,col6)。白先，正確 genmove 應為 {x:1,y:6}');
+    const t = performance.now();
+    const mv = await katagoGenmove(state, { visits: 64 });
+    backendEl.textContent = `backend: ${getKataGoEngineClient().getEngineInfo().backend}`;
+    log(`genmove 回傳：${JSON.stringify(mv)}（${Math.round(performance.now() - t)}ms）`);
+    const ok = mv && mv.x === 1 && mv.y === 6;
+    log(ok ? '✅ 方位正確：回到唯一提子點' : '⚠️ 不是提子點——可能 KataGo 沒選提子，或方位需檢查（見下方說明）');
+    if (!ok) log('（提醒：若回傳的是 {x:6,y:1} 之類對調值，就是 x/y 轉換錯；若完全別處，可能 KataGo 判斷不提，換更大叫吃群再測）');
+  } catch (err) {
+    backendEl.textContent = 'backend: 失敗';
+    log('錯誤：' + (err && err.message ? err.message : String(err)));
+    console.error(err);
+  }
+}
+
 document.getElementById('runWebgpu').addEventListener('click', () => run('webgpu'));
 document.getElementById('runWasm').addEventListener('click', () => run('wasm'));
+document.getElementById('verifyBtn')?.addEventListener('click', verifyOrientation);
