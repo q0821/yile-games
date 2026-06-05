@@ -249,7 +249,14 @@ function doPass() {
   const willRequestAI = gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver;
   const previousIsAIThinking = isAIThinking;
   isAIThinking = willRequestAI ? true : previousIsAIThinking;
-  syncStatus();
+  // In pvc, if after this pass it's the player's turn and no AI move is queued,
+  // the AI was the one that just passed — guide the player on how to finish.
+  const aiJustPassed = gameMode === 'pvc' && !willRequestAI && currentPlayer === playerColor && !gameOver;
+  if (aiJustPassed) {
+    setStatus('AI 虛手了 — 你也虛手即可數目，或按「結束對局」直接計算結果');
+  } else {
+    syncStatus();
+  }
   isAIThinking = previousIsAIThinking;
   drawBoard();
 
@@ -285,6 +292,17 @@ function doResign() {
   if (isGameBlocked()) return;
   const winner = opponent(currentPlayer);
   endGame(`${winner === BLACK ? '⚫ 黑方' : '⚪ 白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`);
+}
+
+// End the game by counting territory, without needing the double-pass dance.
+// Lets the player settle the result and see who won by how many points.
+function finishGame() {
+  if (isGameBusy()) return;
+  if (moveHistory.length === 0) {
+    setStatus('還沒有落子，無法結束對局');
+    return;
+  }
+  endGameByScoring();
 }
 
 function endGameByScoring() {
@@ -735,6 +753,7 @@ Object.assign(window, {
   doPass: doPassAndSave,
   doUndo: doUndoAndSave,
   doResign,
+  finishGame,
   showHintOnce,
   enterReview,
   exitReview,
