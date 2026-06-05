@@ -314,14 +314,45 @@ function endGameByScoring() {
   stopTimer();
   document.getElementById('scoringPanel').style.display = 'block';
   document.getElementById('mobileScoringBar').style.display = 'block';
-  setStatus('已自動估算死子，可點擊修正，然後確認結果');
   updateScoringDisplay();
+  applyUnfinishedWarning();
   drawBoard();
 }
 
 function updateScoringDisplay() {
   const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
   GoUI.updateScoringDisplay({ gameRules, komi }, score);
+}
+
+// 數「中立空點」＝空且不屬任一方領地的點。多 → 邊界沒收完、尚未終局。純規則。
+function countNeutralEmpty(score) {
+  if (!score || !score.territory) return 0;
+  let n = 0;
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
+      if (board[x][y] === EMPTY && score.territory[x][y] === 0) n++;
+    }
+  }
+  return n;
+}
+
+// 數目時若還有很多中立空點，提示尚未終局（避免拿過早的比分當定局）。
+function applyUnfinishedWarning() {
+  const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
+  const neutral = countNeutralEmpty(score);
+  const warnEl = document.getElementById('scoringWarn');
+  const mHint = document.getElementById('mobileScoringHint');
+  const defaultHint = '已自動估算死子；點棋盤上的死子可修正';
+  if (neutral > size) {
+    const msg = `尚未終局？還有 ${neutral} 個雙方交界的空點未圍定，建議先收完官子再數目，目前結果可能不準。`;
+    if (warnEl) { warnEl.textContent = msg; warnEl.style.display = 'block'; }
+    if (mHint) mHint.textContent = msg;
+    setStatus(msg);
+  } else {
+    if (warnEl) warnEl.style.display = 'none';
+    if (mHint) mHint.textContent = defaultHint;
+    setStatus('已自動估算死子，可點擊修正，然後確認結果');
+  }
 }
 
 function confirmScoring() {

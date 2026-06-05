@@ -183,7 +183,7 @@
     <!-- Mobile scoring result bar（手機限定，數目時直接顯示結果＋確認/取消，不必開選單） -->
     <div class="mobile-scoring-bar" id="mobileScoringBar" style="display:none">
       <div class="mobile-scoring-result" id="mobileScoreResult"></div>
-      <div class="mobile-scoring-hint">已自動估算死子；點棋盤上的死子可修正</div>
+      <div class="mobile-scoring-hint" id="mobileScoringHint">已自動估算死子；點棋盤上的死子可修正</div>
       <div class="mobile-scoring-actions">
         <button class="primary" onclick="confirmScoring()">確認結果</button>
         <button onclick="cancelScoring()">取消數目</button>
@@ -240,6 +240,7 @@
         <span style="font-weight:bold">結果</span>
         <span style="font-weight:bold;color:#f0d060" id="resultText"></span>
       </div>
+      <p id="scoringWarn" class="scoring-warn" style="display:none"></p>
       <p style="font-size:11px;color:#667;margin-top:8px">點擊棋盤上的死子將其標記</p>
       <button onclick="confirmScoring()" class="primary" style="margin-top:6px">確認結果</button>
       <button onclick="cancelScoring()">取消數目</button>
