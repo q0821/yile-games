@@ -66,6 +66,32 @@
 - Spike：約 1–2 個工作階段（瓶頸在取得小網路 + 寫對特徵編碼）。
 - 全套：多階段、跨多個工作階段。
 
+## 更新（2026-06-05 web-katrain 原始碼調查 → 改用「重用」策略）
+
+調查 `Sir-Teo/web-katrain`（**MIT 授權**）後，結論大幅降低風險：它已是一套**完整、框架無關（跑在 Web Worker）**
+的瀏覽器 KataGo 引擎，`src/engine/katago/` 內含我們最需要的全部零件：
+
+| 檔案 | 作用 | 對我們的意義 |
+|---|---|---|
+| `featuresV7.ts` / `featuresV7Fast.ts` | KataGo 輸入特徵編碼（22+global 平面） | **最痛的風險①直接解決**（不必自己逐平面比照） |
+| `binModelParser.ts` | 直接解析 KataGo 原生 `.bin.gz` 權重 | **不需 ONNX 轉檔**（風險③消失） |
+| `loadModelV8 / modelV8 / evalV8` | 用 TensorFlow.js 建模與推論 | 直接重用 |
+| `analyzeMcts.ts` / `searchParams.ts` | 輕量 MCTS / 搜尋參數（可調強度） | 對手強度、讓子可用 |
+| `backendFallback.ts` | WebGPU → WASM → CPU 後端 fallback | 行動裝置相容 |
+| `worker.ts` | 推論 Worker | 直接重用 |
+
+**策略改為「重用 web-katrain 引擎模組」**（vendor 進來，或當依賴），而非自己寫 ONNX 編碼：
+- 路線從「ONNX + 自寫特徵編碼」改成「**`.bin.gz` + TF.js（web-katrain 引擎）**」。
+- 我們的 app 是 vanilla JS + Vite；Vite 原生支援 TS，可直接 import 該 TS 引擎模組（引擎不依賴 React）。
+
+**剩下的真實未知（spike 要量）：**
+1. **模型大小 × 行動裝置效能**：web-katrain 預設「tiny 測試網路」（很弱、開得快）；實用是 b18c384（**~96MB，手機太大**）。
+   我們要找**中間的小網路**（b6c96 / b10c128，KataGo 有釋出），量它在 iPhone 的下載大小與每手秒數。**無公開手機數據 → 必須實測。**
+2. **把 TS 引擎整進我們的 Vite 專案**（建置設定、Worker 打包）。
+
+**修正後的 spike：** vendor web-katrain 的 `engine/katago/` + 選一個小網路 → 做一頁會把
+「後端(WebGPU/WASM)、模型大小、初始化時間、單手推論時間」**顯示在畫面上**的測試頁 → 部署 → **你用 iPhone 實測** → 過決策閘。
+
 ## 相關連結
 
 - KataGo：https://github.com/lightvector/KataGo
