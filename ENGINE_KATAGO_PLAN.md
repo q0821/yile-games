@@ -92,6 +92,29 @@
 **修正後的 spike：** vendor web-katrain 的 `engine/katago/` + 選一個小網路 → 做一頁會把
 「後端(WebGPU/WASM)、模型大小、初始化時間、單手推論時間」**顯示在畫面上**的測試頁 → 部署 → **你用 iPhone 實測** → 過決策閘。
 
+## Spike 結果（2026-06-05）→ ✅ 綠燈
+
+vendor web-katrain 引擎 + b6c96(3.8MB) 進 gogame，部署 `/katago-spike.html` 實測：
+
+| 環境 | 後端 | init | 單次 eval | analyze 8/16/32 visits |
+|---|---|---|---|---|
+| 桌機 headless Chromium | WASM | 114ms | ~8ms | 128 / 39 / 74 ms |
+| **iPhone 14 Pro Max** | **WebGPU** | 2ms（快取） | **~10–12ms** | **166 / 163 / 280 ms** |
+
+結論：web-katrain 預設「每手 5–10 秒」是其**高搜尋量**；**低搜尋量在 iPhone 上 < 0.3 秒**、單次 eval ~10ms。
+→ 可即時當對手、可每手誠實估勝率/領地。**全面整合放行。**
+
+## 整合路線（spike 綠燈後）
+
+- **2a 服務封裝** `katago-service.js`：init/載入狀態、`genmove`（低 visits→最佳手）、`evaluate`（勝率/領地）。對齊現有 `gnugo-service` 介面，方便替換。
+- **2b 對弈用 KataGo 當對手**：強度＝visits（初/中/高＝不同思考量）；首手前需等模型載入（~一次性下載，要有載入 UX）。
+- **2c 誠實覆盤分析（最高學習價值）**：每手勝率 + 失分（勝率落差）+ 領地圖 + 勝率曲線 → 誠實復活先前移除的失目/形勢/領地。
+- **2d 讓子（S6）**：有強引擎後變得有意義。
+- **2e 死活 S7**：強引擎當防守方，判定可靠。
+- **GnuGo 去留**：評估保留當離線/輕量 fallback 或淘汰。
+
+> 模型下載 3.8MB（一次性、瀏覽器快取）；可考慮加「啟用 AI 分析」開關，未啟用就不下載，避免拖慢純對弈。
+
 ## 相關連結
 
 - KataGo：https://github.com/lightvector/KataGo
