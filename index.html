@@ -46,6 +46,19 @@
   <!-- Left Panel: Settings -->
   <div class="panel" id="settingsPanel">
     <h3>遊戲設定</h3>
+    <details class="rules-help">
+      <summary>新手說明：規則與術語</summary>
+      <dl>
+        <dt>執子（先手 / 後手）</dt><dd>黑棋先下為先手；白棋後下，靠貼目補償。</dd>
+        <dt>虛手（Pass）</dt><dd>這手不下、讓給對方。雙方連續虛手即終局、進入數目。</dd>
+        <dt>氣（呼吸點）</dt><dd>棋子相鄰的空點；一塊棋的氣歸零就被提走。</dd>
+        <dt>提子</dt><dd>把沒有氣的對方棋子從盤上拿掉。</dd>
+        <dt>數子法（中國規則）</dt><dd>算「活棋子＋圍住的空點」，貼目 7.5。</dd>
+        <dt>數目法（日本規則）</dt><dd>算「圍住的空點＋提子」，貼目 6.5。</dd>
+        <dt>貼目</dt><dd>補償黑棋先手優勢、固定加給白方的目數。</dd>
+        <dt>覆盤</dt><dd>對局結束後，逐手回看自己這盤怎麼下。</dd>
+      </dl>
+    </details>
     <div class="control-group">
       <label>棋盤大小</label>
       <select id="boardSize">
@@ -60,6 +73,7 @@
         <option value="chinese" selected>中國規則（數子法）</option>
         <option value="japanese">日本規則（數目法）</option>
       </select>
+      <p class="control-hint">數子法算「活棋子＋地」、貼 7.5 目；數目法算「地＋提子」、貼 6.5 目。初學建議用中國規則。</p>
     </div>
     <div class="control-group">
       <label>對弈模式</label>
@@ -76,12 +90,13 @@
       </select>
     </div>
     <div class="control-group" id="aiStrengthGroup">
-      <label>AI 強度（GnuGo 等級）</label>
+      <label>電腦強度</label>
       <select id="aiStrength">
-        <option value="1" selected>初級（Level 1）</option>
-        <option value="5">中級（Level 5）</option>
-        <option value="10">高級（Level 10）</option>
+        <option value="1" selected>初級</option>
+        <option value="5">中級</option>
+        <option value="10">高級</option>
       </select>
+      <p class="control-hint">電腦為 GnuGo，約業餘中級棋力；等級越高、思考越深、下得越慢。</p>
     </div>
 
     <h3>功能開關</h3>
@@ -108,7 +123,7 @@
       <label class="toggle"><input type="checkbox" id="reviewToggle" checked><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
-      <span>顯示氣數</span>
+      <span>顯示氣（呼吸點）</span>
       <label class="toggle"><input type="checkbox" id="emotionToggle"><span class="slider"></span></label>
     </div>
     <div class="control-group" style="margin-top:4px">

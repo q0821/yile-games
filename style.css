@@ -165,6 +165,50 @@ canvas {
   color: var(--text-dim);
   margin-bottom: 5px;
 }
+/* 選項下方的小提示文字（規則差異、電腦強度說明等） */
+.control-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+/* 新手摺疊說明：原生 details/summary，鍵盤可操作、不需 JS */
+.rules-help {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+}
+.rules-help > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold-dim);
+}
+.rules-help > summary::-webkit-details-marker { display: none; }
+.rules-help > summary::before {
+  content: '＋';
+  margin-right: 6px;
+  font-weight: 700;
+}
+.rules-help[open] > summary::before { content: '－'; }
+.rules-help dl {
+  margin: 0;
+  padding: 0 12px 10px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.rules-help dt {
+  margin-top: 8px;
+  font-weight: 700;
+  color: var(--text);
+}
+.rules-help dd {
+  margin: 1px 0 0;
+  color: var(--text-dim);
+}
 
 select, button {
   font-family: inherit;
