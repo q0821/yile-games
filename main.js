@@ -673,17 +673,9 @@ function startNewGame() {
   saveGame();
   GnuGoService.clearPlayCache();
 
-  if (gameMode === 'pvc') {
-    aiController.initGnuGo()
-      .then(() => {
-        if (playerColor === WHITE && !gameOver) {
-          setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
-        }
-      })
-      .catch((err) => {
-        console.error('GnuGo init failed:', err);
-        setStatus('AI 引擎載入失敗，請重新整理頁面');
-      });
+  // 不預載任何引擎；AI 先手時直接求手（內部優先 KataGo、lazy 載入，失敗才 fallback GnuGo）。
+  if (gameMode === 'pvc' && playerColor === WHITE && !gameOver) {
+    setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
   }
 }
 
@@ -760,17 +752,9 @@ function loadGame() {
     drawBoard();
     syncStatus(gameOver ? '遊戲結束 — 可覆盤或開始新局' : `已恢復棋局（第 ${moveHistory.length} 手）`);
 
-    if (gameMode === 'pvc' && !gameOver) {
-      aiController.initGnuGo()
-        .then(() => {
-          if (currentPlayer !== playerColor) {
-            setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
-          }
-        })
-        .catch((err) => {
-          console.error('GnuGo init failed:', err);
-          setStatus('AI 引擎載入失敗，請重新整理頁面');
-        });
+    // 不預載引擎；若恢復後輪到 AI，直接求手（KataGo 優先、lazy）。
+    if (gameMode === 'pvc' && !gameOver && currentPlayer !== playerColor) {
+      setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
     }
     return true;
   } catch(e) {
