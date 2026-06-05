@@ -143,7 +143,12 @@
       <div class="info-item">第 <span id="mobileMoveCount">0</span> 手</div>
     </div>
     <canvas id="board"></canvas>
-    <div id="aiThinkingOverlay" style="display:none"></div>
+    <div id="aiThinkingOverlay" style="display:none">
+      <div class="ai-thinking-card">
+        <span class="ai-stones"><span class="ai-stone b"></span><span class="ai-stone w"></span></span>
+        <span class="ai-thinking-label">思考中…</span>
+      </div>
+    </div>
     <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
       <input type="range" id="reviewSlider" class="review-slider" min="0" value="0" step="1"
              oninput="reviewGo(+this.value)" aria-label="覆盤進度">

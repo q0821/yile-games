@@ -620,7 +620,7 @@ function startNewGame() {
 
   const aiStartsGame = gameMode === 'pvc' && playerColor === WHITE && !gameOver;
   updateUI();
-  syncStatus(aiStartsGame ? 'GnuGo 思考中...' : '');
+  syncStatus(aiStartsGame ? 'AI 思考中...' : '');
   drawBoard();
   clearSave();
   saveGame();
