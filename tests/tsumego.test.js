@@ -26,7 +26,7 @@ const SAMPLE_MULTI = {
 // ─── sgfToRC / rcToSgf ────────────────────────────────────────────────────────
 
 describe('sgfToRC', () => {
-  test('第一字母是 column、第二字母是 row（沿用 gnugo-service 慣例）', () => {
+  test('第一字母是 column、第二字母是 row（本專案 SGF 座標慣例）', () => {
     // "ba" → col=indexOf('b')=1, row=indexOf('a')=0
     expect(ctx.sgfToRC('ba')).toEqual({ row: 0, col: 1 });
   });

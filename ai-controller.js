@@ -1,9 +1,8 @@
 // ai-controller.js — AI move requests.
 // Imported by main.js; accesses shared mutable state via the `app` context object.
 //
-// 對手引擎：優先 KataGo（vendored web-katrain，較強且可給誠實評估），
-// KataGo 載入/求手失敗時自動 fallback 回 GnuGo，確保對弈不中斷。
-import { GnuGoService } from './gnugo-service.js';
+// 對手引擎：KataGo（vendored web-katrain，較強且可給誠實評估）。引擎內建
+// WebGPU → WASM → CPU 後端 fallback，毋需另一套引擎兜底。
 import * as KataGo from './katago-service.js';
 
 // 強度（aiLevel 1/5/10 = 初/中/高）→ KataGo 搜尋量（visits）。iPhone WebGPU 實測：
@@ -15,12 +14,7 @@ function aiLevelToVisits(level) {
 }
 
 export function makeAiController(app) {
-  // ——— Internal helpers ———
-  function initGnuGo() {
-    return GnuGoService.ensureReady(app.setStatus);
-  }
-
-  // 用 KataGo 求一手；失敗則丟出，由呼叫端 fallback。
+  // 用 KataGo 求一手。回傳 {x,y}|{pass:true}。
   async function katagoMove() {
     await KataGo.ensureReady(app.setStatus);
     const visits = aiLevelToVisits(app.aiLevel);
@@ -33,14 +27,6 @@ export function makeAiController(app) {
       gameRules: app.gameRules,
       onStatus: app.setStatus,
     }, { visits });
-  }
-
-  // 用 GnuGo 求一手（fallback）。回傳 {x,y}|{pass:true}。
-  async function gnugoMove() {
-    if (!GnuGoService.isReady()) await initGnuGo();
-    const sgf = GnuGoService.buildSGF(app.moveHistory, app.size, app.komi);
-    const result = await GnuGoService.play(app.aiLevel, sgf, app.moveHistory.length, app.size);
-    return result.move ? { x: result.move[0], y: result.move[1] } : { pass: true };
   }
 
   // ——— AI move ———
@@ -57,14 +43,7 @@ export function makeAiController(app) {
       const thinkStart = Date.now();
       const minThinkMs = 1000 + Math.floor(Math.random() * 2000);
 
-      let move;
-      try {
-        move = await katagoMove();
-      } catch (kataErr) {
-        console.warn('KataGo 不可用，fallback 回 GnuGo：', kataErr);
-        app.setStatus('改用 GnuGo 引擎…');
-        move = await gnugoMove();
-      }
+      const move = await katagoMove();
 
       const remaining = minThinkMs - (Date.now() - thinkStart);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
@@ -90,7 +69,6 @@ export function makeAiController(app) {
   }
 
   return {
-    initGnuGo,
     requestAIMove,
   };
 }

@@ -4,7 +4,7 @@
  * 題庫格式（sanderland/tsumego，JSON）：
  *   { AB:[sgf...], AW:[sgf...], SZ:"19", C:"...", SOL:[[color, sgf, note, ""], ...] }
  *
- * 座標慣例（與 ui.js / gnugo-service.js 一致，務必別反）：
+ * 座標慣例（與 ui.js / sgf.js 一致，務必別反）：
  *   SGF 字串第一字母 = column，第二字母 = row，皆自 'a' 起算。
  *   內部棋盤 board[row][col]（即 rules.js 的 board[x][y]，x=row、y=col）。
  *

@@ -1,6 +1,6 @@
 // katago-service.js — gogame 端封裝 vendored KataGo 引擎（web-katrain, MIT，見 katago-engine/）。
 //
-// 對齊 gnugo-service 的使用方式（ensureReady / genmove），讓對弈可改用 KataGo。
+// 提供 ensureReady / genmove / evaluate / analyzeLocal，作為對弈與分析的唯一引擎。
 // 也提供 evaluate()，供日後覆盤誠實分析（勝率/領地）使用。
 //
 // ⚠️ 座標轉換（最關鍵）：

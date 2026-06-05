@@ -115,7 +115,9 @@ vendor web-katrain 引擎 + b6c96(3.8MB) 進 gogame，部署 `/katago-spike.html
 - **2e 死活 S7**〔✅ 完成 2026-06-05〕：解對第一手後 opt-in「試著走完」，KataGo 當對手**只在 viewport 局部應手**
   （`katago-service.analyzeLocal` 把候選手過濾至 region），玩家落子走 `rules.js`；持續顯示**領地覆蓋層**（重用 2c-2，
   搬進 `tsumego-ui`）。**不秀整盤勝率/二元判定**（空盤主導會誤導），只呈現逐點 ownership 這個誠實的局部訊號。
-- **GnuGo 去留**：評估保留當離線/輕量 fallback 或淘汰。
+- **GnuGo 去留**〔✅ 淘汰 2026-06-06〕：已移除 `gnugo-service.js`＋`gnugo-worker/loader.js`＋7.1MB `gnugo.wasm`。
+  對手與分析全由 KataGo 負責（引擎內建 WebGPU→WASM→CPU fallback，毋需另一套兜底）；原 GnuGo 內的純 SGF
+  工具 `buildSGF` 抽到獨立 `sgf.js`（匯出 SGF 用）。index.html 移除 gnugo-loader script、SW precache 移除 gnugo 資產。
 
 > 模型下載 3.8MB（一次性、瀏覽器快取）；可考慮加「啟用 AI 分析」開關，未啟用就不下載，避免拖慢純對弈。
 

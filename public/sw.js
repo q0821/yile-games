@@ -1,19 +1,16 @@
-const VERSION = 'v2026.06.05-6e0db4a';
+const VERSION = 'v2026.06.05-cd75124';
 const CACHE_NAME = `gogame-${VERSION}`;
 const PRECACHE_ASSETS = [
   './',
   `./index.html?v=${VERSION}`,
   './index.html',
-  `./gnugo-loader.js?v=${VERSION}`,
-  `./gnugo-service.js?v=${VERSION}`,
   `./rules.js?v=${VERSION}`,
   `./game-state.js?v=${VERSION}`,
   `./ui.js?v=${VERSION}`,
   `./manifest.json?v=${VERSION}`,
   `./icon-192.png?v=${VERSION}`,
   `./icon-512.png?v=${VERSION}`,
-  `./version.json?v=${VERSION}`,
-  './gnugo.wasm'
+  `./version.json?v=${VERSION}`
 ];
 
 function isSameOrigin(url) {
@@ -32,8 +29,6 @@ function shouldRefreshFirst(request, url) {
       url.pathname.endsWith('/ui.js') ||
       url.pathname.endsWith('/game-state.js') ||
       url.pathname.endsWith('/rules.js') ||
-      url.pathname.endsWith('/gnugo-service.js') ||
-      url.pathname.endsWith('/gnugo-loader.js') ||
       url.pathname.endsWith('/manifest.json') ||
       url.pathname.endsWith('/sw.js')
     )

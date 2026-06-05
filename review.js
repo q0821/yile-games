@@ -1,9 +1,4 @@
 import { tryPlaceStone, createBoard, BLACK } from './rules.js';
-import { GnuGoService } from './gnugo-service.js';
-
-export function buildSGFUpTo(n, moveHistory, size, komi) {
-  return GnuGoService.buildSGFUpTo(moveHistory, size, komi, n);
-}
 
 export function getReviewBoard(moveHistory, currentReviewMove, size) {
   let b = createBoard(size);
@@ -52,4 +47,4 @@ export function summarizeGame(moveHistory, size) {
   return { totalMoves: moveHistory.length, blackCaptured, whiteCaptured, biggest };
 }
 
-export const GoReview = { buildSGFUpTo, getReviewBoard, getReviewLastMove, summarizeGame };
+export const GoReview = { getReviewBoard, getReviewLastMove, summarizeGame };

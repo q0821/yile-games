@@ -7,7 +7,7 @@ import { GoSound } from './sound.js';
 import { GoTimer } from './timer.js';
 import { GoHints } from './hints.js';
 import { GoReview } from './review.js';
-import { GnuGoService } from './gnugo-service.js';
+import { buildSGF } from './sgf.js';
 import { toggleSidebar, openSidebar, closeSidebar } from './sidebar.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
@@ -121,7 +121,7 @@ const app = {
 
   // References to modules
   GameState,
-  GoUI, GoSound, GoTimer, GoHints, GoReview, GnuGoService,
+  GoUI, GoSound, GoTimer, GoHints, GoReview,
 
   // Functions (bound below)
   inBounds, getGroup,
@@ -405,7 +405,7 @@ function endGame(title, detail) {
 }
 
 function exportSGF() {
-  const sgf = GnuGoService.buildSGF(moveHistory, size, komi);
+  const sgf = buildSGF(moveHistory, size, komi);
   const blob = new Blob([sgf], { type: 'application/x-go-sgf' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -671,9 +671,8 @@ function startNewGame() {
   drawBoard();
   clearSave();
   saveGame();
-  GnuGoService.clearPlayCache();
 
-  // 不預載任何引擎；AI 先手時直接求手（內部優先 KataGo、lazy 載入，失敗才 fallback GnuGo）。
+  // 不預載引擎；AI 先手時才求手（KataGo lazy 載入，模型約一次性下載 3.8MB）。
   if (gameMode === 'pvc' && playerColor === WHITE && !gameOver) {
     setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
   }

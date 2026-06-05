@@ -9,8 +9,6 @@
 <meta name="apple-mobile-web-app-title" content="圍棋對弈">
 <link rel="manifest" href="manifest.json?v=v2026.03.15-9c49be6">
 <link rel="apple-touch-icon" href="icon-192.png?v=v2026.03.15-9c49be6">
-<!-- GnuGo WASM loader: classic script (emscripten-generated, must stay global) -->
-<script src="gnugo-loader.js?v=v2026.03.15-9c49be6"></script>
 <title>圍棋對弈</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -142,8 +140,8 @@
       <div class="info-item"><span class="stone-dot white" aria-label="白"></span> <span id="mobileWhiteCap">0</span></div>
       <div class="info-item">第 <span id="mobileMoveCount">0</span> 手</div>
     </div>
-    <canvas id="board"></canvas>
-    <div id="aiThinkingOverlay" style="display:none">
+    <canvas id="board" role="img" aria-label="圍棋棋盤"></canvas>
+    <div id="aiThinkingOverlay" style="display:none" aria-hidden="true">
       <div class="ai-thinking-card">
         <span class="ai-stones"><span class="ai-stone b"></span><span class="ai-stone w"></span></span>
         <span class="ai-thinking-label">思考中…</span>
@@ -179,7 +177,7 @@
       <button onclick="finishGame()">申請數目</button>
       <button onclick="doResign()" class="danger">認輸</button>
     </div>
-    <div class="mobile-status" id="mobileStatus"></div>
+    <div class="mobile-status" id="mobileStatus" role="status" aria-live="polite"></div>
     <!-- Mobile scoring result bar（手機限定，數目時直接顯示結果＋確認/取消，不必開選單） -->
     <div class="mobile-scoring-bar" id="mobileScoringBar" style="display:none">
       <div class="mobile-scoring-result" id="mobileScoreResult"></div>
@@ -198,9 +196,9 @@
 
     <div id="timerArea" style="display:none;">
       <div class="info-row"><span class="label"><span class="stone-dot black"></span> 黑方時間</span></div>
-      <div class="timer-display" id="blackTimer">10:00</div>
+      <div class="timer-display" id="blackTimer" aria-label="黑方剩餘時間">10:00</div>
       <div class="info-row"><span class="label"><span class="stone-dot white"></span> 白方時間</span></div>
-      <div class="timer-display" id="whiteTimer">10:00</div>
+      <div class="timer-display" id="whiteTimer" aria-label="白方剩餘時間">10:00</div>
     </div>
 
     <div class="info-row">
@@ -216,7 +214,7 @@
       <span class="value" id="moveCount">0</span>
     </div>
 
-    <div class="status-msg" id="statusMsg">選擇設定後，點擊「開始新遊戲」來開始對弈</div>
+    <div class="status-msg" id="statusMsg" role="status" aria-live="polite">選擇設定後，點擊「開始新遊戲」來開始對弈</div>
 
     <div style="margin-top:12px">
       <button onclick="doPass()">虛手（Pass）</button>
@@ -262,8 +260,8 @@
     <span id="tsumegoToPlay"></span>
     <span class="tsumego-solved-tag" id="tsumegoSolvedTag"></span>
   </div>
-  <canvas id="tsumegoBoard"></canvas>
-  <div class="tsumego-status" id="tsumegoStatus"></div>
+  <canvas id="tsumegoBoard" role="img" aria-label="死活題棋盤"></canvas>
+  <div class="tsumego-status" id="tsumegoStatus" role="status" aria-live="polite"></div>
   <div class="tsumego-controls">
     <button id="tsumegoPrev">上一題</button>
     <button id="tsumegoRedo">重做</button>
