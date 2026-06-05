@@ -105,6 +105,7 @@ export function registerEventHandlers(app) {
   // ——— Resize ———
   window.addEventListener('resize', () => {
     if (window.innerWidth > 900) app.closeSidebar();
-    app.drawBoard();
+    // 只有對弈棋盤已初始化時才重繪；在首頁/死活畫面 board 為空，重繪會讀到 undefined
+    if (app.board && app.board.length) app.drawBoard();
   });
 }

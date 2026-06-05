@@ -870,6 +870,39 @@ button.danger:hover {
   font-weight: 700;
   border-color: transparent;
 }
+/* 練習模式列：順序 / 隨機 / 只練未解 / 複習錯題 */
+.tsumego-practice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+.tsumego-practice-btn {
+  flex: 1;
+  width: auto;          /* 覆蓋全域 button{width:100%} */
+  margin: 0;
+  min-height: 38px;
+  padding: 8px 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+.tsumego-practice-btn.active {
+  background: var(--bg-input);
+  color: var(--gold-dim);
+  border-color: var(--gold-dim);
+  font-weight: 700;
+}
+.tsumego-stats {
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  min-height: 18px;
+}
 .tsumego-meta {
   display: flex;
   align-items: center;

@@ -12,8 +12,17 @@ import { parseProblem, buildBoardFromProblem, checkAnswer, computeViewport } fro
 import { resizeTsumegoCanvas, drawTsumego } from './tsumego-ui.js';
 import {
   loadProgress, saveProgress, recordResult, setLastIndex, getLastIndex,
-  solvedCount, isSolved
+  solvedCount, isSolved, firstTryRate, streak, bestStreak, dailyCount,
+  reviewIds, reviewCount, totalSolved
 } from './tsumego-progress.js';
+
+/** 本地日期 yyyy-mm-dd（給「今日題數」用；放在這層而非純 reducer，保 reducer 可測）。 */
+function todayStr() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
 
 const VIEWPORT_MARGIN = 2;
 
@@ -35,6 +44,11 @@ let wrongThisProblem = false;
 let markers = [];
 let hover = null;
 
+// 練習模式與播放清單（order = 要走訪的題目 index 陣列；sequential 時為 0..total-1）
+let practiceMode = 'sequential';   // sequential | random | unsolved | review
+let order = [];
+let orderPos = 0;
+
 let dom = {};
 let deps = null;
 
@@ -44,6 +58,8 @@ function cacheDom() {
   dom = {
     screen: $('tsumegoScreen'),
     levels: $('tsumegoLevels'),
+    practice: $('tsumegoPractice'),
+    stats: $('tsumegoStats'),
     problemNo: $('tsumegoProblemNo'),
     toPlay: $('tsumegoToPlay'),
     solvedTag: $('tsumegoSolvedTag'),
@@ -95,6 +111,59 @@ function renderLevelButtons() {
   }
 }
 
+const PRACTICE_MODES = [
+  { id: 'sequential', label: '順序' },
+  { id: 'random',     label: '隨機' },
+  { id: 'unsolved',   label: '只練未解' },
+  { id: 'review',     label: '複習錯題' },
+];
+
+function renderPractice() {
+  if (!dom.practice) return;
+  dom.practice.innerHTML = '';
+  for (const m of PRACTICE_MODES) {
+    const btn = document.createElement('button');
+    btn.className = 'tsumego-practice-btn' + (m.id === practiceMode ? ' active' : '');
+    const count = m.id === 'review' && curLevelId ? reviewCount(progress, curLevelId) : 0;
+    btn.textContent = m.id === 'review' && count > 0 ? `${m.label}（${count}）` : m.label;
+    btn.addEventListener('click', () => setPractice(m.id));
+    dom.practice.appendChild(btn);
+  }
+}
+
+/** 更新統計列：本級一次過率、全域連勝、今日題數。 */
+function updateStats() {
+  if (!dom.stats || !curLevelId) return;
+  const rate = Math.round(firstTryRate(progress, curLevelId) * 100);
+  const sk = streak(progress);
+  const best = bestStreak(progress);
+  const today = dailyCount(progress, todayStr());
+  const skText = best > 0 ? `連勝 ${sk}（最佳 ${best}）` : `連勝 ${sk}`;
+  dom.stats.textContent = `本級一次過 ${rate}%　・　${skText}　・　今日 ${today} 題`;
+}
+
+/** 依練習模式建立要走訪的題目 index 清單。回傳 [] 表示該模式目前沒有題（例如沒有錯題）。 */
+function buildOrder(mode) {
+  const arr = levelCache[curLevelId] || [];
+  const total = arr.length;
+  if (mode === 'unsolved') {
+    return arr.map((p, i) => i).filter(i => !isSolved(progress, curLevelId, arr[i].id));
+  }
+  if (mode === 'review') {
+    const ids = new Set(reviewIds(progress, curLevelId));
+    return arr.map((p, i) => i).filter(i => ids.has(arr[i].id));
+  }
+  const seq = arr.map((p, i) => i);
+  if (mode === 'random') {
+    // Fisher–Yates；隨機性放在這層、不進純 reducer
+    for (let i = seq.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [seq[i], seq[j]] = [seq[j], seq[i]];
+    }
+  }
+  return seq;
+}
+
 function view() {
   return { board: curBoard, size: curProblem.size, viewport, toPlayColor, markers, hover };
 }
@@ -106,12 +175,22 @@ function render() {
 }
 
 function updateMeta() {
-  const total = levelCache[curLevelId].length;
-  dom.problemNo.textContent = `第 ${curIndex + 1} / ${total} 題`;
-  dom.toPlay.textContent = curProblem.toPlay === 'B' ? '⚫ 黑先' : '⚪ 白先';
+  const total = order.length;
+  const levelTotal = levelCache[curLevelId].length;
+  // 順序模式顯示題號即題庫序；其他模式顯示在本清單的進度
+  const label = practiceMode === 'sequential'
+    ? `第 ${curIndex + 1} / ${levelTotal} 題`
+    : `第 ${orderPos + 1} / ${total} 題（${labelOf(practiceMode)}）`;
+  dom.problemNo.textContent = label;
+  dom.toPlay.textContent = curProblem.toPlay === 'B' ? '黑先' : '白先';
   dom.solvedTag.textContent = isSolved(progress, curLevelId, curRaw.id) ? '已解出' : '';
-  dom.prev.disabled = curIndex <= 0;
-  dom.next.disabled = curIndex >= total - 1;
+  dom.prev.disabled = orderPos <= 0;
+  dom.next.disabled = orderPos >= total - 1;
+  updateStats();
+}
+
+function labelOf(mode) {
+  return (PRACTICE_MODES.find(m => m.id === mode) || {}).label || '';
 }
 
 function setStatusMsg(msg, kind) {
@@ -128,10 +207,33 @@ function defaultStatusMsg() {
 async function selectLevel(levelId, resume) {
   await loadLevel(levelId);
   curLevelId = levelId;
-  const total = levelCache[levelId].length;
-  curIndex = resume ? Math.min(getLastIndex(progress, levelId), total - 1) : 0;
-  if (curIndex < 0) curIndex = 0;
+  practiceMode = 'sequential';
+  order = buildOrder('sequential');
+  const total = order.length;
+  const resumeIdx = resume ? Math.min(getLastIndex(progress, levelId), total - 1) : 0;
+  orderPos = resumeIdx >= 0 ? resumeIdx : 0;   // sequential 時 order 為 identity，pos == index
+  curIndex = order[orderPos] ?? 0;
   renderLevelButtons();
+  renderPractice();
+  showProblem();
+}
+
+/** 切換練習模式：重建播放清單並跳到第一題；清單為空（如無錯題）時提示、不換題。 */
+function setPractice(mode) {
+  if (!curLevelId) return;
+  const next = buildOrder(mode);
+  if (next.length === 0) {
+    const msg = mode === 'review'
+      ? '目前沒有要複習的錯題，太好了'
+      : (mode === 'unsolved' ? '這個級別已全部解出' : '沒有可練習的題目');
+    setStatusMsg(msg, 'correct');
+    return;
+  }
+  practiceMode = mode;
+  order = next;
+  orderPos = 0;
+  curIndex = order[0];
+  renderPractice();
   showProblem();
 }
 
@@ -160,14 +262,22 @@ function onCellClick(row, col) {
   if (curBoard[row][col] !== EMPTY) return;
 
   if (checkAnswer(curProblem, row, col)) {
+    const wasSolved = isSolved(progress, curLevelId, curRaw.id);
     curBoard[row][col] = toPlayColor;
     markers = [{ row, col, type: 'correct' }];
     status = 'correct';
-    progress = recordResult(progress, curLevelId, curRaw.id, 'correct');
+    progress = recordResult(progress, curLevelId, curRaw.id, 'correct',
+      { clean: !wrongThisProblem, today: todayStr() });
     saveProgress(progress);
     setStatusMsg(wrongThisProblem ? '正解！' : '正解！一次就對', 'correct');
     renderLevelButtons();
+    renderPractice();
     updateMeta();
+    // 里程碑：本級全部解出（剛好在這手解完最後一題時提示）
+    if (!wasSolved && solvedCount(progress, curLevelId) === levelCache[curLevelId].length) {
+      const lvName = (levels.find(l => l.id === curLevelId) || {}).name || '本級';
+      setStatusMsg(`太好了，${lvName} 全部解出！`, 'correct');
+    }
   } else {
     markers = [{ row, col, type: 'wrong' }];
     status = 'wrong';
@@ -175,6 +285,8 @@ function onCellClick(row, col) {
       wrongThisProblem = true;
       progress = recordResult(progress, curLevelId, curRaw.id, 'attempted');
       saveProgress(progress);
+      renderPractice();   // 進複習佇列 → 更新「複習錯題（N）」
+      updateStats();      // 連勝歸零
     }
     setStatusMsg('不是這手，再試試（可按「看答案」）', 'wrong');
   }
@@ -189,6 +301,8 @@ function reveal() {
     progress = recordResult(progress, curLevelId, curRaw.id, 'revealed');
     saveProgress(progress);
     renderLevelButtons();
+    renderPractice();
+    updateStats();
   }
   const n = curProblem.answers.length;
   setStatusMsg(n > 1 ? `正解（藍圈，共 ${n} 個關鍵點任一即可）` : '正解（藍圈處）', 'answer');
@@ -206,10 +320,10 @@ function redo() {
 }
 
 function go(delta) {
-  const total = levelCache[curLevelId].length;
-  const next = curIndex + delta;
-  if (next < 0 || next >= total) return;
-  curIndex = next;
+  const next = orderPos + delta;
+  if (next < 0 || next >= order.length) return;
+  orderPos = next;
+  curIndex = order[orderPos];
   showProblem();
 }
 
@@ -298,8 +412,7 @@ export async function enterTsumegoMode() {
 
 /** 目前死活進度（給首頁顯示用）：回傳已解總題數。 */
 export function tsumegoSolvedTotal() {
-  const p = loadProgress();
-  return Object.keys(p).reduce((sum, lvId) => sum + solvedCount(p, lvId), 0);
+  return totalSolved(loadProgress());
 }
 
 /** 解過最多題的級別優先當「繼續上次」，否則入門。 */
