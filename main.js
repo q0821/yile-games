@@ -1,6 +1,6 @@
 // main.js — entry point; wires modules together and manages shared game state.
 
-import { EMPTY, BLACK, WHITE, opponent, inBounds as _inBounds, getNeighbors as _getNeighbors, getGroup as _getGroup, getLegalMoves as _getLegalMoves, tryPlaceStone as _tryPlaceStone, calculateScore } from './rules.js';
+import { EMPTY, BLACK, WHITE, opponent, inBounds as _inBounds, getNeighbors as _getNeighbors, getGroup as _getGroup, getLegalMoves as _getLegalMoves, tryPlaceStone as _tryPlaceStone, calculateScore, placeHandicap, handicapPoints } from './rules.js';
 import * as GameStateModule from './game-state.js';
 import { GoUI } from './ui.js';
 import { GoSound } from './sound.js';
@@ -405,7 +405,8 @@ function endGame(title, detail) {
 }
 
 function exportSGF() {
-  const sgf = buildSGF(moveHistory, size, komi);
+  const handicapStones = GameState.getState().handicap >= 2 ? handicapPoints(size, GameState.getState().handicap) : [];
+  const sgf = buildSGF(moveHistory, size, komi, handicapStones);
   const blob = new Blob([sgf], { type: 'application/x-go-sgf' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -648,7 +649,22 @@ function startNewGame() {
   gameRules = document.getElementById('gameRules').value;
   komi = gameRules === 'japanese' ? 6.5 : 7.5;
 
-  GameState.startGame({ size, gameMode, playerColor, aiLevel, timerEnabled, timerSeconds, gameRules, komi });
+  // 讓子（S6）：只在 PvC 生效。讓子＝人執黑（拿讓子）、AI 執白先下、白貼 0.5 目。
+  const handicapEl = document.getElementById('handicap');
+  let handicap = handicapEl ? parseInt(handicapEl.value) || 0 : 0;
+  if (gameMode !== 'pvc' || handicap < 2) handicap = 0;
+  let handicapBoard, handicapFirstPlayer;
+  if (handicap >= 2) {
+    playerColor = BLACK;                          // 人固定執黑
+    handicapBoard = placeHandicap(size, handicap); // 預置黑讓子
+    handicapFirstPlayer = WHITE;                    // 白（AI）先下
+    komi = 0.5;
+  }
+
+  GameState.startGame({
+    size, gameMode, playerColor, aiLevel, timerEnabled, timerSeconds, gameRules, komi,
+    handicap, board: handicapBoard, currentPlayer: handicapFirstPlayer,
+  });
   applyStateFromStore();
 
   emotionEnabled  = document.getElementById('emotionToggle').checked;
@@ -665,7 +681,8 @@ function startNewGame() {
   stopTimer();
   if (timerEnabled) { initTimer(); startTimer(); }
 
-  const aiStartsGame = gameMode === 'pvc' && playerColor === WHITE && !gameOver;
+  // AI 先手 = PvC 且開局輪到的不是玩家（含讓子局：白＝AI 先下）。
+  const aiStartsGame = gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver;
   updateUI();
   syncStatus(aiStartsGame ? 'AI 思考中...' : '');
   drawBoard();
@@ -673,7 +690,7 @@ function startNewGame() {
   saveGame();
 
   // 不預載引擎；AI 先手時才求手（KataGo lazy 載入，模型約一次性下載 3.8MB）。
-  if (gameMode === 'pvc' && playerColor === WHITE && !gameOver) {
+  if (aiStartsGame) {
     setTimeout(() => aiController.requestAIMove(), AI_INIT_DELAY_MS);
   }
 }
@@ -740,6 +757,12 @@ function loadGame() {
     document.getElementById('gameRules').value = gameRules;
     document.getElementById('playerColorGroup').style.display = gameMode === 'pvc' ? 'block' : 'none';
     document.getElementById('aiStrengthGroup').style.display = gameMode === 'pvc' ? 'block' : 'none';
+    const handicapState = GameState.getState().handicap || 0;
+    const hg = document.getElementById('handicapGroup');
+    if (hg) hg.style.display = gameMode === 'pvc' ? 'block' : 'none';
+    const hSel = document.getElementById('handicap');
+    if (hSel) hSel.value = String(handicapState);
+    document.getElementById('playerColor').disabled = handicapState >= 2;
     document.getElementById('timerSettings').style.display = timerEnabled ? 'block' : 'none';
     document.getElementById('timerArea').style.display = timerEnabled ? 'block' : 'none';
     if (timerEnabled) updateTimerDisplay();

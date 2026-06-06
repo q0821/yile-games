@@ -5,9 +5,16 @@
 
 const LETTERS = 'abcdefghijklmnopqrs';
 
-/** moveHistory（{x:row,y:col,player,pass}）→ 完整 SGF 字串。player 1=黑(B)、2=白(W)。 */
-export function buildSGF(moveHistory, size, komi) {
+/**
+ * moveHistory（{x:row,y:col,player,pass}）→ 完整 SGF 字串。player 1=黑(B)、2=白(W)。
+ * handicapStones（[[row,col],...]，選填）：讓子局的預置黑子，輸出為 HA[n]AB[...]（白先）。
+ */
+export function buildSGF(moveHistory, size, komi, handicapStones = []) {
   let sgf = `(;GM[1]FF[4]SZ[${size}]KM[${komi}]`;
+  if (handicapStones && handicapStones.length) {
+    sgf += `HA[${handicapStones.length}]AB`
+      + handicapStones.map(([r, c]) => `[${LETTERS[c]}${LETTERS[r]}]`).join('');
+  }
   for (const m of moveHistory) {
     const color = m.player === 1 ? 'B' : 'W';
     if (m.pass) {

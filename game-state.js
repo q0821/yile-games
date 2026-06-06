@@ -52,6 +52,7 @@ function createInitialState(options = {}) {
       : { [BLACK]: 600, [WHITE]: 600 },
     gameRules: options.gameRules || 'chinese',
     komi: options.komi !== undefined ? options.komi : ((options.gameRules || 'chinese') === 'japanese' ? 6.5 : 7.5),
+    handicap: options.handicap || 0,
     isReviewing: options.isReviewing || false,
     currentReviewMove: options.currentReviewMove || 0,
     isScoring: options.isScoring || false,
@@ -92,6 +93,7 @@ export function getSnapshot() {
     timerEnabled: current.timerEnabled,
     gameRules: current.gameRules,
     komi: current.komi,
+    handicap: current.handicap || 0,
     timerSeconds: { 1: current.timerSeconds[BLACK], 2: current.timerSeconds[WHITE] },
     isReviewing: current.isReviewing,
     currentReviewMove: current.currentReviewMove,
@@ -150,6 +152,7 @@ export function restoreSnapshot(snapshot = {}) {
     },
     gameRules: snapshot.gameRules || 'chinese',
     komi: snapshot.komi,
+    handicap: snapshot.handicap || 0,
     isReviewing: !!snapshot.isReviewing,
     currentReviewMove: snapshot.currentReviewMove || 0,
     isScoring: !!snapshot.isScoring,
@@ -276,6 +279,9 @@ export function undo(options = {}) {
 export function startGame(options = {}) {
   state = createInitialState({
     size: options.size,
+    board: options.board,                 // 讓子局：預置黑子的盤面（否則空盤）
+    currentPlayer: options.currentPlayer,  // 讓子局：白先
+    handicap: options.handicap || 0,
     gameMode: options.gameMode || 'pvc',
     playerColor: options.playerColor || BLACK,
     aiLevel: options.aiLevel || 10,

@@ -80,7 +80,19 @@ export function registerEventHandlers(app) {
     const isPvC = e.target.value === 'pvc';
     document.getElementById('playerColorGroup').style.display = isPvC ? 'block' : 'none';
     document.getElementById('aiStrengthGroup').style.display = isPvC ? 'block' : 'none';
+    const hg = document.getElementById('handicapGroup');
+    if (hg) hg.style.display = isPvC ? 'block' : 'none';
   });
+
+  // 讓子 > 0 時固定執黑（人拿讓子）：鎖住執子選單並設為黑。
+  const handicapEl = document.getElementById('handicap');
+  if (handicapEl) {
+    handicapEl.addEventListener('change', (e) => {
+      const on = (parseInt(e.target.value) || 0) >= 2;
+      const pc = document.getElementById('playerColor');
+      if (pc) { if (on) pc.value = '1'; pc.disabled = on; }
+    });
+  }
 
   document.getElementById('emotionToggle').addEventListener('change', (e) => {
     app.emotionEnabled = e.target.checked;

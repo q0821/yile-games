@@ -356,3 +356,72 @@ describe('estimateDeadStones', () => {
     expect(dead.has(4 * 9 + 5)).toBe(false);
   });
 });
+
+// ─── handicap (S6) ────────────────────────────────────────────────────────────
+
+describe('handicapPoints', () => {
+  test('count < 2 回空陣列', () => {
+    expect(GoRules.handicapPoints(19, 0)).toEqual([]);
+    expect(GoRules.handicapPoints(19, 1)).toEqual([]);
+  });
+
+  test('不支援的尺寸回空陣列', () => {
+    expect(GoRules.handicapPoints(7, 4)).toEqual([]);
+  });
+
+  test('19 路讓 2 子＝左下、右上星位（4/16 線→0-indexed 3/15）', () => {
+    expect(GoRules.handicapPoints(19, 2)).toEqual([[15, 3], [3, 15]]);
+  });
+
+  test('19 路讓 5 子＝四角＋天元', () => {
+    expect(GoRules.handicapPoints(19, 5)).toEqual([
+      [15, 3], [3, 15], [3, 3], [15, 15], [9, 9]
+    ]);
+  });
+
+  test('19 路讓 9 子＝全部 9 個星位、含天元', () => {
+    const pts = GoRules.handicapPoints(19, 9);
+    expect(pts.length).toBe(9);
+    expect(pts).toContainEqual([9, 9]);       // 天元
+    expect(pts).toContainEqual([3, 9]);       // 上邊
+    expect(pts).toContainEqual([15, 9]);      // 下邊
+  });
+
+  test('各尺寸天元位置正確（13→6,6；9→4,4）', () => {
+    expect(GoRules.handicapPoints(13, 5)).toContainEqual([6, 6]);
+    expect(GoRules.handicapPoints(9, 5)).toContainEqual([4, 4]);
+  });
+
+  test('讓子點皆落在盤內且不重複', () => {
+    for (const size of [9, 13, 19]) {
+      for (let n = 2; n <= 9; n++) {
+        const pts = GoRules.handicapPoints(size, n);
+        expect(pts.length).toBe(n);
+        const keys = new Set(pts.map(([r, c]) => r * size + c));
+        expect(keys.size).toBe(n); // 無重複
+        for (const [r, c] of pts) {
+          expect(r).toBeGreaterThanOrEqual(0); expect(r).toBeLessThan(size);
+          expect(c).toBeGreaterThanOrEqual(0); expect(c).toBeLessThan(size);
+        }
+      }
+    }
+  });
+});
+
+describe('placeHandicap', () => {
+  test('在星位擺上對應數量的黑子、其餘為空', () => {
+    const b = GoRules.placeHandicap(19, 4);
+    let black = 0;
+    for (let r = 0; r < 19; r++) for (let c = 0; c < 19; c++) {
+      if (b[r][c] === BLACK) black++;
+      else expect(b[r][c]).toBe(EMPTY);
+    }
+    expect(black).toBe(4);
+    for (const [r, c] of GoRules.handicapPoints(19, 4)) expect(b[r][c]).toBe(BLACK);
+  });
+
+  test('count < 2 回空盤', () => {
+    const b = GoRules.placeHandicap(19, 0);
+    expect(b.every(row => row.every(v => v === EMPTY))).toBe(true);
+  });
+});

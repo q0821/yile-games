@@ -14,6 +14,49 @@ export function opponent(player) {
   return player === BLACK ? WHITE : BLACK;
 }
 
+// ——— 讓子（handicap, S6）———
+// 標準星位讓子。各尺寸星位（0-indexed lo/mid/hi 線）：19→3/9/15、13→3/6/9、9→2/4/6。
+// 擺子順序沿用通行慣例（角→邊→天元，奇數含天元）：
+//   2 左下,右上｜3 +左上｜4 +右下｜5 +天元｜6 +左,右邊｜7 +天元｜8 +上,下邊｜9 +天元
+
+/** 回傳某尺寸的 9 個星位（[row,col]）；不支援的尺寸回 null。 */
+function starPoints(size) {
+  let lo, mid, hi;
+  if (size === 19) { lo = 3; mid = 9; hi = 15; }
+  else if (size === 13) { lo = 3; mid = 6; hi = 9; }
+  else if (size === 9) { lo = 2; mid = 4; hi = 6; }
+  else return null;
+  return {
+    LL: [hi, lo], UR: [lo, hi], UL: [lo, lo], LR: [hi, hi],   // 四角
+    L: [mid, lo], R: [mid, hi], T: [lo, mid], B: [hi, mid],   // 四邊
+    C: [mid, mid],                                            // 天元
+  };
+}
+
+/** 讓 count 子的標準擺放位置（[row,col] 陣列）；count<2 或尺寸不支援回 []。 */
+export function handicapPoints(size, count) {
+  const s = starPoints(size);
+  if (!s || count < 2) return [];
+  const order = {
+    2: [s.LL, s.UR],
+    3: [s.LL, s.UR, s.UL],
+    4: [s.LL, s.UR, s.UL, s.LR],
+    5: [s.LL, s.UR, s.UL, s.LR, s.C],
+    6: [s.LL, s.UR, s.UL, s.LR, s.L, s.R],
+    7: [s.LL, s.UR, s.UL, s.LR, s.L, s.R, s.C],
+    8: [s.LL, s.UR, s.UL, s.LR, s.L, s.R, s.T, s.B],
+    9: [s.LL, s.UR, s.UL, s.LR, s.L, s.R, s.T, s.B, s.C],
+  };
+  return order[Math.min(Math.max(count, 2), 9)] || [];
+}
+
+/** 在新盤面擺上 count 顆黑讓子，回傳該盤面。count<2 時回傳空盤。 */
+export function placeHandicap(size, count) {
+  const board = createBoard(size);
+  for (const [r, c] of handicapPoints(size, count)) board[r][c] = BLACK;
+  return board;
+}
+
 export function inBounds(size, x, y) {
   return x >= 0 && x < size && y >= 0 && y < size;
 }
@@ -238,5 +281,6 @@ export const GoRules = {
   EMPTY, BLACK, WHITE,
   createBoard, cloneBoard, opponent, inBounds, getNeighbors,
   getGroup, removeGroup, boardToString, tryPlaceStone,
-  getLegalMoves, calculateTerritory, estimateDeadStones, calculateScore
+  getLegalMoves, calculateTerritory, estimateDeadStones, calculateScore,
+  handicapPoints, placeHandicap
 };
