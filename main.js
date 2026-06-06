@@ -59,6 +59,8 @@ let currentReviewMove = 0;
 let isScoring = false;
 let deadStones = new Set();
 let showingHint = false;
+let suggestMove = null; // KataGo 建議走法 [row,col]，null=不顯示
+let _suggestBusy = false;
 
 let emotionEnabled = false;
 
@@ -156,6 +158,36 @@ function clearHint() {
   if (showingHint) { showingHint = false; drawBoard(); }
 }
 
+// 走法提示：用 KataGo 算「現在這手該下哪」並在盤上標出（藍圈「薦」）。
+async function requestMoveHint() {
+  if (isGameBusy() || _suggestBusy) return;
+  if (gameMode === 'pvc' && currentPlayer !== playerColor) return; // 只在輪到你時
+  _suggestBusy = true;
+  setStatus('AI 思考建議走法中…');
+  try {
+    const move = await KataGo.genmove({
+      board, size, currentPlayer, moveHistory, komi, gameRules, onStatus: setStatus,
+    }, { visits: 24 });
+    if (move && !move.pass) {
+      suggestMove = [move.x, move.y];
+      setStatus(`建議走法：${COORD_LETTERS[move.y]}${size - move.x}（藍圈處）`);
+    } else {
+      suggestMove = null;
+      setStatus('AI 建議虛手（pass）');
+    }
+    drawBoard();
+  } catch (err) {
+    console.error('move hint error:', err);
+    setStatus('建議走法失敗，請稍候再試');
+  } finally {
+    _suggestBusy = false;
+  }
+}
+
+function clearSuggest() {
+  if (suggestMove) { suggestMove = null; }
+}
+
 function getCaptureHints(b, player) {
   return GoHints.getCaptureHints(b, size, player, koPoint);
 }
@@ -187,6 +219,7 @@ function buildBoardViewState() {
     scoreData,
     showingHint,
     captureHints,
+    suggestMove,
     emotionEnabled,
     hoverPos,
     ownership: (isReviewing && reviewOwnershipOn && reviewAnalysis && reviewAnalysis[currentReviewMove])
@@ -216,6 +249,7 @@ function placeStone(x, y) {
   applyStateFromStore();
 
   showingHint = false;
+  suggestMove = null;
 
   updateUI();
   const willRequestAI = gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver;
@@ -241,6 +275,7 @@ function doPass() {
   if (isGameBusy()) return;
 
   showingHint = false;
+  suggestMove = null;
 
   const result = GameState.applyPass();
   if (!result.ok) return;
@@ -277,6 +312,7 @@ function doPass() {
 function doUndo() {
   if (isGameBlocked()) return;
   showingHint = false;
+  suggestMove = null;
   if (!document.getElementById('undoToggle').checked) {
     setStatus('悔棋功能已關閉，可在設定中開啟');
     return;
@@ -1003,6 +1039,7 @@ Object.assign(window, {
   finishGame,
   resetAiLevel,
   showHintOnce,
+  requestMoveHint,
   enterReview,
   exitReview,
   reviewGo,

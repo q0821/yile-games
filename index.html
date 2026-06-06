@@ -137,6 +137,7 @@
       <label class="toggle"><input type="checkbox" id="emotionToggle"><span class="slider"></span></label>
     </div>
     <div class="control-group" style="margin-top:4px">
+      <button onclick="requestMoveHint()" id="moveHintBtn">建議走法（AI）</button>
       <button onclick="showHintOnce()" id="hintBtn">吃子提示</button>
     </div>
 
@@ -185,7 +186,8 @@
     <div class="mobile-action-bar" id="mobileActionBar">
       <button onclick="doPass()">虛手（Pass）</button>
       <button onclick="doUndo()">悔棋</button>
-      <button onclick="showHintOnce()">提示</button>
+      <button onclick="requestMoveHint()">建議走法</button>
+      <button onclick="showHintOnce()">吃子提示</button>
       <button onclick="finishGame()">申請數目</button>
       <button onclick="doResign()" class="danger">認輸</button>
     </div>

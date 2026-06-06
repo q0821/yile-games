@@ -390,6 +390,25 @@ export function drawBoard(deps, state) {
     }
   }
 
+  // KataGo 建議走法（單點，藍色圈「薦」）
+  if (state.suggestMove && !state.gameOver && !state.isReviewing && !state.isScoring) {
+    const [sx, sy] = state.suggestMove;
+    const cx = deps.padding + sy * deps.cellSize;
+    const cy = deps.padding + sx * deps.cellSize;
+    ctx.save();
+    ctx.strokeStyle = '#2e7dd1';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, deps.cellSize * 0.42, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#2e7dd1';
+    ctx.font = `bold ${Math.max(10, deps.cellSize * 0.32)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('薦', cx, cy);
+    ctx.restore();
+  }
+
   if (state.hoverPos && !state.gameOver && !state.isReviewing && !state.isScoring && !state.isAIThinking) {
     const [hx, hy] = state.hoverPos;
     if (state.board[hx][hy] === EMPTY) {
