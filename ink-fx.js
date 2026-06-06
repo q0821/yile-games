@@ -110,15 +110,19 @@ export function playTitleReveal(h1El, opts = {}) {
   img.onload = () => {
     if (started) return; // 避免快取補呼叫造成重複
     started = true;
-    h1El.style.visibility = 'hidden'; // 只有確定要動畫時才隱藏；onload 沒來就保持可見
+    // 不再隱藏 <h1>：文字永遠是可見本體，水墨動畫只疊在上面當特效；
+    // 就算圖載失敗 / 座標算錯 / 字型位移，標題文字都還在，不會消失。
+    // 動畫當下重新量框（字型/版面此時通常已穩定，定位較準）。
+    const r = h1El.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) { showStatic(); return; }
     // 依 contain 規則算出圖在標題框內的實際顯示尺寸，避免 WebGL 把圖拉伸變形
     const iw = img.naturalWidth || 3;
     const ih = img.naturalHeight || 1;
-    const scale = Math.min(rect.width / iw, rect.height / ih);
+    const scale = Math.min(r.width / iw, r.height / ih);
     const w = Math.round(iw * scale);
     const h = Math.round(ih * scale);
-    const left = Math.round(rect.left + (rect.width - w) / 2);
-    const top = Math.round(rect.top + (rect.height - h) / 2);
+    const left = Math.round(r.left + (r.width - w) / 2);
+    const top = Math.round(r.top + (r.height - h) / 2);
 
     let renderer;
     try {

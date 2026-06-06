@@ -75,21 +75,13 @@ h1::after {
   background: linear-gradient(90deg, transparent, var(--seal) 30%, var(--seal) 70%, transparent);
   opacity: 0.85;
 }
-/* 毛筆字標題（圖）— 加 .brush-title 即用生成的書法圖取代宋體字 */
+/* 標題：可靠的文字本體（Noto Serif TC）。
+   2026-06-06：原本用背景圖 title-ink.webp 取代文字（text-indent:-9999px 把字推出畫面），
+   但那張圖被 CDN 間歇快取成 HTML（poisoned）就會讓標題整個消失。改回純文字後，標題
+   永遠可見、不可能因圖/CDN/字型問題消失；水墨揭示動畫（ink-fx）僅疊在上面當加分特效。 */
 h1.brush-title {
-  width: min(440px, 76vw);
-  height: 104px;
-  text-indent: -9999px;
-  overflow: hidden;
-  text-shadow: none;
-  /* 真正帶 alpha 的墨色透明圖：白底已去除、筆畫即墨色，毋需任何 blend mode。
-     （舊版用 white 底圖 + mix-blend-mode: multiply 假透明，iOS WebKit 會整塊算透明 → 標題消失） */
-  /* ?v=2：避開先前 CDN 將此 URL 快取成 HTML 的 poisoned entry（換 cache key 強制回源）。
-     圖片內容若再變動，遞增此版號即可。 */
-  background: url('/img/title-ink.webp?v=2') center/contain no-repeat;
-  /* 預設可見：暈開動畫由 JS 在進首頁時短暫隱藏→播放→還原；任何路徑結束都保證留著標題 */
+  font-size: clamp(30px, 8vw, 44px);
 }
-h1.brush-title::after { display: none; }  /* 毛筆版不要那道穿字的朱砂線 */
 
 /* ===== Layout ===== */
 .game-container {

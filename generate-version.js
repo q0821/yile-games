@@ -47,4 +47,14 @@ let swContent = fs.readFileSync(swPath, 'utf8');
 swContent = swContent.replace(/^const VERSION = '.*?';/m, `const VERSION = '${version}';`);
 fs.writeFileSync(swPath, swContent);
 
+// 根治 cache-busting：把 index.html 裡資產的版本 query（?v=...）改寫成當前版本。
+// 否則寫死的 ?v=（如 ?v=v2026.03.15-9c49be6）永不變，瀏覽器/Cloudflare 會一直對
+// style.css 等資產發舊快取，新樣式進不來（曾導致版面跑掉、標題消失）。
+const htmlPath = 'index.html';
+if (fs.existsSync(htmlPath)) {
+  const html = fs.readFileSync(htmlPath, 'utf8');
+  const updated = html.replace(/(\?v=)v?[0-9][^"'\s>]*/g, `$1${version}`);
+  if (updated !== html) fs.writeFileSync(htmlPath, updated);
+}
+
 console.log(version);
