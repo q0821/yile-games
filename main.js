@@ -60,7 +60,6 @@ let isScoring = false;
 let deadStones = new Set();
 let showingHint = false;
 let suggestMove = null; // KataGo 建議走法 [row,col]，null=不顯示
-let suggestPv = null;   // 後續變化預想圖：[[row,col],...]（含建議手本身）
 let _suggestBusy = false;
 
 let emotionEnabled = false;
@@ -159,7 +158,8 @@ function clearHint() {
   if (showingHint) { showingHint = false; drawBoard(); }
 }
 
-// 走法提示：用 KataGo 算「現在這手該下哪」+ 數據理由 + 後續變化預想圖。
+// 走法提示：用 KataGo 算「現在這手該下哪」+ 數據理由（值幾目）。
+// 注意：此處用全力最佳手、不套用對弈的隨機弱化，所以建議與對手強度無關。
 async function requestMoveHint() {
   if (isGameBusy() || _suggestBusy) return;
   if (gameMode === 'pvc' && currentPlayer !== playerColor) return; // 只在輪到你時
@@ -171,10 +171,9 @@ async function requestMoveHint() {
     }, { visits: 24 });
     if (r.move) {
       suggestMove = [r.move.x, r.move.y];
-      suggestPv = (r.pv && r.pv.length) ? r.pv : [suggestMove];
       setStatus(describeSuggestion(r));
     } else {
-      suggestMove = null; suggestPv = null;
+      suggestMove = null;
       setStatus('AI 建議虛手（pass）');
     }
     drawBoard();
@@ -195,13 +194,11 @@ function describeSuggestion(r) {
     const mine = currentPlayer === BLACK ? r.scoreLead : -r.scoreLead;
     leadTxt = mine >= 0 ? `下了約領先 ${mine.toFixed(0)} 目` : `下了仍落後約 ${(-mine).toFixed(0)} 目`;
   }
-  const pvTxt = (suggestPv && suggestPv.length > 1) ? `；藍線為接下來預想的 ${suggestPv.length} 手變化` : '';
-  return `建議走法：${coord}（藍圈）${leadTxt ? '，' + leadTxt : ''}${pvTxt}`;
+  return `建議走法：${coord}（藍圈）${leadTxt ? '，' + leadTxt : ''}`;
 }
 
 function clearSuggest() {
   suggestMove = null;
-  suggestPv = null;
 }
 
 function getCaptureHints(b, player) {
@@ -236,7 +233,6 @@ function buildBoardViewState() {
     showingHint,
     captureHints,
     suggestMove,
-    suggestPv,
     emotionEnabled,
     hoverPos,
     ownership: (isReviewing && reviewOwnershipOn && reviewAnalysis && reviewAnalysis[currentReviewMove])
@@ -267,7 +263,6 @@ function placeStone(x, y) {
 
   showingHint = false;
   suggestMove = null;
-  suggestPv = null;
 
   updateUI();
   const willRequestAI = gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver;
@@ -294,7 +289,6 @@ function doPass() {
 
   showingHint = false;
   suggestMove = null;
-  suggestPv = null;
 
   const result = GameState.applyPass();
   if (!result.ok) return;
@@ -332,7 +326,6 @@ function doUndo() {
   if (isGameBlocked()) return;
   showingHint = false;
   suggestMove = null;
-  suggestPv = null;
   if (!document.getElementById('undoToggle').checked) {
     setStatus('悔棋功能已關閉，可在設定中開啟');
     return;
