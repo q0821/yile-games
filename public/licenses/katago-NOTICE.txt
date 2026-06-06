@@ -1,0 +1,17 @@
+KataGo neural network weights — attribution
+============================================
+
+The Go-playing neural network shipped with this app at
+/models/katago-small.bin.gz is a network released by the KataGo project
+(David J. Wu / "lightvector").
+
+  KataGo:  https://github.com/lightvector/KataGo
+  License: MIT License (engine source code)
+
+KataGo's released neural networks are made freely available by the project
+for public use and redistribution.
+
+The in-browser inference engine used to run this network is ported from
+Web KaTrain (https://github.com/Sir-Teo/web-katrain), which reimplements
+KataGo's input-feature encoding and inference in TypeScript/TensorFlow.js.
+Web KaTrain is MIT-licensed — see web-katrain-LICENSE.txt in this folder.

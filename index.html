@@ -311,8 +311,40 @@
   </div>
 </div>
 
+<!-- About / Licenses Modal -->
+<div class="modal-overlay" id="aboutModal">
+  <div class="modal changelog-modal">
+    <h2>關於與授權</h2>
+    <div class="changelog-body">
+      <h3>本站</h3>
+      <p>作者：<a href="https://github.com/q0821" target="_blank" rel="noopener noreferrer">Jackie Yeh</a>（聯絡請透過 GitHub）<br>
+        原始碼：<a href="https://github.com/q0821/gogame" target="_blank" rel="noopener noreferrer">github.com/q0821/gogame</a></p>
+
+      <p>本站使用下列開源資源，謹此致謝並標注授權。</p>
+
+      <h3>死活題庫</h3>
+      <p><a href="https://github.com/sanderland/tsumego" target="_blank" rel="noopener noreferrer">sanderland/tsumego</a>，MIT 授權。<br>
+        Copyright © 2020 Sander Land and/or other authors.<br>
+        <a href="tsumego/LICENSE" target="_blank" rel="noopener noreferrer">授權條款全文</a></p>
+
+      <h3>圍棋 AI 引擎（KataGo）</h3>
+      <p>瀏覽器內的 KataGo 推論引擎移植自 <a href="https://github.com/Sir-Teo/web-katrain" target="_blank" rel="noopener noreferrer">Sir-Teo/web-katrain</a>，MIT 授權。<br>
+        Copyright © 2026 Web KatRain Contributors.<br>
+        <a href="licenses/web-katrain-LICENSE.txt" target="_blank" rel="noopener noreferrer">授權條款全文</a></p>
+      <p>底層引擎與神經網路權重來自 <a href="https://github.com/lightvector/KataGo" target="_blank" rel="noopener noreferrer">KataGo</a>（lightvector/KataGo，程式 MIT 授權）；網路權重由 KataGo 專案免費釋出供公眾使用。<br>
+        <a href="licenses/katago-NOTICE.txt" target="_blank" rel="noopener noreferrer">署名說明</a></p>
+
+      <h3>字型</h3>
+      <p>Noto Serif TC（Google，SIL Open Font License 1.1）。</p>
+    </div>
+    <button class="primary" onclick="closeAbout()">關閉</button>
+  </div>
+</div>
+
 <div class="version-footer">
   <button type="button" id="versionFooter" class="version-link" onclick="openChangelog()" title="查看版本紀錄">版本：dev</button>
+  <button type="button" class="version-link" onclick="openAbout()" title="第三方資源與授權">關於與授權</button>
+  <a class="version-link" href="https://github.com/q0821" target="_blank" rel="noopener noreferrer" title="作者 GitHub">作者：Jackie Yeh</a>
 </div>
 
 <!-- All application code is bundled by Vite from main.js (ES6 module entry) -->

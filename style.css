@@ -873,6 +873,7 @@ button.danger:hover {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
 }
+a.version-link { display: inline-block; }
 /* 不要 hover 效果（避免吃到全域 button:hover 的整條亮帶） */
 .version-link:hover {
   background: none;

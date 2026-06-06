@@ -871,6 +871,14 @@ function closeChangelog() {
   document.getElementById('changelogModal').classList.remove('show');
 }
 
+function openAbout() {
+  document.getElementById('aboutModal').classList.add('show');
+}
+
+function closeAbout() {
+  document.getElementById('aboutModal').classList.remove('show');
+}
+
 // ==================== GLOBAL ERROR HANDLING ====================
 window.addEventListener('error', (e) => {
   if (!e.filename || !e.filename.includes(location.hostname)) return;
@@ -906,6 +914,8 @@ Object.assign(window, {
   closeModal,
   openChangelog,
   closeChangelog,
+  openAbout,
+  closeAbout,
   confirmScoring,
   cancelScoring,
   toggleSidebar,
