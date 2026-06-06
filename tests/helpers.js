@@ -152,4 +152,11 @@ function sandboxWithReview() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview };
+/** Returns a sandbox with AdaptiveDifficulty loaded (pure logic; no DOM needed). */
+function sandboxWithAdaptive() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './adaptive-difficulty.js');
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive };

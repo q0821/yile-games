@@ -518,6 +518,21 @@ button.danger:hover {
   font-size: 12px !important;
   color: var(--text-muted) !important;
   line-height: 1.6;
+  white-space: pre-line; /* 讓自適應升降訊息能換行顯示 */
+}
+
+/* 電腦等級顯示（自適應難度） */
+.ai-level-display {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold);
+  padding: 6px 0 2px;
+}
+.control-reset {
+  width: auto;
+  margin-top: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
 }
 
 /* ===== Scoring panel ===== */

@@ -103,6 +103,22 @@ export async function genmove(state, { visits = 32, maxTimeMs = 8000 } = {}) {
 }
 
 /**
+ * 求候選手清單（供自適應難度的隨機弱化挑手用）。回傳本專案座標 + pointsLost/order。
+ * @returns {Array<{x:number,y:number,pointsLost:number,order:number}>}  空陣列＝該 pass
+ */
+export async function genmoveCandidates(state, { visits = 32, maxTimeMs = 8000 } = {}) {
+  await ensureReady(state.onStatus);
+  const analysis = await client().analyze(buildArgs(state, { visits, maxTimeMs }));
+  const moves = analysis?.moves || [];
+  // web Move x=col,y=row → 本專案 x=row(m.y), y=col(m.x)
+  return moves.map((m) => ({
+    x: m.y, y: m.x,
+    pointsLost: m.pointsLost ?? 0,
+    order: m.order ?? 0,
+  }));
+}
+
+/**
  * 評估目前盤面（供覆盤分析）。回傳 KataGo Analysis payload（rootWinRate、moves、ownership…）。
  * 勝率/領地觀點之後在 2c 統一處理。
  */
@@ -150,7 +166,7 @@ export async function analyzeLocal(state, region, { visits = 24, maxTimeMs = 600
   return { move, winrate, ownership };
 }
 
-export const KataGoService = { ensureReady, isReady, getBackend, genmove, evaluate, analyzeLocal, scoreGame };
+export const KataGoService = { ensureReady, isReady, getBackend, genmove, genmoveCandidates, evaluate, analyzeLocal, scoreGame };
 
 /**
  * 終局數目：用 KataGo 的 ownership（每點 +1 黑佔 / -1 白佔，黑視角，index = row*size+col）

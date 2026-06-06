@@ -14,6 +14,7 @@ import { registerEventHandlers } from './event-handlers.js';
 import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
+import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -44,7 +45,9 @@ let passCount = 0;
 let gameOver = false;
 let gameMode = 'pvc';
 let playerColor = BLACK;
-let aiLevel = 10;
+// 自適應難度：aiLevel 現在是「電腦等級」(1..MAX)，依戰績自動升降，獨立存於 localStorage。
+const AI_LEVEL_KEY = 'gogame_ai_level';
+let aiLevel = loadAiLevel();
 let isAIThinking = false;
 
 let timerEnabled = false;
@@ -294,7 +297,51 @@ function doUndo() {
 function doResign() {
   if (isGameBlocked()) return;
   const winner = opponent(currentPlayer);
+  // 認輸視為大敗/大勝：認輸者的對手贏。以人類視角換算 margin 給自適應難度。
+  const humanWon = (winner === playerColor);
+  applyResultToLevel(humanWon ? 30 : -30);
   endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`);
+}
+
+// ——— 自適應難度（電腦等級依戰績升降） ———
+function loadAiLevel() {
+  try {
+    const v = parseInt(localStorage.getItem(AI_LEVEL_KEY));
+    if (Number.isFinite(v)) return Math.max(MIN_LEVEL, v);
+  } catch (_) {}
+  return MIN_LEVEL; // 預設從最低級開始往上爬
+}
+
+function saveAiLevel() {
+  try { localStorage.setItem(AI_LEVEL_KEY, String(aiLevel)); } catch (_) {}
+}
+
+// 更新設定面板的「電腦等級」顯示。
+function updateAiLevelDisplay() {
+  const el = document.getElementById('aiLevelDisplay');
+  if (el) el.textContent = `第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
+}
+
+let _pendingLevelMsg = null; // 升降訊息，於結束彈窗顯示
+
+// 依「人類視角勝負目數」調整等級，回傳是否有變動，並備妥明示訊息。
+function applyResultToLevel(humanMargin) {
+  if (gameMode !== 'pvc') return; // 只在人機對局調整
+  const before = aiLevel;
+  const r = nextLevel(before, humanMargin);
+  aiLevel = r.level;
+  saveAiLevel();
+  updateAiLevelDisplay();
+  if (r.change === 'up') _pendingLevelMsg = `🎉 你贏得漂亮！電腦升到第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
+  else if (r.change === 'down') _pendingLevelMsg = `電腦降到第 ${aiLevel} 級（${kyuLabel(aiLevel)}），調整步調再來`;
+  else _pendingLevelMsg = `電腦維持第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
+}
+
+function resetAiLevel() {
+  aiLevel = MIN_LEVEL;
+  saveAiLevel();
+  updateAiLevelDisplay();
+  setStatus(`已重設：電腦回到第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`);
 }
 
 // End the game by counting territory, without needing the double-pass dance.
@@ -400,6 +447,9 @@ function confirmScoring() {
   const diff = score.black - score.white;
   const winner = diff > 0 ? '黑方' : '白方';
   const detail = `黑 ${score.black.toFixed(1)} vs 白 ${score.white.toFixed(1)}（含貼目 ${komi}）`;
+  // 人類視角的勝負目數（人執 playerColor）：正=人贏 N 目、負=人輸 N 目。
+  const humanMargin = playerColor === BLACK ? diff : -diff;
+  applyResultToLevel(humanMargin);
   GameState.confirmScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
@@ -431,6 +481,12 @@ function endGame(title, detail) {
       txt += `・最大一次：第 ${s.biggest.moveNumber} 手${s.biggest.byPlayer === BLACK ? '黑' : '白'}提 ${s.biggest.count} 子`;
     }
     sm.textContent = txt;
+  }
+  // 自適應難度：明示電腦升/降級
+  if (_pendingLevelMsg) {
+    const sm2 = document.getElementById('modalSummary');
+    if (sm2) sm2.textContent = (sm2.textContent ? sm2.textContent + '\n' : '') + _pendingLevelMsg;
+    _pendingLevelMsg = null;
   }
   const reviewOn = document.getElementById('reviewToggle').checked;
   document.getElementById('modalReviewBtn').style.display = reviewOn ? 'block' : 'none';
@@ -464,6 +520,7 @@ function closeModal() {
 // ==================== TIMER ====================
 function _timerOnTimeout(losingPlayer) {
   const winner = opponent(losingPlayer);
+  applyResultToLevel(winner === playerColor ? 30 : -30);
   endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${losingPlayer === BLACK ? '黑' : '白'}方超時`);
 }
 
@@ -684,7 +741,9 @@ function startNewGame() {
   gameMode = VALID_GAME_MODES.includes(rawMode) ? rawMode : 'pvc';
 
   playerColor = parseInt(document.getElementById('playerColor').value);
-  aiLevel = parseInt(document.getElementById('aiStrength').value);
+  // aiLevel 由自適應系統管理（不再從下拉讀取），沿用目前等級。
+  aiLevel = loadAiLevel();
+  updateAiLevelDisplay();
   timerEnabled = document.getElementById('timerToggle').checked;
   gameRules = document.getElementById('gameRules').value;
   komi = gameRules === 'japanese' ? 6.5 : 7.5;
@@ -792,7 +851,8 @@ function loadGame() {
     document.getElementById('boardSize').value = size;
     document.getElementById('gameMode').value = gameMode;
     document.getElementById('playerColor').value = playerColor;
-    document.getElementById('aiStrength').value = aiLevel;
+    aiLevel = loadAiLevel();
+    updateAiLevelDisplay();
     document.getElementById('timerToggle').checked = timerEnabled;
     document.getElementById('gameRules').value = gameRules;
     document.getElementById('playerColorGroup').style.display = gameMode === 'pvc' ? 'block' : 'none';
@@ -941,6 +1001,7 @@ Object.assign(window, {
   doUndo: doUndoAndSave,
   doResign,
   finishGame,
+  resetAiLevel,
   showHintOnce,
   enterReview,
   exitReview,
@@ -977,6 +1038,7 @@ Object.defineProperty(window, 'moveHistory', {
 
 // ==================== INIT ====================
 registerEventHandlers(app);
+updateAiLevelDisplay();
 
 const _isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 if ('serviceWorker' in navigator && _isLocalDev) {

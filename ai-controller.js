@@ -4,21 +4,14 @@
 // 對手引擎：KataGo（vendored web-katrain，較強且可給誠實評估）。引擎內建
 // WebGPU → WASM → CPU 後端 fallback，毋需另一套引擎兜底。
 import * as KataGo from './katago-service.js';
-
-// 強度（aiLevel 1/5/10 = 初/中/高）→ KataGo 搜尋量（visits）。iPhone WebGPU 實測：
-// 32 visits ~0.28s、單次 eval ~10ms，故下列值在手機上約 0.2~1.5s，可接受。
-function aiLevelToVisits(level) {
-  if (level >= 10) return 160;
-  if (level >= 5) return 48;
-  return 8;
-}
+import { levelConfig, pickMove } from './adaptive-difficulty.js';
 
 export function makeAiController(app) {
-  // 用 KataGo 求一手。回傳 {x,y}|{pass:true}。
+  // 用 KataGo 求一手，依自適應等級做隨機弱化。回傳 {x,y}|{pass:true}。
   async function katagoMove() {
     await KataGo.ensureReady(app.setStatus);
-    const visits = aiLevelToVisits(app.aiLevel);
-    return KataGo.genmove({
+    const cfg = levelConfig(app.aiLevel);
+    const cands = await KataGo.genmoveCandidates({
       board: app.board,
       size: app.size,
       currentPlayer: app.currentPlayer,
@@ -26,7 +19,10 @@ export function makeAiController(app) {
       komi: app.komi,
       gameRules: app.gameRules,
       onStatus: app.setStatus,
-    }, { visits });
+    }, { visits: cfg.visits });
+    if (!cands.length) return { pass: true };
+    const m = pickMove(cands, app.aiLevel);
+    return m ? { x: m.x, y: m.y } : { pass: true };
   }
 
   // ——— AI move ———

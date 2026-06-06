@@ -88,13 +88,10 @@
       </select>
     </div>
     <div class="control-group" id="aiStrengthGroup">
-      <label>電腦思考量</label>
-      <select id="aiStrength">
-        <option value="1" selected>低</option>
-        <option value="5">中</option>
-        <option value="10">高</option>
-      </select>
-      <p class="control-hint">電腦用 KataGo 引擎下棋；思考量越高、棋力越強，但每手等越久（「高」在較舊手機可能要數秒）。</p>
+      <label>電腦等級（自動調整）</label>
+      <div id="aiLevelDisplay" class="ai-level-display">第 1 級（約 25 級）</div>
+      <p class="control-hint">電腦會依你每局的勝負目數自動升降：贏夠多目會升級、輸太多會降級。等級越高棋力越強。級位為估計值，僅供參考。</p>
+      <button type="button" onclick="resetAiLevel()" class="control-reset">重設等級</button>
     </div>
     <div class="control-group" id="handicapGroup">
       <label>讓子</label>
