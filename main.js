@@ -60,6 +60,7 @@ let isScoring = false;
 let deadStones = new Set();
 let showingHint = false;
 let suggestMove = null; // KataGo 建議走法 [row,col]，null=不顯示
+let suggestPv = null;   // 後續變化預想圖：[[row,col],...]（含建議手本身）
 let _suggestBusy = false;
 
 let emotionEnabled = false;
@@ -158,21 +159,22 @@ function clearHint() {
   if (showingHint) { showingHint = false; drawBoard(); }
 }
 
-// 走法提示：用 KataGo 算「現在這手該下哪」並在盤上標出（藍圈「薦」）。
+// 走法提示：用 KataGo 算「現在這手該下哪」+ 數據理由 + 後續變化預想圖。
 async function requestMoveHint() {
   if (isGameBusy() || _suggestBusy) return;
   if (gameMode === 'pvc' && currentPlayer !== playerColor) return; // 只在輪到你時
   _suggestBusy = true;
   setStatus('AI 思考建議走法中…');
   try {
-    const move = await KataGo.genmove({
+    const r = await KataGo.suggest({
       board, size, currentPlayer, moveHistory, komi, gameRules, onStatus: setStatus,
     }, { visits: 24 });
-    if (move && !move.pass) {
-      suggestMove = [move.x, move.y];
-      setStatus(`建議走法：${COORD_LETTERS[move.y]}${size - move.x}（藍圈處）`);
+    if (r.move) {
+      suggestMove = [r.move.x, r.move.y];
+      suggestPv = (r.pv && r.pv.length) ? r.pv : [suggestMove];
+      setStatus(describeSuggestion(r));
     } else {
-      suggestMove = null;
+      suggestMove = null; suggestPv = null;
       setStatus('AI 建議虛手（pass）');
     }
     drawBoard();
@@ -184,8 +186,22 @@ async function requestMoveHint() {
   }
 }
 
+// 把 KataGo 數據翻成白話（誠實、只用真實數值）：座標、領先目數、後續手數。
+function describeSuggestion(r) {
+  const coord = `${COORD_LETTERS[r.move.y]}${size - r.move.x}`;
+  // scoreLead 是黑領先目數；換成「當前玩家」視角
+  let leadTxt = '';
+  if (typeof r.scoreLead === 'number') {
+    const mine = currentPlayer === BLACK ? r.scoreLead : -r.scoreLead;
+    leadTxt = mine >= 0 ? `下了約領先 ${mine.toFixed(0)} 目` : `下了仍落後約 ${(-mine).toFixed(0)} 目`;
+  }
+  const pvTxt = (suggestPv && suggestPv.length > 1) ? `；藍線為接下來預想的 ${suggestPv.length} 手變化` : '';
+  return `建議走法：${coord}（藍圈）${leadTxt ? '，' + leadTxt : ''}${pvTxt}`;
+}
+
 function clearSuggest() {
-  if (suggestMove) { suggestMove = null; }
+  suggestMove = null;
+  suggestPv = null;
 }
 
 function getCaptureHints(b, player) {
@@ -220,6 +236,7 @@ function buildBoardViewState() {
     showingHint,
     captureHints,
     suggestMove,
+    suggestPv,
     emotionEnabled,
     hoverPos,
     ownership: (isReviewing && reviewOwnershipOn && reviewAnalysis && reviewAnalysis[currentReviewMove])
@@ -250,6 +267,7 @@ function placeStone(x, y) {
 
   showingHint = false;
   suggestMove = null;
+  suggestPv = null;
 
   updateUI();
   const willRequestAI = gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver;
@@ -276,6 +294,7 @@ function doPass() {
 
   showingHint = false;
   suggestMove = null;
+  suggestPv = null;
 
   const result = GameState.applyPass();
   if (!result.ok) return;
@@ -313,6 +332,7 @@ function doUndo() {
   if (isGameBlocked()) return;
   showingHint = false;
   suggestMove = null;
+  suggestPv = null;
   if (!document.getElementById('undoToggle').checked) {
     setStatus('悔棋功能已關閉，可在設定中開啟');
     return;

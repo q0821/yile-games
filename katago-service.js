@@ -102,6 +102,41 @@ export async function genmove(state, { visits = 32, maxTimeMs = 8000 } = {}) {
   return { x: best.y, y: best.x };
 }
 
+// GTP 座標（如 "K10"，跳過字母 I）→ 本專案 [row, col]（row 從上、col 從左）。pass/無效回 null。
+function gtpToRowCol(gtp, size) {
+  if (!gtp || gtp.toLowerCase() === 'pass') return null;
+  const m = /^([A-HJ-Za-hj-z])(\d{1,2})$/.exec(gtp.trim());
+  if (!m) return null;
+  let col = m[1].toUpperCase().charCodeAt(0) - 65; // A=0
+  if (m[1].toUpperCase() > 'I') col -= 1;           // 跳過 I
+  const num = parseInt(m[2], 10);                    // 1..size（從下數）
+  const row = size - num;                            // 轉成從上數
+  if (col < 0 || col >= size || row < 0 || row >= size) return null;
+  return [row, col];
+}
+
+/**
+ * 求「建議走法 + 說明數據 + 後續變化」。供對弈中的走法提示用。
+ * @returns {{ move:{x,y}|null, winrate:number|null, scoreLead:number|null,
+ *             pointsLost:number, pv:Array<[row,col]> }}
+ *          winrate = 黑勝率(0..1)；scoreLead = 黑領先目數；pv = 後續變化（本專案座標）。
+ */
+export async function suggest(state, { visits = 24, maxTimeMs = 8000 } = {}) {
+  await ensureReady(state.onStatus);
+  const analysis = await client().analyze(buildArgs(state, { visits, maxTimeMs }));
+  const moves = analysis?.moves || [];
+  if (!moves.length) return { move: null, winrate: analysis?.rootWinRate ?? null, scoreLead: analysis?.rootScoreLead ?? null, pointsLost: 0, pv: [] };
+  const best = moves.find((m) => m.order === 0) || moves[0];
+  const pv = (best.pv || []).map((g) => gtpToRowCol(g, state.size)).filter(Boolean);
+  return {
+    move: { x: best.y, y: best.x },
+    winrate: best.winRate ?? analysis?.rootWinRate ?? null,
+    scoreLead: best.scoreLead ?? analysis?.rootScoreLead ?? null,
+    pointsLost: best.pointsLost ?? 0,
+    pv,
+  };
+}
+
 /**
  * 求候選手清單（供自適應難度的隨機弱化挑手用）。回傳本專案座標 + pointsLost/order。
  * @returns {Array<{x:number,y:number,pointsLost:number,order:number}>}  空陣列＝該 pass
@@ -166,7 +201,7 @@ export async function analyzeLocal(state, region, { visits = 24, maxTimeMs = 600
   return { move, winrate, ownership };
 }
 
-export const KataGoService = { ensureReady, isReady, getBackend, genmove, genmoveCandidates, evaluate, analyzeLocal, scoreGame };
+export const KataGoService = { ensureReady, isReady, getBackend, genmove, genmoveCandidates, suggest, evaluate, analyzeLocal, scoreGame };
 
 /**
  * 終局數目：用 KataGo 的 ownership（每點 +1 黑佔 / -1 白佔，黑視角，index = row*size+col）

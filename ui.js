@@ -390,11 +390,34 @@ export function drawBoard(deps, state) {
     }
   }
 
-  // KataGo 建議走法（單點，藍色圈「薦」）
+  // KataGo 建議走法：先畫後續變化預想線（PV），再畫建議手藍圈「薦」。
   if (state.suggestMove && !state.gameOver && !state.isReviewing && !state.isScoring) {
+    const cxy = (r, c) => [deps.padding + c * deps.cellSize, deps.padding + r * deps.cellSize];
+    const pv = state.suggestPv || [];
+    // 預想變化：連線 + 標序號（1=建議手、2=對方應手、3=你再下…），交錯黑白點
+    if (pv.length > 1) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(46,125,209,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      pv.forEach(([r, c], i) => { const [px, py] = cxy(r, c); i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py); });
+      ctx.stroke();
+      for (let i = 1; i < pv.length; i++) {
+        const [r, c] = pv[i];
+        const [px, py] = cxy(r, c);
+        ctx.beginPath();
+        ctx.fillStyle = (i % 2 === 0) ? 'rgba(40,40,40,0.85)' : 'rgba(245,245,245,0.9)';
+        ctx.arc(px, py, deps.cellSize * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = (i % 2 === 0) ? '#fff' : '#222';
+        ctx.font = `bold ${Math.max(9, deps.cellSize * 0.3)}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(i + 1), px, py);
+      }
+      ctx.restore();
+    }
     const [sx, sy] = state.suggestMove;
-    const cx = deps.padding + sy * deps.cellSize;
-    const cy = deps.padding + sx * deps.cellSize;
+    const [cx, cy] = cxy(sx, sy);
     ctx.save();
     ctx.strokeStyle = '#2e7dd1';
     ctx.lineWidth = 3;
