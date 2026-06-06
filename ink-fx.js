@@ -10,8 +10,9 @@
  * 並釋放 WebGL context（不長駐、手機也省電）。
  */
 import { Renderer, Program, Mesh, Triangle, Texture } from 'ogl';
+import { TITLE_DATA_URI } from './title-data.js';
 
-const TITLE_SRC = '/img/title-ink.webp?v=2'; // ?v=2：避開 CDN poisoned cache（見 style.css 註解）
+const TITLE_SRC = TITLE_DATA_URI; // base64 內嵌：不發外部請求，CDN 無法快取成 HTML（見 title-data.js）
 const DURATION = 1300; // ms
 
 const vertex = /* glsl */ `
