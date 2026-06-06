@@ -150,4 +150,19 @@ export async function analyzeLocal(state, region, { visits = 24, maxTimeMs = 600
   return { move, winrate, ownership };
 }
 
-export const KataGoService = { ensureReady, isReady, getBackend, genmove, evaluate, analyzeLocal };
+export const KataGoService = { ensureReady, isReady, getBackend, genmove, evaluate, analyzeLocal, scoreGame };
+
+/**
+ * 終局數目：用 KataGo 的 ownership（每點 +1 黑佔 / -1 白佔，黑視角，index = row*size+col）
+ * 與 rootScoreLead（黑領先目數）做權威判定，取代不可靠的純 JS 死子估算。
+ * @returns {{ ownership:(Float32Array|number[]), scoreLead:number|null }}
+ *          scoreLead > 0 黑領先、< 0 白領先（已含貼目，KataGo 內部以 komi 計入）。
+ */
+export async function scoreGame(state, { visits = 24, maxTimeMs = 8000 } = {}) {
+  await ensureReady(state.onStatus);
+  const analysis = await client().analyze(buildArgs(state, { visits, maxTimeMs }));
+  return {
+    ownership: analysis?.ownership || null,
+    scoreLead: analysis?.rootScoreLead ?? null,
+  };
+}

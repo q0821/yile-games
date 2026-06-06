@@ -308,16 +308,56 @@ function finishGame() {
   endGameByScoring();
 }
 
-function endGameByScoring() {
+// 用 KataGo 的 ownership 推導死子：盤上某顆棋子若所在點被對方明確佔有（|own| 夠大且歸對方），
+// 即判為死子。ownership：+1 黑佔 / -1 白佔，黑視角，index = row*size+col。
+function deadStonesFromOwnership(ownership) {
+  const dead = new Set();
+  if (!ownership) return dead;
+  const TH = 0.5; // 歸屬信心門檻；> 0.5 視為該方明確佔有
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
+      const v = board[x][y];
+      if (v === EMPTY) continue;
+      const own = ownership[x * size + y]; // +黑 / -白
+      // 黑子落在白佔區 → 黑子死；白子落在黑佔區 → 白子死
+      if (v === BLACK && own < -TH) dead.add(x * size + y);
+      else if (v === WHITE && own > TH) dead.add(x * size + y);
+    }
+  }
+  return dead;
+}
+
+async function endGameByScoring() {
   GameState.beginScoring();
   applyStateFromStore();
   stopTimer();
   document.getElementById('scoringPanel').style.display = 'block';
   document.getElementById('mobileScoringBar').style.display = 'block';
+  // 先用舊估算顯示「計算中」基準，再用 KataGo ownership 覆蓋成準確結果。
+  updateScoringDisplay();
+  setStatus('AI 數目中…');
+  drawBoard();
+
+  try {
+    const { ownership } = await KataGo.scoreGame({
+      board, size, currentPlayer, moveHistory, komi, gameRules, onStatus: setStatus,
+    });
+    if (ownership) {
+      const dead = deadStonesFromOwnership(ownership);
+      GameState.sync({ deadStones: Array.from(dead) });
+      applyStateFromStore();
+      _lastOwnership = ownership;
+    }
+  } catch (err) {
+    console.error('KataGo scoring failed, fallback to JS estimate:', err);
+    // 失敗則沿用 beginScoring 的純 JS 估算（已在 deadStones 內）
+  }
+
   updateScoringDisplay();
   applyUnfinishedWarning();
   drawBoard();
 }
+let _lastOwnership = null;
 
 function updateScoringDisplay() {
   const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
