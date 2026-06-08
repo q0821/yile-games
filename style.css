@@ -1384,6 +1384,13 @@ h1.brush-title {
 #resultModal #modalDetail { color: var(--text-dim) !important; }
 
 /* ===== 象棋覆盤 ===== */
+.xqp-info {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
+  font-family: var(--font-serif);
+}
+
 .board-end-btn.ghost {
   margin-top: 10px;
   background: transparent;

@@ -449,6 +449,42 @@
   </div>
 </div>
 
+<!-- Xiangqi puzzles (殘局) screen -->
+<div class="gomoku-screen" id="xqpScreen" style="display:none">
+  <div class="mode-header">
+    <button class="mode-back" id="xqpHome">回首頁</button>
+    <h2 class="mode-title">象棋殘局</h2>
+  </div>
+  <div class="gomoku-settings">
+    <div class="control-group">
+      <label for="xqpCategory">題庫分類</label>
+      <select id="xqpCategory"></select>
+    </div>
+  </div>
+  <div class="xqp-info" id="xqpInfo"></div>
+  <div class="board-wrap">
+    <canvas id="xqpBoard" role="img" aria-label="象棋殘局棋盤"></canvas>
+    <div class="board-end" id="xqpEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="xqpEndTitle">解出！</div>
+        <div class="board-end-sub" id="xqpEndSub"></div>
+        <button class="board-end-btn" id="xqpEndBtn">下一題</button>
+      </div>
+    </div>
+  </div>
+  <div class="xiangqi-statusrow">
+    <span class="gomoku-status" id="xqpStatus" role="status" aria-live="polite"></span>
+    <span class="xiangqi-spinner" id="xqpThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
+  </div>
+  <div class="gomoku-controls">
+    <button id="xqpPrev">上一題</button>
+    <button id="xqpNext">下一題</button>
+    <button id="xqpRandom">隨機</button>
+    <button id="xqpReset">重置</button>
+    <button id="xqpHint">提示</button>
+  </div>
+</div>
+
 <!-- Result Modal -->
 <div class="modal-overlay" id="resultModal">
   <div class="modal">
@@ -489,6 +525,11 @@
       <p><a href="https://github.com/sanderland/tsumego" target="_blank" rel="noopener noreferrer">sanderland/tsumego</a>，MIT 授權。<br>
         Copyright © 2020 Sander Land and/or other authors.<br>
         <a href="tsumego/LICENSE" target="_blank" rel="noopener noreferrer">授權條款全文</a></p>
+
+      <h3>象棋殘局題庫</h3>
+      <p>古典殘局題目（基本殺法、江湖殘局、夢入神機、適情雅趣）取自
+        <a href="https://github.com/dffge552/xiangqi-pwa-offline" target="_blank" rel="noopener noreferrer">棋弈江湖（dffge552/xiangqi-pwa-offline）</a>，MIT 授權。<br>
+        Copyright © 2026 dffge552。古譜本身屬公共領域，謹此致謝。</p>
 
       <h3>圍棋 AI 引擎（KataGo）</h3>
       <p>瀏覽器內的 KataGo 推論引擎移植自 <a href="https://github.com/Sir-Teo/web-katrain" target="_blank" rel="noopener noreferrer">Sir-Teo/web-katrain</a>，MIT 授權。<br>

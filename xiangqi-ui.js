@@ -45,6 +45,28 @@ function ix(deps, col) { return deps.padding + col * deps.cellSize; }
 function iy(deps, row) { return deps.padding + row * deps.cellSize; }
 function line(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
 
+/** 兵卒位（rows 3,6 cols 0,2,4,6,8）與炮位（rows 2,7 cols 1,7）的傳統直角標線；邊列只畫內側。 */
+function drawPositionMarks(deps) {
+  const ctx = deps.ctx, cell = deps.cellSize;
+  const g = cell * 0.10, len = cell * 0.16;
+  ctx.strokeStyle = LINE; ctx.lineWidth = 1.2;
+  const pts = [];
+  for (const c of [0, 2, 4, 6, 8]) { pts.push([3, c]); pts.push([6, c]); }
+  for (const c of [1, 7]) { pts.push([2, c]); pts.push([7, c]); }
+  for (const [r, c] of pts) {
+    const x = ix(deps, c), y = iy(deps, r);
+    for (const dx of [-1, 1]) {
+      if ((dx < 0 && c === 0) || (dx > 0 && c === COLUMNS - 1)) continue; // 邊列省略外側
+      for (const dy of [-1, 1]) {
+        const px = x + dx * g, py = y + dy * g;
+        ctx.beginPath();
+        ctx.moveTo(px + dx * len, py); ctx.lineTo(px, py); ctx.lineTo(px, py + dy * len);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
 /** 畫一顆實體立體棋子（投影 + 凸面漸層 + 描邊 + 高光 + 字）。 */
 function drawPiece(ctx, x, y, r, piece, lifted) {
   // 防護：座標/半徑非有限值時跳過（createRadialGradient 收到 NaN 會拋例外凍住整盤）
@@ -121,6 +143,9 @@ export function drawXiangqi(deps, view) {
   line(ctx, ix(deps, 5), iy(deps, 0), ix(deps, 3), iy(deps, 2));
   line(ctx, ix(deps, 3), iy(deps, 7), ix(deps, 5), iy(deps, 9));
   line(ctx, ix(deps, 5), iy(deps, 7), ix(deps, 3), iy(deps, 9));
+
+  // 兵卒位、炮位的傳統直角標線
+  drawPositionMarks(deps);
 
   // 河界字
   ctx.fillStyle = 'rgba(91,68,35,0.5)';

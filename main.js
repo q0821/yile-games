@@ -15,6 +15,7 @@ import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
 import { enterGomokuMode } from './gomoku-mode.js';
 import { enterXiangqiMode } from './xiangqi-mode.js';
 import { enterOthelloMode } from './othello-mode.js';
+import { enterXiangqiPuzzleMode } from './xiangqi-puzzle-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
@@ -1118,8 +1119,9 @@ applyAppVersion().then((version) => {
 const HOME_ITEMS = [
   { id: 'play',    title: '圍棋對弈', desc: '與電腦對弈或雙人對局',     hash: '#play' },
   { id: 'tsumego', title: '死活練習', desc: '題庫做活／殺棋，提升棋力', hash: '#tsumego' },
-  { id: 'gomoku',  title: '五子棋',   desc: '五子連線，先連成一線者勝', hash: '#gomoku' },
   { id: 'xiangqi', title: '象棋對弈', desc: '中國象棋，與電腦或雙人對局', hash: '#xiangqi' },
+  { id: 'xqpuzzle',title: '象棋殘局', desc: '古典殘局，執先手求殺取勝',     hash: '#xqpuzzle' },
+  { id: 'gomoku',  title: '五子棋',   desc: '五子連線，先連成一線者勝', hash: '#gomoku' },
   { id: 'othello', title: '黑白棋',   desc: '翻轉棋，圍地翻子、子多者勝',   hash: '#othello' },
 ];
 
@@ -1181,6 +1183,7 @@ function showScreen(name) {
   document.getElementById('gomokuScreen').style.display = name === 'gomoku' ? 'flex' : 'none';
   document.getElementById('xiangqiScreen').style.display = name === 'xiangqi' ? 'flex' : 'none';
   document.getElementById('othelloScreen').style.display = name === 'othello' ? 'flex' : 'none';
+  document.getElementById('xqpScreen').style.display = name === 'xqpuzzle' ? 'flex' : 'none';
   const playHeader = document.getElementById('playHeader');
   if (playHeader) playHeader.style.display = name === 'play' ? 'flex' : 'none';
   const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1215,6 +1218,10 @@ function applyRoute(animateTitle) {
     showScreen('othello');
     if (title) title.style.visibility = 'visible';
     enterOthelloMode();
+  } else if (hash === '#xqpuzzle') {
+    showScreen('xqpuzzle');
+    if (title) title.style.visibility = 'visible';
+    enterXiangqiPuzzleMode();
   } else if (hash === '#play') {
     showScreen('play');
     if (title) title.style.visibility = 'visible';
