@@ -111,8 +111,9 @@ export async function analyze({ fen, movetimeMs = 600 }) {
     if (!pvM) return; // 只採有 pv 的搜尋行（最終最深的會留下）
     const cpM = line.match(/score cp (-?\d+)/);
     const mateM = line.match(/score mate (-?\d+)/);
+    // 取該行的分數型別；互斥清掉另一個，避免 cp/mate 並存矛盾（淺層 cp、深層 mate）
     if (cpM) { cp = parseInt(cpM[1], 10); mate = null; }
-    else if (mateM) { mate = parseInt(mateM[1], 10); }
+    else if (mateM) { mate = parseInt(mateM[1], 10); cp = null; }
     pv = pvM[1].trim().split(/\s+/);
   };
   send('go movetime ' + movetimeMs);

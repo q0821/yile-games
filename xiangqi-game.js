@@ -39,6 +39,15 @@ export async function newGame() {
   _board = new _ffish.Board('xiangqi');
 }
 
+/**
+ * 建立獨立的 ffish Board（殘局模式自管，不碰對弈用的單例 _board，避免互相污染）。
+ * 呼叫端負責 delete()。可帶起始 FEN。
+ */
+export async function newRawBoard(fen) {
+  await ensureReady();
+  return fen ? new _ffish.Board('xiangqi', fen) : new _ffish.Board('xiangqi');
+}
+
 // ——— 座標映射（唯一來源；改這裡前先肉眼驗證 row/col 沒對調）———
 
 /** grid 座標 → UCI square。row 0=上(rank10)、row 9=下(rank1)、col 0=左(file a)。 */
