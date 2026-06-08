@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>象棋引擎 Spike — Fairy-Stockfish WASM</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #ece2cd; color: #2c2417; max-width: 760px; }
+  h1 { font-size: 18px; }
+  p { font-size: 14px; line-height: 1.6; }
+  button { font-size: 16px; padding: 10px 16px; margin: 4px 4px 12px 0; border-radius: 8px; border: 1px solid #ab9670; background: #856219; color: #f7f0e0; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .control-row { display: flex; align-items: center; gap: 12px; margin: 8px 0 16px; }
+  .control-row label { font-size: 14px; font-weight: 600; }
+  input[type=range] { flex: 1; max-width: 320px; }
+  #movetimeVal { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 72px; }
+  .field { background: #f7f0e0; border: 1px solid #cabd9f; border-radius: 8px; padding: 8px 10px; font-size: 14px; margin: 6px 0; }
+  .field b { font-weight: 700; }
+  #moves { font-family: ui-monospace, monospace; word-break: break-all; }
+  pre { background: #f7f0e0; border: 1px solid #cabd9f; border-radius: 8px; padding: 10px; font-size: 13px; white-space: pre-wrap; min-height: 240px; max-height: 360px; overflow-y: auto; }
+</style>
+</head>
+<body>
+  <h1>象棋引擎 Spike — Fairy-Stockfish WASM（A2 方案驗證）</h1>
+  <p>
+    目標：驗證 <b>fairy-stockfish-nnue.wasm</b> 能在瀏覽器載入、設成象棋變體、回傳<b>合法手</b>，
+    並用「思考時間」當難度旋鈕。棋盤尚未接，僅以 UCI 著法字串呈現。<br>
+    （未載入 NNUE，使用古典評估；多執行緒引擎需 cross-origin isolated，已於 vite.config 設 COOP/COEP。）
+  </p>
+
+  <button id="loadBtn">載入引擎</button>
+  <button id="stepBtn">走一手</button>
+  <button id="selfplayBtn">自走 10 手</button>
+  <button id="resetBtn">重置局面</button>
+
+  <div class="control-row">
+    <label for="movetime">思考時間（難度）</label>
+    <input type="range" id="movetime" min="100" max="3000" step="100" value="500">
+    <span id="movetimeVal">500 ms</span>
+  </div>
+
+  <div class="field">手數：<b id="plyCount">0</b></div>
+  <div class="field">著法序列：<span id="moves"></span></div>
+
+  <pre id="out"></pre>
+
+  <!-- 先以全域 script 載入 Emscripten 工廠（暴露 window.Stockfish），再載模組邏輯 -->
+  <script src="/engine/xiangqi/stockfish.js"></script>
+  <script type="module" src="/xiangqi-spike.js"></script>
+</body>
+</html>
