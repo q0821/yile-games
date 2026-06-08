@@ -55,9 +55,17 @@ export function fen() { return _board.fen(); }
 /** true = 紅方（先手）走，false = 黑方走。 */
 export function turn() { return _board.turn(); }
 export function legalMoves() { return _board.legalMoves().split(/\s+/).filter(Boolean); }
+/**
+ * 拆解 UCI 著法為 from/to square。⚠️ 象棋 rank 1–10：rank 10 的 square 是 3 字元
+ * （如 'b10'），整個著法可能 5 字元（'b10c8'），不能用固定 slice(0,2)/slice(2,4)。
+ */
+export function splitMove(uci) {
+  const m = /^([a-i]\d{1,2})([a-i]\d{1,2})$/.exec(uci);
+  return m ? { from: m[1], to: m[2] } : { from: uci.slice(0, 2), to: uci.slice(2) };
+}
 /** 從某 square 出發的所有合法手（回傳目的 square 陣列）。 */
 export function legalTargetsFrom(square) {
-  return legalMoves().filter((m) => m.slice(0, 2) === square).map((m) => m.slice(2, 4));
+  return legalMoves().map(splitMove).filter((m) => m.from === square).map((m) => m.to);
 }
 /** 走一手（UCI），回傳是否合法。 */
 export function move(uci) { return _board.push(uci); }

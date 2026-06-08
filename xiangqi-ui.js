@@ -47,6 +47,8 @@ function line(ctx, x1, y1, x2, y2) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.li
 
 /** 畫一顆實體立體棋子（投影 + 凸面漸層 + 描邊 + 高光 + 字）。 */
 function drawPiece(ctx, x, y, r, piece, lifted) {
+  // 防護：座標/半徑非有限值時跳過（createRadialGradient 收到 NaN 會拋例外凍住整盤）
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r) || r <= 0) return;
   const edge = piece.red ? '#a8392e' : '#2c2417';
   // 1) 投影（只在底盤填色時開 shadow，畫完即關，避免描邊/字糊掉）
   ctx.save();

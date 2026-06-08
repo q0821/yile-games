@@ -141,12 +141,12 @@ const MOVE_ANIM_MS = 280;
 /** 以「目前（落子前）局面 + 隱藏起點格 + 浮動棋子」插值滑動。 */
 function animateMove(uci) {
   return new Promise((resolve) => {
-    const fromSq = uci.slice(0, 2);
+    const { from: fromSq, to: toSq } = Game.splitMove(uci);
     const fromRC = Game.squareToRC(fromSq);
     const grid = Game.piecesGrid();
     const piece = grid[fromRC.row] && grid[fromRC.row][fromRC.col];
     if (!piece) { resolve(); return; }
-    const p0 = pixelOf(fromSq), p1 = pixelOf(uci.slice(2, 4));
+    const p0 = pixelOf(fromSq), p1 = pixelOf(toSq);
     let start = null;
     const step = (ts) => {
       if (start === null) start = ts;
@@ -171,7 +171,8 @@ async function doMove(uci) {
   const ok = Game.move(uci);
   moving = false;
   if (!ok) { render(); return false; }
-  lastMove = [uci.slice(0, 2), uci.slice(2, 4)];
+  const parts = Game.splitMove(uci);
+  lastMove = [parts.from, parts.to];
   gameOver = Game.isGameOver();
   updateCheck();
   setStatus();
