@@ -314,7 +314,16 @@
       </select>
     </div>
   </div>
-  <canvas id="gomokuBoard" role="img" aria-label="五子棋棋盤"></canvas>
+  <div class="board-wrap">
+    <canvas id="gomokuBoard" role="img" aria-label="五子棋棋盤"></canvas>
+    <div class="board-end" id="gomokuEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="gomokuEndTitle">黑方勝</div>
+        <div class="board-end-sub" id="gomokuEndSub"></div>
+        <button class="board-end-btn" id="gomokuEndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
   <div class="gomoku-status" id="gomokuStatus" role="status" aria-live="polite"></div>
   <div class="gomoku-controls">
     <button id="gomokuRestart">重新開始</button>
@@ -352,14 +361,14 @@
       </select>
     </div>
   </div>
-  <div class="xiangqi-board-wrap">
+  <div class="board-wrap">
     <canvas id="xiangqiBoard" role="img" aria-label="象棋棋盤"></canvas>
     <div class="xiangqi-check" id="xiangqiCheck" aria-hidden="true">將 軍</div>
-    <div class="xiangqi-end" id="xiangqiEnd" style="display:none" role="dialog" aria-live="assertive">
-      <div class="xiangqi-end-card">
-        <div class="xiangqi-end-title" id="xiangqiEndTitle">紅方勝</div>
-        <div class="xiangqi-end-sub" id="xiangqiEndSub"></div>
-        <button class="xiangqi-end-btn" id="xiangqiEndBtn">再來一局</button>
+    <div class="board-end" id="xiangqiEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="xiangqiEndTitle">紅方勝</div>
+        <div class="board-end-sub" id="xiangqiEndSub"></div>
+        <button class="board-end-btn" id="xiangqiEndBtn">再來一局</button>
       </div>
     </div>
   </div>

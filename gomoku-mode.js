@@ -43,6 +43,7 @@ function cacheDom() {
     mode: $('gomokuMode'),
     color: $('gomokuColor'),
     level: $('gomokuLevel'),
+    end: $('gomokuEnd'), endTitle: $('gomokuEndTitle'), endSub: $('gomokuEndSub'), endBtn: $('gomokuEndBtn'),
   };
 }
 
@@ -89,11 +90,24 @@ function setStatus(msg) {
     dom.status.textContent = winner === null
       ? '和局 — 棋盤已滿'
       : `${winner === BLACK ? '黑方' : '白方'}勝！`;
+    showEnd();
   } else {
     dom.status.textContent = `${currentPlayer === BLACK ? '黑方' : '白方'}回合`;
   }
   if (dom.undo) dom.undo.disabled = aiBusy || history.length === 0;
 }
+
+/** 結束覆蓋卡片（與象棋一致的 .board-end）。 */
+function showEnd() {
+  if (!dom.end) return;
+  const title = winner === null ? '和局' : (winner === BLACK ? '黑方勝' : '白方勝');
+  let sub = '';
+  if (mode === 'pvc' && winner !== null) sub = (winner === playerColor) ? '你贏了！' : '電腦獲勝';
+  if (dom.endTitle) dom.endTitle.textContent = title;
+  if (dom.endSub) dom.endSub.textContent = sub;
+  dom.end.style.display = 'flex';
+}
+function hideEnd() { if (dom.end) dom.end.style.display = 'none'; }
 
 // ——— 對局邏輯 ———
 
@@ -107,6 +121,7 @@ function place(r, c, player) {
 }
 
 function newGame() {
+  hideEnd();
   board = createBoard(size);
   currentPlayer = BLACK;
   gameOver = false;
@@ -234,6 +249,7 @@ function wireEvents() {
 
   dom.restart?.addEventListener('click', () => newGame());
   dom.undo?.addEventListener('click', () => undo());
+  dom.endBtn?.addEventListener('click', () => newGame());
   dom.home?.addEventListener('click', () => { location.hash = '#home'; });
 
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });

@@ -1250,7 +1250,7 @@ h1.brush-title {
 }
 
 /* ===== 象棋：board-wrap / 將軍 / 思考 spinner / 結束畫面 ===== */
-.xiangqi-board-wrap {
+.board-wrap {
   position: relative;
   display: inline-block;
   line-height: 0; /* 消除 canvas 下方間隙 */
@@ -1311,7 +1311,7 @@ h1.brush-title {
 }
 
 /* 結束覆蓋畫面 */
-.xiangqi-end {
+.board-end {
   position: absolute;
   inset: 0;
   display: flex;
@@ -1324,7 +1324,7 @@ h1.brush-title {
   animation: xqEndIn 0.3s ease both;
 }
 @keyframes xqEndIn { from { opacity: 0; } to { opacity: 1; } }
-.xiangqi-end-card {
+.board-end-card {
   background: var(--bg-card);
   border: 1px solid var(--border, #cabd9f);
   border-radius: 18px;
@@ -1335,20 +1335,20 @@ h1.brush-title {
   min-width: min(74vw, 270px);
 }
 @keyframes xqCardIn { from { opacity: 0; transform: translateY(12px) scale(0.94); } to { opacity: 1; transform: none; } }
-.xiangqi-end-title {
+.board-end-title {
   font-family: var(--font-serif);
   font-weight: 900;
   font-size: clamp(30px, 7vw, 40px);
   line-height: 1.2;
   color: var(--text, #2c2417);
 }
-.xiangqi-end-sub {
+.board-end-sub {
   font-size: clamp(15px, 3.6vw, 18px);
   color: var(--text-dim, #6a5c44);
   margin-top: 8px;
 }
-.xiangqi-end-sub:empty { display: none; }
-.xiangqi-end-btn {
+.board-end-sub:empty { display: none; }
+.board-end-btn {
   margin-top: 26px;
   font-size: 17px;
   padding: 12px 34px;
@@ -1358,4 +1358,27 @@ h1.brush-title {
   color: #f7f0e0;
   cursor: pointer;
 }
-.xiangqi-end-btn:hover { filter: brightness(1.06); }
+.board-end-btn:hover { filter: brightness(1.06); }
+
+/* 圍棋結束彈窗：對齊 .board-end 視覺語言（暖色卡 + 宋體結果標題），
+   scoped 到 #resultModal，不影響「關於 / 更新日誌」彈窗。 */
+#resultModal { background: rgba(40, 30, 18, 0.6); }
+#resultModal .modal {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+#resultModal #modalTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+#resultModal #modalResult {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: clamp(28px, 7vw, 38px);
+  line-height: 1.2;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+#resultModal #modalDetail { color: var(--text-dim) !important; }
