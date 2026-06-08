@@ -23,6 +23,7 @@ let winner = null;          // BLACK | WHITE | null
 let lastMove = null;        // [r,c]
 let passNotice = null;
 let aiBusy = false;
+let animating = false;      // 翻子動畫中（鎖操作）
 let history = [];           // 狀態快照堆疊（悔棋用）
 
 // ——— 設定 ———
@@ -123,18 +124,43 @@ function advanceTurn(justMoved) {
   }
 }
 
-function makeMove(r, c, player) {
+const FLIP_ANIM_MS = 300;
+
+/** 翻子動畫：被翻子水平縮放換色、落子 pop-in；board 已更新。 */
+function animateFlips(flipped, place, player) {
+  return new Promise((resolve) => {
+    const set = new Set(flipped.map(([r, c]) => r + ',' + c));
+    const black = player === BLACK;
+    let start = null, done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+    const step = (ts) => {
+      if (done) return;
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / FLIP_ANIM_MS);
+      drawOthello(deps, { board, size, lastMove: null, legalMoves: null, anim: { set, place, black, t } });
+      if (t < 1) requestAnimationFrame(step); else finish();
+    };
+    requestAnimationFrame(step);
+    // 保險：rAF 在分頁背景會暫停，timeout 確保流程一定能繼續（不卡死）
+    setTimeout(finish, FLIP_ANIM_MS + 400);
+  });
+}
+
+async function makeMove(r, c, player) {
   history.push(snapshot());
-  applyMove(board, size, r, c, player);
+  const flipped = applyMove(board, size, r, c, player);
   lastMove = [r, c];
+  animating = true;
+  await animateFlips(flipped, [r, c], player);
+  animating = false;
   advanceTurn(player);
 }
 
-function onCellClick(r, c) {
-  if (gameOver || aiBusy || !board) return;
+async function onCellClick(r, c) {
+  if (gameOver || aiBusy || animating || !board) return;
   if (mode === 'pvc' && !isPlayerTurn()) return;
   if (!flips(board, size, r, c, currentPlayer).length) return; // 非合法手
-  makeMove(r, c, currentPlayer);
+  await makeMove(r, c, currentPlayer);
   setStatus();
   render();
   if (gameOver) { showEnd(); return; }
@@ -153,11 +179,11 @@ function maybeAiMove() {
     if (!isActive() || gameOver || isPlayerTurn()) { aiBusy = false; showThinking(false); return; }
     let mv = null;
     try { mv = bestMove(board, size, currentPlayer, level); } catch { mv = null; }
-    const finish = () => {
+    const finish = async () => {
       aiBusy = false;
       showThinking(false);
       if (mv) {
-        makeMove(mv.r, mv.c, currentPlayer);
+        await makeMove(mv.r, mv.c, currentPlayer);
         setStatus();
         render();
         if (gameOver) { showEnd(); return; }
@@ -172,7 +198,7 @@ function maybeAiMove() {
 }
 
 function undo() {
-  if (aiBusy || !history.length) return;
+  if (aiBusy || animating || !history.length) return;
   restore(history.pop());
   if (mode === 'pvc') {
     // 退到玩家可下的時機（連電腦那手一起退）

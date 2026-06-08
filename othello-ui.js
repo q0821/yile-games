@@ -77,19 +77,36 @@ export function drawOthello(deps, view) {
   }
 
   const radius = cell * 0.42;
-  // 合法手提示（輪到的一方）
-  if (view.legalMoves) {
+  const anim = view.anim;
+  // 合法手提示（輪到的一方；動畫中不顯示）
+  if (view.legalMoves && !anim) {
     ctx.fillStyle = HINT;
     for (const [r, c] of view.legalMoves) {
       ctx.beginPath(); ctx.arc(cx(deps, c), cy(deps, r), cell * 0.12, 0, Math.PI * 2); ctx.fill();
     }
   }
-  // 棋子
+  // 棋子（動畫中跳過正在翻/落的格，改由動畫畫）
   const board = view.board;
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
       if (board[r][c] === EMPTY) continue;
+      if (anim && (anim.set.has(r + ',' + c) || (anim.place && anim.place[0] === r && anim.place[1] === c))) continue;
       drawStone(deps, cx(deps, c), cy(deps, r), radius, board[r][c] === BLACK);
+    }
+  }
+  // 翻子動畫：水平縮放 1→0→1，中途換色；落子 pop-in
+  if (anim) {
+    const t = anim.t;
+    const scaleX = Math.abs(Math.cos(Math.PI * t));
+    const showNew = t >= 0.5;
+    for (const key of anim.set) {
+      const [r, c] = key.split(',').map(Number);
+      drawStoneScaled(deps, cx(deps, c), cy(deps, r), radius, showNew ? anim.black : !anim.black, scaleX);
+    }
+    if (anim.place) {
+      const [r, c] = anim.place;
+      const s = 0.4 + 0.6 * Math.min(1, t * 1.4);
+      drawStoneScaled(deps, cx(deps, c), cy(deps, r), radius * s, anim.black, 1);
     }
   }
   // 最後一手標記
@@ -98,4 +115,15 @@ export function drawOthello(deps, view) {
     ctx.strokeStyle = LAST; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(cx(deps, c), cy(deps, r), radius + 3, 0, Math.PI * 2); ctx.stroke();
   }
+}
+
+/** 以水平縮放畫棋子（翻轉效果）。 */
+function drawStoneScaled(deps, x, y, r, black, scaleX) {
+  const ctx = deps.ctx;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(Math.max(0.02, scaleX), 1);
+  ctx.translate(-x, -y);
+  drawStone(deps, x, y, r, black);
+  ctx.restore();
 }

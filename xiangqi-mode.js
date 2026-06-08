@@ -345,8 +345,10 @@ function animateMove(uci) {
     const piece = grid[fromRC.row] && grid[fromRC.row][fromRC.col];
     if (!piece) { resolve(); return; }
     const p0 = pixelOf(fromSq), p1 = pixelOf(toSq);
-    let start = null;
+    let start = null, done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
     const step = (ts) => {
+      if (done) return;
       if (start === null) start = ts;
       const t = Math.min(1, (ts - start) / MOVE_ANIM_MS);
       const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
@@ -355,9 +357,11 @@ function animateMove(uci) {
         rc: (sq) => Game.squareToRC(sq),
         anim: { hideRow: fromRC.row, hideCol: fromRC.col, piece, x: p0.x + (p1.x - p0.x) * e, y: p0.y + (p1.y - p0.y) * e },
       });
-      if (t < 1) requestAnimationFrame(step); else resolve();
+      if (t < 1) requestAnimationFrame(step); else finish();
     };
     requestAnimationFrame(step);
+    // 保險：rAF 在分頁背景會暫停，timeout 確保走子流程不卡死
+    setTimeout(finish, MOVE_ANIM_MS + 400);
   });
 }
 
