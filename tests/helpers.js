@@ -159,4 +159,13 @@ function sandboxWithAdaptive() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive };
+/** Returns a sandbox with Gomoku rules + AI loaded (pure logic; no DOM needed). */
+function sandboxWithGomoku() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
+  loadIntoContext(ctx, localRequire, './gomoku-rules.js');
+  loadIntoContext(ctx, localRequire, './gomoku-ai.js');
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithGomoku };

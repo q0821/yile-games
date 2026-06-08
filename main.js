@@ -12,6 +12,7 @@ import { toggleSidebar, openSidebar, closeSidebar } from './sidebar.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
+import { enterGomokuMode } from './gomoku-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
@@ -1113,8 +1114,9 @@ applyAppVersion().then((version) => {
 //   ''/'#home' → 首頁、'#play' → 對弈、'#tsumego' → 死活練習。
 // 對弈只在首次進入「對弈」時初始化（保留 loadGame 自動恢復未完成對局）。
 const HOME_ITEMS = [
-  { id: 'play',    title: '對弈',     desc: '與電腦對弈或雙人對局',     hash: '#play' },
+  { id: 'play',    title: '圍棋對弈', desc: '與電腦對弈或雙人對局',     hash: '#play' },
   { id: 'tsumego', title: '死活練習', desc: '題庫做活／殺棋，提升棋力', hash: '#tsumego' },
+  { id: 'gomoku',  title: '五子棋',   desc: '五子連線，先連成一線者勝', hash: '#gomoku' },
 ];
 
 let playInited = false;
@@ -1172,6 +1174,7 @@ function showScreen(name) {
   document.getElementById('homeScreen').style.display = name === 'home' ? 'flex' : 'none';
   document.querySelector('.game-container').style.display = name === 'play' ? '' : 'none';
   document.getElementById('tsumegoScreen').style.display = name === 'tsumego' ? 'flex' : 'none';
+  document.getElementById('gomokuScreen').style.display = name === 'gomoku' ? 'flex' : 'none';
   const playHeader = document.getElementById('playHeader');
   if (playHeader) playHeader.style.display = name === 'play' ? 'flex' : 'none';
   const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1194,6 +1197,10 @@ function applyRoute(animateTitle) {
     showScreen('tsumego');
     if (title) title.style.visibility = 'visible';
     enterTsumegoMode();
+  } else if (hash === '#gomoku') {
+    showScreen('gomoku');
+    if (title) title.style.visibility = 'visible';
+    enterGomokuMode();
   } else if (hash === '#play') {
     showScreen('play');
     if (title) title.style.visibility = 'visible';

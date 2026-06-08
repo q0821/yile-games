@@ -6,17 +6,17 @@
 <meta name="theme-color" content="#1a1a2e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="圍棋對弈">
+<meta name="apple-mobile-web-app-title" content="弈樂">
 <link rel="manifest" href="manifest.json?v=v2026.06.06-13ae1d9">
 <link rel="apple-touch-icon" href="icon-192.png?v=v2026.06.06-13ae1d9">
-<title>圍棋對弈</title>
+<title>弈樂</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&display=swap">
 <link rel="stylesheet" href="style.css?v=v2026.06.06-13ae1d9">
 </head>
 <body>
-  <h1 class="brush-title">圍棋對弈</h1>
+  <h1 class="brush-title">弈樂</h1>
 
 <!-- Mobile menu button -->
 <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleSidebar()">選單</button>
@@ -37,7 +37,7 @@
 <!-- Mode header (shared style with tsumego) -->
 <div class="mode-header" id="playHeader" style="display:none">
   <button class="mode-back" onclick="goHome()">回首頁</button>
-  <h2 class="mode-title">對弈</h2>
+  <h2 class="mode-title">圍棋對弈</h2>
 </div>
 
 <div class="game-container" style="display:none">
@@ -285,6 +285,44 @@
   </div>
 </div>
 
+<!-- Gomoku (Five-in-a-row) screen -->
+<div class="gomoku-screen" id="gomokuScreen" style="display:none">
+  <div class="mode-header">
+    <button class="mode-back" id="gomokuHome">回首頁</button>
+    <h2 class="mode-title">五子棋對弈</h2>
+  </div>
+  <div class="gomoku-settings">
+    <div class="control-group">
+      <label for="gomokuMode">對弈模式</label>
+      <select id="gomokuMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="gomokuColor">玩家執子</label>
+      <select id="gomokuColor">
+        <option value="1">執黑（先手）</option>
+        <option value="2">執白（後手）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="gomokuLevel">電腦難度</label>
+      <select id="gomokuLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+  </div>
+  <canvas id="gomokuBoard" role="img" aria-label="五子棋棋盤"></canvas>
+  <div class="gomoku-status" id="gomokuStatus" role="status" aria-live="polite"></div>
+  <div class="gomoku-controls">
+    <button id="gomokuRestart">重新開始</button>
+    <button id="gomokuUndo">悔棋</button>
+  </div>
+</div>
+
 <!-- Result Modal -->
 <div class="modal-overlay" id="resultModal">
   <div class="modal">
@@ -317,7 +355,7 @@
     <div class="changelog-body">
       <h3>本站</h3>
       <p>作者：<a href="https://github.com/q0821" target="_blank" rel="noopener noreferrer">Jackie Yeh</a>（聯絡請透過 GitHub）<br>
-        原始碼：<a href="https://github.com/q0821/gogame" target="_blank" rel="noopener noreferrer">github.com/q0821/gogame</a></p>
+        原始碼：<a href="https://github.com/q0821/yile-games" target="_blank" rel="noopener noreferrer">github.com/q0821/yile-games</a></p>
 
       <p>本站使用下列開源資源，謹此致謝並標注授權。</p>
 

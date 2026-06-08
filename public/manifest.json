@@ -1,7 +1,7 @@
 {
-  "name": "圍棋對弈",
-  "short_name": "圍棋",
-  "description": "網頁圍棋遊戲，支援人 vs 人、人 vs AI 對弈",
+  "name": "弈樂",
+  "short_name": "弈樂",
+  "description": "網頁棋類遊戲：圍棋對弈、死活練習、五子棋，支援人 vs 人、人 vs AI",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",

@@ -1,7 +1,8 @@
 /**
  * 水墨暈開動畫（WebGL，用 OGL）。
  *
- * 目前只做一項：進首頁時，「圍棋對弈」標題以水墨滲入宣紙的方式浮現。
+ * 目前只做一項：進首頁時，「弈樂」標題以水墨滲入宣紙的方式浮現（需有毛筆圖；
+ * 無圖時退回思源宋體文字標題 + CSS 淡入，見 title-data.js / style.css）。
  * 做法：把標題圖當 texture，用 fbm 噪聲場當「滲入門檻」，progress 0→1 時
  * 各處筆畫依噪聲值先後、以柔邊浮現 → 不規則的墨暈擴散感。
  *
@@ -90,6 +91,10 @@ export function playTitleReveal(h1El, opts = {}) {
   if (!h1El) return;
 
   const showStatic = () => { h1El.style.visibility = 'visible'; };
+
+  // 無毛筆標題圖（已改用思源宋體文字標題）→ 不播圖揭示，直接顯示文字；
+  // 質感由 style.css 的 CSS 淡入動畫負責。日後 inline 回毛筆圖即自動恢復 WebGL 揭示。
+  if (!TITLE_SRC) { showStatic(); return; }
 
   // 先收掉前一個還在跑的動畫，避免重複 overlay 堆疊
   if (_active) { _active.cleanup(); _active = null; }
