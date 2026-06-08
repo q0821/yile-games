@@ -1,0 +1,266 @@
+// othello-mode.js — 黑白棋模式控制器（比照 gomoku-mode + 象棋那輪 UX：結束卡片、思考延遲、悔棋）。
+//
+// 自管狀態與事件；畫面顯隱由 main.js 路由統一管理。重用 othello-rules（規則）、othello-ai（AI）、
+// othello-ui（渲染）、共用 .board-end 結束卡片。
+import { BLACK, WHITE, opponent } from './rules.js';
+import { SIZE, newBoard, flips, legalMoves, hasLegalMove, applyMove, score, isGameOver } from './othello-rules.js';
+import { bestMove } from './othello-ai.js';
+import { resizeOthelloCanvas, drawOthello } from './othello-ui.js';
+
+const SETTINGS_KEY = 'othello-settings-v1';
+
+let initialized = false;
+let wired = false;
+let dom = {};
+let deps = null;
+
+// ——— 對局狀態 ———
+const size = SIZE;
+let board = null;
+let currentPlayer = BLACK;
+let gameOver = false;
+let winner = null;          // BLACK | WHITE | null
+let lastMove = null;        // [r,c]
+let passNotice = null;
+let aiBusy = false;
+let history = [];           // 狀態快照堆疊（悔棋用）
+
+// ——— 設定 ———
+let mode = 'pvc';           // 'pvc' | 'pvp'
+let playerColor = BLACK;    // pvc 玩家執子
+let level = 2;              // 1..3
+
+const $ = (id) => document.getElementById(id);
+
+function cacheDom() {
+  dom = {
+    screen: $('othelloScreen'), canvas: $('othelloBoard'), status: $('othelloStatus'),
+    thinking: $('othelloThinking'), restart: $('othelloRestart'), undo: $('othelloUndo'), home: $('othelloHome'),
+    mode: $('othelloMode'), color: $('othelloColor'), level: $('othelloLevel'),
+    end: $('othelloEnd'), endTitle: $('othelloEndTitle'), endSub: $('othelloEndSub'), endBtn: $('othelloEndBtn'),
+  };
+}
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (s) {
+      if (s.mode === 'pvp' || s.mode === 'pvc') mode = s.mode;
+      if (s.playerColor === BLACK || s.playerColor === WHITE) playerColor = s.playerColor;
+      if (s.level >= 1 && s.level <= 3) level = s.level;
+    }
+  } catch { /* ignore */ }
+}
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ mode, playerColor, level })); } catch { /* ignore */ }
+}
+
+function isActive() { return dom.screen && dom.screen.style.display !== 'none'; }
+function isPlayerTurn() { return mode === 'pvp' || currentPlayer === playerColor; }
+
+// ——— 渲染 ———
+
+function view() {
+  return {
+    board, size, lastMove,
+    legalMoves: gameOver || aiBusy ? null : (isPlayerTurn() ? legalMoves(board, size, currentPlayer) : null),
+  };
+}
+function render() {
+  if (!board) return;
+  const w = Math.min((dom.screen?.clientWidth || window.innerWidth) - 24, window.innerWidth - 32, 480);
+  resizeOthelloCanvas(deps, w);
+  drawOthello(deps, view());
+}
+
+function setStatus(msg) {
+  if (!dom.status) return;
+  if (msg) { dom.status.textContent = msg; return; }
+  const s = score(board, size);
+  const tally = `黑 ${s.black}：白 ${s.white}`;
+  if (gameOver) {
+    dom.status.textContent = `${tally}　` + (winner === null ? '和局' : (winner === BLACK ? '黑方勝' : '白方勝'));
+  } else {
+    const who = currentPlayer === BLACK ? '黑方' : '白方';
+    dom.status.textContent = `${tally}　${who}回合` + (passNotice ? `（${passNotice}）` : '');
+  }
+  if (dom.undo) dom.undo.disabled = aiBusy || history.length === 0;
+}
+
+function showThinking(b) { if (dom.thinking) dom.thinking.style.display = b ? 'inline-flex' : 'none'; }
+
+// ——— 結束畫面（共用 .board-end）———
+
+function showEnd() {
+  if (!dom.end) return;
+  const s = score(board, size);
+  dom.endTitle.textContent = winner === null ? '和局' : (winner === BLACK ? '黑方勝' : '白方勝');
+  let sub = `黑 ${s.black}：白 ${s.white}`;
+  if (mode === 'pvc' && winner !== null) sub += '　' + (winner === playerColor ? '你贏了！' : '電腦獲勝');
+  dom.endSub.textContent = sub;
+  dom.end.style.display = 'flex';
+}
+function hideEnd() { if (dom.end) dom.end.style.display = 'none'; }
+
+// ——— 對局邏輯 ———
+
+function snapshot() { return { board: board.map((r) => r.slice()), player: currentPlayer, last: lastMove ? lastMove.slice() : null }; }
+function restore(s) { board = s.board.map((r) => r.slice()); currentPlayer = s.player; lastMove = s.last; gameOver = false; winner = null; passNotice = null; }
+
+/** 一方剛走完後決定下一回合（含 pass / 終局）。 */
+function advanceTurn(justMoved) {
+  const opp = opponent(justMoved);
+  passNotice = null;
+  if (hasLegalMove(board, size, opp)) {
+    currentPlayer = opp;
+  } else if (hasLegalMove(board, size, justMoved)) {
+    currentPlayer = justMoved;
+    passNotice = (opp === BLACK ? '黑方' : '白方') + '無合法手，跳過';
+  } else {
+    gameOver = true;
+    const s = score(board, size);
+    winner = s.black > s.white ? BLACK : s.white > s.black ? WHITE : null;
+  }
+}
+
+function makeMove(r, c, player) {
+  history.push(snapshot());
+  applyMove(board, size, r, c, player);
+  lastMove = [r, c];
+  advanceTurn(player);
+}
+
+function onCellClick(r, c) {
+  if (gameOver || aiBusy || !board) return;
+  if (mode === 'pvc' && !isPlayerTurn()) return;
+  if (!flips(board, size, r, c, currentPlayer).length) return; // 非合法手
+  makeMove(r, c, currentPlayer);
+  setStatus();
+  render();
+  if (gameOver) { showEnd(); return; }
+  maybeAiMove();
+}
+
+function maybeAiMove() {
+  if (mode !== 'pvc' || gameOver || isPlayerTurn()) return;
+  aiBusy = true;
+  showThinking(true);
+  setStatus('電腦思考中…');
+  const minDelay = 700 + Math.floor(Math.random() * 1100); // 0.7–1.8s
+  const t0 = performance.now();
+  // 放 setTimeout 讓 UI 先更新；AI 計算同步但 Othello 夠快
+  setTimeout(() => {
+    if (!isActive() || gameOver || isPlayerTurn()) { aiBusy = false; showThinking(false); return; }
+    let mv = null;
+    try { mv = bestMove(board, size, currentPlayer, level); } catch { mv = null; }
+    const finish = () => {
+      aiBusy = false;
+      showThinking(false);
+      if (mv) {
+        makeMove(mv.r, mv.c, currentPlayer);
+        setStatus();
+        render();
+        if (gameOver) { showEnd(); return; }
+        maybeAiMove(); // 玩家被迫 pass → AI 連走
+      } else {
+        setStatus();
+      }
+    };
+    const rest = minDelay - (performance.now() - t0);
+    if (rest > 0) setTimeout(finish, rest); else finish();
+  }, 40);
+}
+
+function undo() {
+  if (aiBusy || !history.length) return;
+  restore(history.pop());
+  if (mode === 'pvc') {
+    // 退到玩家可下的時機（連電腦那手一起退）
+    while (history.length && currentPlayer !== playerColor) restore(history.pop());
+  }
+  hideEnd();
+  setStatus();
+  render();
+  // pvc 退到開局後若仍非玩家回合（玩家執白）→ 讓 AI 補先手
+  if (mode === 'pvc' && !gameOver && currentPlayer !== playerColor) maybeAiMove();
+}
+
+function newGame() {
+  hideEnd();
+  showThinking(false);
+  board = newBoard(size);
+  currentPlayer = BLACK;
+  gameOver = false;
+  winner = null;
+  lastMove = null;
+  passNotice = null;
+  aiBusy = false;
+  history = [];
+  setStatus();
+  render();
+  maybeAiMove(); // pvc 玩家執白時，黑（AI）先手
+}
+
+// ——— 設定 UI ———
+
+function applySettingsToControls() {
+  if (dom.mode) dom.mode.value = mode;
+  if (dom.color) dom.color.value = String(playerColor);
+  if (dom.level) dom.level.value = String(level);
+  const pvc = mode === 'pvc';
+  dom.color?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
+  dom.level?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
+}
+
+// ——— 事件 ———
+
+function cellFromEvent(e) {
+  const rect = dom.canvas.getBoundingClientRect();
+  const pt = e.changedTouches?.[0] || e.touches?.[0] || e;
+  const mx = pt.clientX - rect.left - deps.padding;
+  const my = pt.clientY - rect.top - deps.padding;
+  const col = Math.floor(mx / deps.cellSize);
+  const row = Math.floor(my / deps.cellSize);
+  if (col < 0 || col >= size || row < 0 || row >= size) return null;
+  return { row, col };
+}
+
+function wireEvents() {
+  if (wired) return;
+  wired = true;
+  let lastTouchAt = 0;
+  dom.canvas.addEventListener('click', (e) => {
+    if (Date.now() - lastTouchAt < 500) return;
+    const p = cellFromEvent(e); if (p) onCellClick(p.row, p.col);
+  });
+  dom.canvas.addEventListener('touchend', (e) => {
+    lastTouchAt = Date.now(); e.preventDefault();
+    const p = cellFromEvent(e); if (p) onCellClick(p.row, p.col);
+  }, { passive: false });
+
+  dom.restart?.addEventListener('click', () => newGame());
+  dom.undo?.addEventListener('click', () => undo());
+  dom.endBtn?.addEventListener('click', () => newGame());
+  dom.home?.addEventListener('click', () => { location.hash = '#home'; });
+  dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
+  dom.color?.addEventListener('change', () => { playerColor = Number(dom.color.value) === WHITE ? WHITE : BLACK; saveSettings(); newGame(); });
+  dom.level?.addEventListener('change', () => { level = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
+  window.addEventListener('resize', () => { if (isActive()) render(); });
+}
+
+// ——— 進入 ———
+
+export async function enterOthelloMode() {
+  if (!initialized) {
+    cacheDom();
+    loadSettings();
+    deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), size, padding: 10, cellSize: 40 };
+    applySettingsToControls();
+    wireEvents();
+    initialized = true;
+  }
+  if (!board) newGame();
+  else render();
+}
+
+export const OthelloMode = { enterOthelloMode };

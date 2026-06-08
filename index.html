@@ -399,6 +399,56 @@
   </div>
 </div>
 
+<!-- Othello (Reversi) screen -->
+<div class="gomoku-screen" id="othelloScreen" style="display:none">
+  <div class="mode-header">
+    <button class="mode-back" id="othelloHome">回首頁</button>
+    <h2 class="mode-title">黑白棋</h2>
+  </div>
+  <div class="gomoku-settings">
+    <div class="control-group">
+      <label for="othelloMode">對弈模式</label>
+      <select id="othelloMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="othelloColor">玩家執子</label>
+      <select id="othelloColor">
+        <option value="1">執黑（先手）</option>
+        <option value="2">執白（後手）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="othelloLevel">電腦難度</label>
+      <select id="othelloLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+  </div>
+  <div class="board-wrap">
+    <canvas id="othelloBoard" role="img" aria-label="黑白棋棋盤"></canvas>
+    <div class="board-end" id="othelloEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="othelloEndTitle">黑方勝</div>
+        <div class="board-end-sub" id="othelloEndSub"></div>
+        <button class="board-end-btn" id="othelloEndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
+  <div class="xiangqi-statusrow">
+    <span class="gomoku-status" id="othelloStatus" role="status" aria-live="polite"></span>
+    <span class="xiangqi-spinner" id="othelloThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
+  </div>
+  <div class="gomoku-controls">
+    <button id="othelloRestart">重新開始</button>
+    <button id="othelloUndo">悔棋</button>
+  </div>
+</div>
+
 <!-- Result Modal -->
 <div class="modal-overlay" id="resultModal">
   <div class="modal">
