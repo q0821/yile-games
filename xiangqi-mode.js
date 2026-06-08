@@ -34,10 +34,10 @@ const $ = (id) => document.getElementById(id);
 function cacheDom() {
   dom = {
     screen: $('xiangqiScreen'), canvas: $('xiangqiBoard'), status: $('xiangqiStatus'),
-    restart: $('xiangqiRestart'), home: $('xiangqiHome'),
+    restart: $('xiangqiRestart'), undo: $('xiangqiUndo'), home: $('xiangqiHome'),
     mode: $('xiangqiMode'), color: $('xiangqiColor'), level: $('xiangqiLevel'),
     thinking: $('xiangqiThinking'), checkBanner: $('xiangqiCheck'),
-    endOverlay: $('xiangqiEnd'), endTitle: $('xiangqiEndTitle'), endBtn: $('xiangqiEndBtn'),
+    endOverlay: $('xiangqiEnd'), endTitle: $('xiangqiEndTitle'), endSub: $('xiangqiEndSub'), endBtn: $('xiangqiEndBtn'),
   };
 }
 
@@ -110,17 +110,41 @@ function flashCheck() {
 function showEnd() {
   if (!dom.endOverlay) return;
   const r = Game.result();
-  let title = r === '1-0' ? '紅方勝' : r === '0-1' ? '黑方勝' : '和局';
-  if (mode === 'pvc' && r !== '1/2-1/2') {
-    const youWon = (r === '1-0') === playerRed;
-    title += youWon ? '・你贏了！' : '・電腦獲勝';
-  }
+  const title = r === '1-0' ? '紅方勝' : r === '0-1' ? '黑方勝' : '和局';
+  let sub = '';
+  if (mode === 'pvc' && r !== '1/2-1/2') sub = ((r === '1-0') === playerRed) ? '你贏了！' : '電腦獲勝';
   if (dom.endTitle) dom.endTitle.textContent = title;
+  if (dom.endSub) dom.endSub.textContent = sub;
   dom.endOverlay.style.display = 'flex';
 }
 function hideEnd() { if (dom.endOverlay) dom.endOverlay.style.display = 'none'; }
 
+/** 更新悔棋按鈕可用狀態（思考/動畫/無手/結束時不可悔）。 */
+function updateUndoBtn() {
+  if (!dom.undo) return;
+  dom.undo.disabled = !boardReady || aiBusy || moving || gameOver || Game.gamePly() === 0;
+}
+
+/** 悔棋：pvc 退回玩家可下的時機（連 AI 那手一起退）。 */
+function undoMove() {
+  if (aiBusy || moving || !boardReady || Game.gamePly() === 0) return;
+  Game.undo();
+  // pvc 若退完仍非玩家回合（剛退掉的是玩家手、輪到玩家對手）→ 再退一手回到玩家
+  if (mode === 'pvc' && Game.gamePly() > 0 && Game.turn() !== playerRed) Game.undo();
+  gameOver = false;
+  hideEnd();
+  clearSelection();
+  const lm = Game.lastMoveUci();
+  lastMove = lm ? [Game.splitMove(lm).from, Game.splitMove(lm).to] : null;
+  updateCheck();
+  setStatus();
+  render();
+  // 玩家執黑、退到開局（輪到紅=AI）→ 讓 AI 重新先手
+  if (mode === 'pvc' && !gameOver && Game.turn() !== playerRed) maybeAiMove();
+}
+
 function setStatus(msg) {
+  updateUndoBtn();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {
@@ -282,6 +306,7 @@ function wireEvents() {
   }, { passive: false });
 
   dom.restart?.addEventListener('click', () => newGame());
+  dom.undo?.addEventListener('click', () => undoMove());
   dom.endBtn?.addEventListener('click', () => newGame());
   dom.home?.addEventListener('click', () => { location.hash = '#home'; });
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
