@@ -168,4 +168,13 @@ function sandboxWithGomoku() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithGomoku };
+/** Returns a sandbox with Othello rules + AI loaded (pure logic; no DOM needed). */
+function sandboxWithOthello() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
+  loadIntoContext(ctx, localRequire, './othello-rules.js');
+  loadIntoContext(ctx, localRequire, './othello-ai.js');
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithGomoku, sandboxWithOthello };
