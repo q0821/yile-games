@@ -5,6 +5,7 @@
 // 重用 xiangqi-game 的獨立 board 與純工具、xiangqi-engine 的 analyze、xiangqi-ui 的 drawXiangqi。
 import * as Game from './xiangqi-game.js';
 import * as Engine from './xiangqi-engine.js';
+import * as Progress from './xiangqi-puzzle-progress.js';
 import { resizeXiangqiCanvas, drawXiangqi } from './xiangqi-ui.js';
 
 const WIN_CP = 150;     // 起始 ≥ 此值視為「求勝」題
@@ -65,10 +66,45 @@ function render() {
   resizeXiangqiCanvas(deps, w);
   drawXiangqi(deps, view());
 }
+const PMOVE_MS = 260;
+function pixelOf(sq) { const { row, col } = Game.squareToRC(sq); return { x: deps.padding + col * deps.cellSize, y: deps.padding + row * deps.cellSize }; }
+
+/** 走子滑動動畫（落子前以目前局面 + 隱藏起點 + 浮動棋子插值）。 */
+function animateMove(uci) {
+  return new Promise((resolve) => {
+    const { from, to } = Game.splitMove(uci);
+    const fromRC = Game.squareToRC(from);
+    const grid = Game.gridFromFen(board.fen());
+    const piece = grid[fromRC.row] && grid[fromRC.row][fromRC.col];
+    if (!piece) { resolve(); return; }
+    const p0 = pixelOf(from), p1 = pixelOf(to);
+    let start = null, done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+    const step = (ts) => {
+      if (done) return;
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / PMOVE_MS);
+      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      drawXiangqi(deps, {
+        grid, selected: null, legalTargets: null, lastMove: null, checkRC: null,
+        rc: (sq) => Game.squareToRC(sq),
+        anim: { hideRow: fromRC.row, hideCol: fromRC.col, piece, x: p0.x + (p1.x - p0.x) * e, y: p0.y + (p1.y - p0.y) * e },
+      });
+      if (t < 1) requestAnimationFrame(step); else finish();
+    };
+    requestAnimationFrame(step);
+    setTimeout(finish, PMOVE_MS + 400); // rAF 分頁背景會停 → 保險
+  });
+}
+
 function setStatus(msg) { if (dom.status) dom.status.textContent = msg; }
 function showThinking(b) { if (dom.thinking) dom.thinking.style.display = b ? 'inline-flex' : 'none'; }
 function updateInfo() {
-  if (dom.info) dom.info.textContent = puzzles.length ? `${puzzles[pIdx].name}　(${pIdx + 1}/${puzzles.length})` : '';
+  if (!dom.info) return;
+  if (!puzzles.length) { dom.info.textContent = ''; return; }
+  const done = Progress.solvedCount(puzzles.map((p) => p.fen));
+  const mark = Progress.isSolved(puzzles[pIdx].fen) ? '　✓已解' : '';
+  dom.info.textContent = `${puzzles[pIdx].name}　(${pIdx + 1}/${puzzles.length}・已解 ${done})${mark}`;
 }
 
 function goalText() {
@@ -78,6 +114,7 @@ function goalText() {
 
 // ——— 結束卡片（共用 .board-end）———
 function showEnd(ok, msg) {
+  if (ok && puzzles[pIdx]) { Progress.markSolved(puzzles[pIdx].fen); updateInfo(); }
   if (!dom.end) return;
   dom.endTitle.textContent = ok ? '解出！' : '再接再厲';
   dom.endSub.textContent = msg || '';
@@ -162,51 +199,55 @@ function onPoint(row, col) {
   render();
 }
 
+function isWinResult() { const r = board.result(); return (playerRed && r === '1-0') || (!playerRed && r === '0-1'); }
+
 async function playerMove(uci) {
+  busy = true;
+  clearSel();
+  hintMove = null;
+  await animateMove(uci);
   board.push(uci);
   const sp = Game.splitMove(uci);
   lastMove = [sp.from, sp.to];
-  clearSel();
-  hintMove = null;
   updateCheck();
   render();
   // 玩家直接將死 → 解出
   if (board.isGameOver()) {
-    const r = board.result();
-    const win = (playerRed && r === '1-0') || (!playerRed && r === '0-1');
-    finished = true;
+    const win = isWinResult();
+    finished = true; busy = false;
     setStatus(win ? '將死對方，解出！' : '對局結束');
     showEnd(win, win ? goalLabelDone() : '本題結束');
     return;
   }
   // 判定 + 取防守手（一次 analyze 兼得）
-  busy = true; showThinking(true); setStatus('電腦思考中…');
+  showThinking(true); setStatus('電腦思考中…');
   try {
     const a = await Engine.analyze({ fen: board.fen(), movetimeMs: 600 });
     const playerEval = -evalCp(a);      // a 為對手視角 → 取負為玩家視角
-    showThinking(false); busy = false;
+    showThinking(false);
     if (objective === 'win' && playerEval < FAIL_CP) {
-      finished = true;
+      finished = true; busy = false;
       setStatus('這手把勝勢走丟了');
       showEnd(false, '可惜，這手丟了勝勢，再試一次');
       return;
     }
     if (objective === 'draw' && playerEval < -200) {
-      finished = true;
+      finished = true; busy = false;
       setStatus('這手落入敗勢');
       showEnd(false, '守和失敗，再試一次');
       return;
     }
     // 引擎防守（用 analyze 的最佳手＝全強度）
     if (a.bestmove) {
+      await animateMove(a.bestmove);
       board.push(a.bestmove);
       const d = Game.splitMove(a.bestmove);
       lastMove = [d.from, d.to];
       updateCheck();
     }
+    busy = false;
     if (board.isGameOver()) {
-      const r = board.result();
-      const win = (playerRed && r === '1-0') || (!playerRed && r === '0-1');
+      const win = isWinResult();
       finished = true;
       setStatus(win ? '解出！' : '對局結束');
       showEnd(win, win ? goalLabelDone() : '本題結束');
