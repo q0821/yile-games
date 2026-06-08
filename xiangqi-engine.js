@@ -29,7 +29,10 @@ function loadFactory() {
   return _factoryPromise;
 }
 
+let _tap = null; // 分析時暫接所有輸出行（收 info 的 score/pv）
+
 function onLine(line) {
+  if (_tap) _tap(line);
   for (const w of [..._waiters]) {
     if (w.pred(line)) { _waiters.delete(w); w.resolve(line); }
   }
@@ -89,12 +92,43 @@ export async function bestMove({ fen, level = 2, movetimeMs = 800 }) {
   return (!mv || mv === '(none)') ? null : mv;
 }
 
+/**
+ * 分析一個局面（滿血、不限棋力），供覆盤評估。
+ * @returns {Promise<{cp:number|null, mate:number|null, pv:string[]|null, bestmove:string|null}>}
+ *   cp/mate 為「輪到下的一方」視角（正=該方有利）。pv 為最佳變化（UCI 著法陣列）。
+ */
+export async function analyze({ fen, movetimeMs = 600 }) {
+  await ensureReady();
+  send('setoption name UCI_LimitStrength value false'); // 分析用全力（對弈 bestMove 會再設回 true）
+  send('ucinewgame');
+  send('position fen ' + fen);
+  send('isready');
+  await waitFor((l) => l === 'readyok');
+  let cp = null, mate = null, pv = null;
+  _tap = (line) => {
+    if (line.lastIndexOf('info', 0) !== 0) return;
+    const pvM = line.match(/ pv (.+)$/);
+    if (!pvM) return; // 只採有 pv 的搜尋行（最終最深的會留下）
+    const cpM = line.match(/score cp (-?\d+)/);
+    const mateM = line.match(/score mate (-?\d+)/);
+    if (cpM) { cp = parseInt(cpM[1], 10); mate = null; }
+    else if (mateM) { mate = parseInt(mateM[1], 10); }
+    pv = pvM[1].trim().split(/\s+/);
+  };
+  send('go movetime ' + movetimeMs);
+  const bmLine = await waitFor((l) => l.startsWith('bestmove'), movetimeMs + 15000);
+  _tap = null;
+  const bm = bmLine.split(/\s+/)[1];
+  return { cp, mate, pv, bestmove: (bm && bm !== '(none)') ? bm : null };
+}
+
 /** terminate 引擎並清狀態，讓下次 ensureReady 重建乾淨引擎（出錯後用）。 */
 export function reset() {
   try { _engine?.postMessage?.('quit'); } catch { /* 忽略 */ }
   _engine = null;
   _readyPromise = null;
   _waiters.clear();
+  _tap = null;
 }
 
 export function isReady() { return !!_engine; }
