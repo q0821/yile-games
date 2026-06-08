@@ -28,7 +28,10 @@
   --shadow:     0 8px 36px rgba(60,46,24,0.22);
   --shadow-sm:  0 2px 10px rgba(60,46,24,0.16);
   --transition: 0.2s ease;
-  --font-serif: 'Noto Serif TC', 'Songti TC', 'Source Han Serif TC', 'STSong', serif;
+  /* 系統內建宋體優先序：先用本機有的 Noto/思源（若裝了），再依平台 fallback：
+     macOS/iOS=Songti、Windows=新細明體(PMingLiU)/SimSun、最後 generic serif。
+     不再依賴 Google Fonts，以便全瀏覽器啟用 COEP require-corp。 */
+  --font-serif: 'Noto Serif TC', 'Noto Serif CJK TC', 'Source Han Serif TC', 'Songti TC', 'Songti SC', 'STSong', 'PMingLiU', 'MingLiU', 'SimSun', serif;
   /* 亮色水墨背景圖（gpt-image 生成）。絕對路徑：bundled CSS 會被搬到 /assets/，
      用相對 'img/...' 會解析成 /assets/img/... 而 404（圖片實際在 /img/）。 */
   --bg-app-image: url('/img/bg-light.webp');
@@ -1182,7 +1185,7 @@ h1.brush-title {
   overflow: visible;
   white-space: nowrap;
   background: none;
-  font-family: 'Noto Serif TC', serif;
+  font-family: var(--font-serif);
   font-weight: 900;
   font-size: clamp(44px, 12vw, 84px);
   line-height: 1.15;

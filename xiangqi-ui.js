@@ -4,6 +4,9 @@
 // view = { grid, selected, legalTargets, lastMove }；座標 row 0=上、col 0=左（與 xiangqi-game 一致）。
 import { COLUMNS, ROWS } from './xiangqi-game.js';
 
+// 與 style.css --font-serif 同步（canvas 無法吃 CSS 變數，故重複一份系統宋體 stack）
+const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
+
 const BG = '#e9c987';
 const LINE = '#5b4423';
 const SEL = '#c0392b';
@@ -66,7 +69,7 @@ export function drawXiangqi(deps, view) {
 
   // 河界字
   ctx.fillStyle = 'rgba(91,68,35,0.55)';
-  ctx.font = `${Math.round(cell * 0.5)}px "Noto Serif TC", serif`;
+  ctx.font = `${Math.round(cell * 0.5)}px ${SERIF}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const riverY = (iy(deps, 4) + iy(deps, 5)) / 2;
@@ -100,7 +103,7 @@ export function drawXiangqi(deps, view) {
       ctx.strokeStyle = piece.red ? '#b03a2e' : '#2c2417';
       ctx.stroke();
       ctx.fillStyle = piece.red ? '#b03a2e' : '#2c2417';
-      ctx.font = `700 ${Math.round(cell * 0.5)}px "Noto Serif TC", serif`;
+      ctx.font = `700 ${Math.round(cell * 0.5)}px ${SERIF}`;
       ctx.fillText(piece.char, x, y + 1);
     }
   }

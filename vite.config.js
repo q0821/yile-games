@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite';
 
 // 象棋引擎（fairy-stockfish-nnue.wasm）是 pthread 多執行緒 build，需頁面 cross-origin
-// isolated 才能用 SharedArrayBuffer。COEP 用 credentialless（非 require-corp）以免擋掉
-// 主站的 Google Fonts 等無 CORP 標頭的跨來源資源。dev 與 preview 都套用。
+// isolated 才能用 SharedArrayBuffer。已移除所有跨來源子資源（改用系統內建宋體），
+// 故 COEP 用 require-corp（全瀏覽器支援，含 iOS Safari）。dev 與 preview 都套用。
+// 正式部署（Cloudflare）需設相同回應標頭，見 DEPLOY-XIANGQI.md。
 const crossOriginIsolationHeaders = {
   'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Embedder-Policy': 'credentialless',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
 };
 
 export default defineConfig({
