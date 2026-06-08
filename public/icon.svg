@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f0dcab"/>
+      <stop offset="1" stop-color="#e0c184"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="url(#bg)"/>
+  <!-- 淡棋盤格線 -->
+  <g stroke="#5b4423" stroke-opacity="0.15" stroke-width="4">
+    <path d="M150 96 V416 M256 96 V416 M362 96 V416 M96 150 H416 M96 256 H416 M96 362 H416"/>
+  </g>
+  <!-- 宋體「弈」（弈樂品牌；無對應字型時退回系統 serif 仍可顯示） -->
+  <text x="256" y="300" font-family="Songti TC, STSong, Noto Serif TC, serif" font-weight="900"
+        font-size="340" fill="#2c2417" text-anchor="middle" dominant-baseline="middle">弈</text>
+</svg>
