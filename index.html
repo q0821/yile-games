@@ -487,6 +487,99 @@
   </div>
 </div>
 
+<!-- Shogi (日本將棋) screen -->
+<div class="gomoku-screen" id="shogiScreen" style="display:none">
+  <div class="mode-header">
+    <button class="mode-back" id="shogiHome">回首頁</button>
+    <h2 class="mode-title">日本將棋</h2>
+  </div>
+  <div class="gomoku-settings">
+    <div class="control-group">
+      <label for="shogiMode">對弈模式</label>
+      <select id="shogiMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="shogiColor">玩家執子</label>
+      <select id="shogiColor">
+        <option value="sente">執先手（下方）</option>
+        <option value="gote">執後手（上方）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="shogiLevel">電腦難度</label>
+      <select id="shogiLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+  </div>
+  <div class="shogi-hand" id="shogiHandGote" aria-label="後手持駒"></div>
+  <div class="board-wrap">
+    <canvas id="shogiBoard" role="img" aria-label="將棋棋盤"></canvas>
+    <div class="xiangqi-check" id="shogiCheck" aria-hidden="true">王 手</div>
+    <div class="shogi-promo" id="shogiPromo" style="display:none" role="dialog" aria-label="升變選擇">
+      <div class="shogi-promo-card">
+        <div class="shogi-promo-title">要升變嗎？</div>
+        <div class="shogi-promo-btns">
+          <button class="board-end-btn" id="shogiPromoYes">成る（升變）</button>
+          <button class="board-end-btn ghost" id="shogiPromoNo">不成</button>
+        </div>
+      </div>
+    </div>
+    <div class="board-end" id="shogiEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="shogiEndTitle">先手勝</div>
+        <div class="board-end-sub" id="shogiEndSub"></div>
+        <button class="board-end-btn" id="shogiEndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
+  <div class="shogi-hand" id="shogiHandSente" aria-label="先手持駒"></div>
+  <div class="xiangqi-statusrow">
+    <span class="gomoku-status" id="shogiStatus" role="status" aria-live="polite"></span>
+    <span class="xiangqi-spinner" id="shogiThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
+  </div>
+  <div class="gomoku-controls">
+    <button id="shogiRestart">重新開始</button>
+    <button id="shogiUndo">悔棋</button>
+    <button id="shogiRulesBtn">規則說明</button>
+  </div>
+</div>
+
+<!-- Shogi rules modal -->
+<div class="modal-overlay" id="shogiRulesModal">
+  <div class="modal changelog-modal">
+    <h2>將棋規則速覽</h2>
+    <div class="changelog-body shogi-rules">
+      <p>將棋為日本象棋，9×9 格盤，駒置於格內。雙方共用駒色，以<strong>朝向</strong>區分：對方的駒上下顛倒（朝向你）。目標是<strong>將死</strong>對方的王。</p>
+      <h3>駒與走法</h3>
+      <dl>
+        <dt>王／玉（K）</dt><dd>向八方各走一格。</dd>
+        <dt>飛（R）</dt><dd>直橫任意格（同象棋的車）。</dd>
+        <dt>角（B）</dt><dd>斜向任意格。</dd>
+        <dt>金（G）</dt><dd>前、後、左、右、左前、右前共六方各一格。</dd>
+        <dt>銀（S）</dt><dd>前、左前、右前、左後、右後共五方各一格。</dd>
+        <dt>桂（N）</dt><dd>只能向前躍兩格再左右一格（似西洋棋的馬，且僅向前）。</dd>
+        <dt>香（L）</dt><dd>向正前方任意格。</dd>
+        <dt>步（歩，P）</dt><dd>向正前方一格。</dd>
+      </dl>
+      <h3>升變（成る）</h3>
+      <p>駒走入、走出或行經<strong>對方陣地（最靠對方的三排）</strong>時，可選擇翻面升變（漢字轉紅）。
+        飛→龍、角→馬，銀／桂／香／步升變後皆如金將般行走。步、桂、香走到無法再走的底排時<strong>強制升變</strong>。</p>
+      <h3>打入（持駒）</h3>
+      <p>吃掉對方的駒後，該駒翻為己方並收入<strong>持駒</strong>。之後可花一手把持駒「打」回盤上任一空格（打入時不可直接升變）。
+        限制（如同一直行不可有兩枚未升變步、打步不可直接將死）由引擎自動處理。</p>
+      <h3>操作</h3>
+      <p>點盤上己方駒會顯示合法目的；點持駒列的駒可選取後打入（高亮落點）。走入敵陣可升變時會跳「成る／不成」選擇。</p>
+    </div>
+    <button class="primary" data-close-rules>關閉</button>
+  </div>
+</div>
+
 <!-- Result Modal -->
 <div class="modal-overlay" id="resultModal">
   <div class="modal">
@@ -540,9 +633,9 @@
       <p>底層引擎與神經網路權重來自 <a href="https://github.com/lightvector/KataGo" target="_blank" rel="noopener noreferrer">KataGo</a>（lightvector/KataGo，程式 MIT 授權）；網路權重由 KataGo 專案免費釋出供公眾使用。<br>
         <a href="licenses/katago-NOTICE.txt" target="_blank" rel="noopener noreferrer">署名說明</a></p>
 
-      <h3>象棋 AI 引擎（Fairy-Stockfish）</h3>
-      <p>瀏覽器內的象棋 AI 為 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">Fairy-Stockfish</a> 的 WebAssembly 版（<a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener noreferrer">fairy-stockfish.wasm</a>），<strong>GPL-3.0</strong> 授權，作者 Fabian Fichter。<br>
-        棋規與合法手由同專案的 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">ffish</a>（ffish-es6）提供，亦為 GPL-3.0。<br>
+      <h3>象棋／將棋 AI 引擎（Fairy-Stockfish）</h3>
+      <p>瀏覽器內的象棋與日本將棋 AI 同為 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">Fairy-Stockfish</a> 的 WebAssembly 版（<a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener noreferrer">fairy-stockfish.wasm</a>），<strong>GPL-3.0</strong> 授權，作者 Fabian Fichter。<br>
+        兩種棋的棋規與合法手皆由同專案的 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">ffish</a>（ffish-es6）提供，亦為 GPL-3.0。<br>
         依 GPL-3.0，本站原始碼已公開（見上方「本站」連結）；引擎原始碼見其 GitHub 專案。</p>
 
       <h3>五子棋 AI</h3>

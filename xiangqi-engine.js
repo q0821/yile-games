@@ -1,9 +1,13 @@
-// xiangqi-engine.js — 象棋 AI 服務（封裝 Fairy-Stockfish WASM，UCI 協定）。
+// xiangqi-engine.js — Fairy-Stockfish AI 服務（封裝 WASM，UCI 協定）。
 //
-// 比照 katago-service：lazy-load（進象棋模式才載）、ensureReady 只初始化一次、
+// 比照 katago-service：lazy-load（進對弈模式才載）、ensureReady 只初始化一次、
 // 出錯可 reset 重建。難度用 UCI_Elo（引擎自我降棋力），比限時的難度曲線平滑。
 // ⚠️ 多執行緒 build 需頁面 cross-origin isolated（COOP/COEP，見 vite.config.js）。
 // 引擎與 ffish 共用 UCI 著法字串，毋須座標轉換。
+//
+// 多變體：Fairy-Stockfish 同一份 WASM 支援多種棋（xiangqi、shogi…）。bestMove/analyze
+// 接 `variant` 參數，每次求手前 `setoption UCI_Variant` + `ucinewgame` 隔離，預設 xiangqi
+// 保持象棋相容（將棋傳 'shogi'，見 shogi-engine.js）。單例引擎共用，因每手都重設變體故無污染。
 
 const ENGINE_DIR = '/engine/xiangqi/';
 
@@ -61,8 +65,7 @@ export function ensureReady(onStatus) {
     _engine.addMessageListener(onLine);
     send('uci');
     await waitFor((l) => l === 'uciok');
-    send('setoption name UCI_Variant value xiangqi');
-    send('isready');
+    send('isready');                    // 變體於每次 bestMove/analyze 才設（支援多變體共用引擎）
     await waitFor((l) => l === 'readyok');
     return true;
   })().catch((e) => { _readyPromise = null; throw e; });
@@ -72,14 +75,16 @@ export function ensureReady(onStatus) {
 /**
  * 求一手。
  * @param {object} o
- * @param {string} o.fen     目前局面（象棋 FEN，由 ffish 提供）
+ * @param {string} o.fen     目前局面（FEN，由 ffish 提供）
  * @param {number} o.level   1=簡單 2=普通 3=困難（對應 UCI_Elo）
  * @param {number} o.movetimeMs 思考時間上限
+ * @param {string} o.variant 棋類變體（預設 xiangqi；將棋傳 shogi）
  * @returns {Promise<string|null>} UCI 著法（如 'h2e2'），無手可走回 null
  */
-export async function bestMove({ fen, level = 2, movetimeMs = 800 }) {
+export async function bestMove({ fen, level = 2, movetimeMs = 800, variant = 'xiangqi' }) {
   await ensureReady();
   const elo = ELO_BY_LEVEL[level] ?? 1500;
+  send('setoption name UCI_Variant value ' + variant);
   send('setoption name UCI_LimitStrength value true');
   send('setoption name UCI_Elo value ' + elo);
   send('ucinewgame');
@@ -97,8 +102,9 @@ export async function bestMove({ fen, level = 2, movetimeMs = 800 }) {
  * @returns {Promise<{cp:number|null, mate:number|null, pv:string[]|null, bestmove:string|null}>}
  *   cp/mate 為「輪到下的一方」視角（正=該方有利）。pv 為最佳變化（UCI 著法陣列）。
  */
-export async function analyze({ fen, movetimeMs = 600 }) {
+export async function analyze({ fen, movetimeMs = 600, variant = 'xiangqi' }) {
   await ensureReady();
+  send('setoption name UCI_Variant value ' + variant);
   send('setoption name UCI_LimitStrength value false'); // 分析用全力（對弈 bestMove 會再設回 true）
   send('ucinewgame');
   send('position fen ' + fen);

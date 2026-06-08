@@ -1449,3 +1449,103 @@ h1.brush-title {
 .xq-cls.inaccuracy { color: #b5851f; }
 .xq-cls.mistake { color: #c0392b; }
 .xq-cls.blunder { color: #a01b1b; }
+
+/* ===== 將棋：持駒區 / 升變選擇 / 規則 ===== */
+.shogi-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 460px;
+  min-height: 40px;
+  padding: 5px 8px;
+  margin: 4px 0;
+  border-radius: 10px;
+  background: var(--bg-panel, rgba(120, 90, 45, 0.08));
+  border: 1px solid var(--border, #cabd9f);
+}
+.shogi-hand-piece {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 38px;
+  padding: 0;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 19px;
+  color: #5b4222;
+  background: #f2dca8;
+  border: 1px solid #8a6a34;
+  border-radius: 4px 4px 6px 6px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.shogi-hand-piece.gote { transform: rotate(180deg); }
+.shogi-hand-piece:hover:not(:disabled) { box-shadow: 0 2px 8px rgba(60, 40, 15, 0.3); }
+.shogi-hand-piece.sel {
+  background: #f7e9c5;
+  border-color: #c0392b;
+  box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.5);
+}
+.shogi-hand-piece:disabled { cursor: default; opacity: 0.92; }
+.shogi-hand-count {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  font-family: var(--font-sans, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  color: #fff;
+  background: #8a6a34;
+  border-radius: 8px;
+}
+.shogi-hand-piece.gote .shogi-hand-count { transform: rotate(180deg); }
+.shogi-hand-empty { font-size: 13px; color: var(--text-muted, #9a8a6a); }
+
+/* 升變 成る/不成 選擇 */
+.shogi-promo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 30, 18, 0.45);
+  border-radius: 10px;
+  z-index: 6;
+}
+.shogi-promo-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border, #cabd9f);
+  border-radius: 16px;
+  padding: 22px 26px;
+  text-align: center;
+  box-shadow: 0 14px 40px rgba(40, 28, 12, 0.4);
+}
+.shogi-promo-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--text, #2c2417);
+  margin-bottom: 14px;
+}
+.shogi-promo-btns { display: flex; gap: 10px; }
+.shogi-promo-btns .board-end-btn { margin-top: 0; font-size: 15px; padding: 10px 18px; }
+
+/* 規則 modal 內的駒走法清單 */
+.shogi-rules dl {
+  margin: 6px 0 4px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+}
+.shogi-rules dt { font-weight: 700; color: var(--text); white-space: nowrap; }
+.shogi-rules dd { margin: 0; color: var(--text-dim); }
