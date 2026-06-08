@@ -8,7 +8,7 @@
 //   web-katrain BoardState 為 board[row][col]（'black'|'white'|null），Move{ x=col, y=row }。
 //   兩邊內部都是 [row][col]，但 Move 的 x/y 對調：web.x = our.y(col)、web.y = our.x(row)。
 import { BLACK, WHITE, EMPTY } from './rules.js';
-import { getKataGoEngineClient } from './katago-engine/engine/katago/client.ts';
+import { getKataGoEngineClient, resetKataGoEngineClientForTests } from './katago-engine/engine/katago/client.ts';
 import { publicUrl } from './katago-engine/utils/publicUrl.ts';
 
 const MODEL_URL = publicUrl('models/katago-small.bin.gz');
@@ -36,6 +36,21 @@ export function ensureReady(onStatus) {
     throw err;
   });
   return _readyPromise;
+}
+
+/**
+ * 重置引擎：terminate 壞掉的 worker、清掉 client singleton 與本地快取狀態，
+ * 讓下一次 ensureReady() 重新建立 worker 並重新 init。
+ *
+ * 用途：AI 推論偶發失敗（如 WebGPU device lost / worker 推論錯誤）後，引擎可能
+ * 已壞但 _readyPromise / _backend 仍是舊值，後續呼叫會跳過 init 一直用壞引擎。
+ * 出錯後呼叫本函式即可讓「重試」或「開始新遊戲」真正重建乾淨引擎，不必整頁 reload。
+ */
+export function reset() {
+  try { resetKataGoEngineClientForTests(); } catch { /* dispose 失敗無妨，仍清本地狀態 */ }
+  _client = null;
+  _readyPromise = null;
+  _backend = null;
 }
 
 export function isReady() {
@@ -201,7 +216,7 @@ export async function analyzeLocal(state, region, { visits = 24, maxTimeMs = 600
   return { move, winrate, ownership };
 }
 
-export const KataGoService = { ensureReady, isReady, getBackend, genmove, genmoveCandidates, suggest, evaluate, analyzeLocal, scoreGame };
+export const KataGoService = { ensureReady, reset, isReady, getBackend, genmove, genmoveCandidates, suggest, evaluate, analyzeLocal, scoreGame };
 
 /**
  * 終局數目：用 KataGo 的 ownership（每點 +1 黑佔 / -1 白佔，黑視角，index = row*size+col）

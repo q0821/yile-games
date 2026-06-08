@@ -34,6 +34,11 @@ export function registerEventHandlers(app) {
       return;
     }
 
+    // pvc 模式只在輪到你時才允許手動落子。原本僅靠 isAIThinking 旗標擋，旗標若因
+    // AI 出錯被清掉、但仍停在 AI 回合時就會破防 → 玩家點擊會幫 AI 下子弄亂棋局。
+    // 改以「是否輪到玩家」為準（AI 透過 app.placeStone 落子不經此處，不受影響）。
+    if (app.gameMode === 'pvc' && app.currentPlayer !== app.playerColor) return;
+
     app.placeStone(x, y);
   }
 
