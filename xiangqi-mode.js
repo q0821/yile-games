@@ -18,7 +18,9 @@ let deps = null;
 let selected = null;       // 選取的 square
 let legalTargets = null;   // 目的 square 陣列
 let lastMove = null;       // [from, to]
-let aiBusy = false;
+let checkRC = null;        // 被將將帥的 {row,col}（將軍高亮）
+let aiBusy = false;        // AI 思考中
+let moving = false;        // 棋子移動動畫中（鎖操作避免競態）
 let gameOver = false;
 let boardReady = false;
 
@@ -34,6 +36,8 @@ function cacheDom() {
     screen: $('xiangqiScreen'), canvas: $('xiangqiBoard'), status: $('xiangqiStatus'),
     restart: $('xiangqiRestart'), home: $('xiangqiHome'),
     mode: $('xiangqiMode'), color: $('xiangqiColor'), level: $('xiangqiLevel'),
+    thinking: $('xiangqiThinking'), checkBanner: $('xiangqiCheck'),
+    endOverlay: $('xiangqiEnd'), endTitle: $('xiangqiEndTitle'), endBtn: $('xiangqiEndBtn'),
   };
 }
 
@@ -59,17 +63,62 @@ function isPlayerTurn() { return mode === 'pvp' || Game.turn() === playerRed; }
 function view() {
   return {
     grid: Game.piecesGrid(),
-    selected, legalTargets, lastMove,
+    selected, legalTargets, lastMove, checkRC,
     rc: (sq) => Game.squareToRC(sq),
   };
 }
 
+/** 重算尺寸 + 重畫（一般用）。
+ *  寬度量測來源用 screen 容器（非 canvas 的 inline-block wrap，否則會回饋縮小）。 */
 function render() {
   if (!boardReady) return;
-  const w = Math.min((dom.canvas.parentElement?.clientWidth || window.innerWidth) - 8, window.innerWidth - 32);
+  const avail = (dom.screen?.clientWidth || window.innerWidth) - 24;
+  const w = Math.min(avail, window.innerWidth - 32, 480);
   resizeXiangqiCanvas(deps, w);
   drawXiangqi(deps, view());
 }
+
+/** 只重畫（不重算尺寸），可帶覆寫（動畫用，避免每幀 resize 抖動）。 */
+function draw(extra) {
+  if (!boardReady) return;
+  drawXiangqi(deps, { ...view(), ...(extra || {}) });
+}
+
+function pixelOf(sq) {
+  const { row, col } = Game.squareToRC(sq);
+  return { x: deps.padding + col * deps.cellSize, y: deps.padding + row * deps.cellSize };
+}
+
+function updateCheck() {
+  if (!gameOver && Game.isCheck()) {
+    const sq = Game.checkedSquares()[0];
+    checkRC = sq ? Game.squareToRC(sq) : null;
+  } else {
+    checkRC = null;
+  }
+}
+
+function showThinking(b) { if (dom.thinking) dom.thinking.style.display = b ? 'inline-flex' : 'none'; }
+
+function flashCheck() {
+  if (!dom.checkBanner) return;
+  dom.checkBanner.classList.remove('show');
+  void dom.checkBanner.offsetWidth; // reflow 重啟動畫
+  dom.checkBanner.classList.add('show');
+}
+
+function showEnd() {
+  if (!dom.endOverlay) return;
+  const r = Game.result();
+  let title = r === '1-0' ? '紅方勝' : r === '0-1' ? '黑方勝' : '和局';
+  if (mode === 'pvc' && r !== '1/2-1/2') {
+    const youWon = (r === '1-0') === playerRed;
+    title += youWon ? '・你贏了！' : '・電腦獲勝';
+  }
+  if (dom.endTitle) dom.endTitle.textContent = title;
+  dom.endOverlay.style.display = 'flex';
+}
+function hideEnd() { if (dom.endOverlay) dom.endOverlay.style.display = 'none'; }
 
 function setStatus(msg) {
   if (!dom.status) return;
@@ -87,23 +136,58 @@ function setStatus(msg) {
 
 function clearSelection() { selected = null; legalTargets = null; }
 
-function doMove(uci) {
-  if (!Game.move(uci)) return false;
-  lastMove = [uci.slice(0, 2), uci.slice(2, 4)];
+const MOVE_ANIM_MS = 280;
+
+/** 以「目前（落子前）局面 + 隱藏起點格 + 浮動棋子」插值滑動。 */
+function animateMove(uci) {
+  return new Promise((resolve) => {
+    const fromSq = uci.slice(0, 2);
+    const fromRC = Game.squareToRC(fromSq);
+    const grid = Game.piecesGrid();
+    const piece = grid[fromRC.row] && grid[fromRC.row][fromRC.col];
+    if (!piece) { resolve(); return; }
+    const p0 = pixelOf(fromSq), p1 = pixelOf(uci.slice(2, 4));
+    let start = null;
+    const step = (ts) => {
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / MOVE_ANIM_MS);
+      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+      drawXiangqi(deps, {
+        grid, selected: null, legalTargets: null, lastMove: null, checkRC: null,
+        rc: (sq) => Game.squareToRC(sq),
+        anim: { hideRow: fromRC.row, hideCol: fromRC.col, piece, x: p0.x + (p1.x - p0.x) * e, y: p0.y + (p1.y - p0.y) * e },
+      });
+      if (t < 1) requestAnimationFrame(step); else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+async function doMove(uci) {
+  moving = true;
   clearSelection();
+  draw();                 // 先清掉選取/合法點視覺再滑動
+  await animateMove(uci);
+  const ok = Game.move(uci);
+  moving = false;
+  if (!ok) { render(); return false; }
+  lastMove = [uci.slice(0, 2), uci.slice(2, 4)];
   gameOver = Game.isGameOver();
+  updateCheck();
   setStatus();
   render();
+  if (gameOver) showEnd();
+  else if (Game.isCheck()) flashCheck();
   return true;
 }
 
-function onPoint(row, col) {
-  if (gameOver || aiBusy || !boardReady) return;
+async function onPoint(row, col) {
+  if (gameOver || aiBusy || moving || !boardReady) return;
   if (mode === 'pvc' && !isPlayerTurn()) return;
   const sq = Game.rcToSquare(row, col);
   // 已選子 → 點到合法目的就走
   if (selected && legalTargets && legalTargets.includes(sq)) {
-    doMove(selected + sq);
+    await doMove(selected + sq);
     maybeAiMove();
     return;
   }
@@ -117,30 +201,42 @@ function onPoint(row, col) {
 function maybeAiMove() {
   if (mode !== 'pvc' || gameOver || isPlayerTurn()) return;
   aiBusy = true;
+  showThinking(true);
   setStatus('電腦思考中…');
-  setTimeout(async () => {
+  // 思考總時間 1.1–2.5 秒：引擎實算不足的差額補等待，讓 AI 有「在想」的感覺。
+  const minDelay = 1100 + Math.floor(Math.random() * 1400);
+  const t0 = performance.now();
+  (async () => {
     try {
-      if (!isActive() || gameOver) { aiBusy = false; return; }
       const mv = await Engine.bestMove({ fen: Game.fen(), level });
+      const rest = minDelay - (performance.now() - t0);
+      if (rest > 0) await new Promise((r) => setTimeout(r, rest));
+      showThinking(false);
       aiBusy = false;
-      if (mv) doMove(mv);
-      else { gameOver = true; setStatus(); }
+      if (!isActive() || gameOver) return;
+      if (mv) await doMove(mv);
+      else { gameOver = true; setStatus(); showEnd(); }
     } catch (err) {
+      showThinking(false);
       aiBusy = false;
       setStatus('AI 出錯：' + (err?.message || err) + '（請重新開始）');
       Engine.reset();
     }
-  }, 180);
+  })();
 }
 
 async function newGame() {
+  hideEnd();
+  showThinking(false);
   setStatus('載入棋盤中…');
   await Game.ensureReady();
   await Game.newGame();
   boardReady = true;
   clearSelection();
   lastMove = null;
+  checkRC = null;
   aiBusy = false;
+  moving = false;
   gameOver = false;
   setStatus();
   render();
@@ -185,6 +281,7 @@ function wireEvents() {
   }, { passive: false });
 
   dom.restart?.addEventListener('click', () => newGame());
+  dom.endBtn?.addEventListener('click', () => newGame());
   dom.home?.addEventListener('click', () => { location.hash = '#home'; });
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
   dom.color?.addEventListener('change', () => { playerRed = dom.color.value !== 'black'; saveSettings(); newGame(); });

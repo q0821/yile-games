@@ -352,8 +352,20 @@
       </select>
     </div>
   </div>
-  <canvas id="xiangqiBoard" role="img" aria-label="象棋棋盤"></canvas>
-  <div class="gomoku-status" id="xiangqiStatus" role="status" aria-live="polite"></div>
+  <div class="xiangqi-board-wrap">
+    <canvas id="xiangqiBoard" role="img" aria-label="象棋棋盤"></canvas>
+    <div class="xiangqi-check" id="xiangqiCheck" aria-hidden="true">將 軍</div>
+    <div class="xiangqi-end" id="xiangqiEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="xiangqi-end-card">
+        <div class="xiangqi-end-title" id="xiangqiEndTitle">紅方勝</div>
+        <button class="xiangqi-end-btn" id="xiangqiEndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
+  <div class="xiangqi-statusrow">
+    <span class="gomoku-status" id="xiangqiStatus" role="status" aria-live="polite"></span>
+    <span class="xiangqi-spinner" id="xiangqiThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
+  </div>
   <div class="gomoku-controls">
     <button id="xiangqiRestart">重新開始</button>
   </div>

@@ -65,6 +65,8 @@ export function isGameOver() { return _board.isGameOver(); }
 /** ffish result：'1-0' 紅勝、'0-1' 黑勝、'1/2-1/2' 和、'*' 進行中。 */
 export function result() { return _board.result(); }
 export function isCheck() { return _board.isCheck(); }
+/** 被將的棋子（將/帥）square 陣列，供將軍高亮。 */
+export function checkedSquares() { return _board.checkedPieces().split(/\s+/).filter(Boolean); }
 
 /**
  * 解析目前 FEN → grid[row][col]，每格為 { char, red } 或 null。
