@@ -323,6 +323,43 @@
   </div>
 </div>
 
+<!-- Xiangqi (Chinese chess) screen -->
+<div class="gomoku-screen" id="xiangqiScreen" style="display:none">
+  <div class="mode-header">
+    <button class="mode-back" id="xiangqiHome">回首頁</button>
+    <h2 class="mode-title">象棋對弈</h2>
+  </div>
+  <div class="gomoku-settings">
+    <div class="control-group">
+      <label for="xiangqiMode">對弈模式</label>
+      <select id="xiangqiMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="xiangqiColor">玩家執子</label>
+      <select id="xiangqiColor">
+        <option value="red">執紅（先手）</option>
+        <option value="black">執黑（後手）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="xiangqiLevel">電腦難度</label>
+      <select id="xiangqiLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+  </div>
+  <canvas id="xiangqiBoard" role="img" aria-label="象棋棋盤"></canvas>
+  <div class="gomoku-status" id="xiangqiStatus" role="status" aria-live="polite"></div>
+  <div class="gomoku-controls">
+    <button id="xiangqiRestart">重新開始</button>
+  </div>
+</div>
+
 <!-- Result Modal -->
 <div class="modal-overlay" id="resultModal">
   <div class="modal">

@@ -13,6 +13,7 @@ import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
 import { enterGomokuMode } from './gomoku-mode.js';
+import { enterXiangqiMode } from './xiangqi-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
@@ -1117,6 +1118,7 @@ const HOME_ITEMS = [
   { id: 'play',    title: '圍棋對弈', desc: '與電腦對弈或雙人對局',     hash: '#play' },
   { id: 'tsumego', title: '死活練習', desc: '題庫做活／殺棋，提升棋力', hash: '#tsumego' },
   { id: 'gomoku',  title: '五子棋',   desc: '五子連線，先連成一線者勝', hash: '#gomoku' },
+  { id: 'xiangqi', title: '象棋對弈', desc: '中國象棋，與電腦或雙人對局', hash: '#xiangqi' },
 ];
 
 let playInited = false;
@@ -1175,6 +1177,7 @@ function showScreen(name) {
   document.querySelector('.game-container').style.display = name === 'play' ? '' : 'none';
   document.getElementById('tsumegoScreen').style.display = name === 'tsumego' ? 'flex' : 'none';
   document.getElementById('gomokuScreen').style.display = name === 'gomoku' ? 'flex' : 'none';
+  document.getElementById('xiangqiScreen').style.display = name === 'xiangqi' ? 'flex' : 'none';
   const playHeader = document.getElementById('playHeader');
   if (playHeader) playHeader.style.display = name === 'play' ? 'flex' : 'none';
   const menuBtn = document.getElementById('mobileMenuBtn');
@@ -1201,6 +1204,10 @@ function applyRoute(animateTitle) {
     showScreen('gomoku');
     if (title) title.style.visibility = 'visible';
     enterGomokuMode();
+  } else if (hash === '#xiangqi') {
+    showScreen('xiangqi');
+    if (title) title.style.visibility = 'visible';
+    enterXiangqiMode();
   } else if (hash === '#play') {
     showScreen('play');
     if (title) title.style.visibility = 'visible';
