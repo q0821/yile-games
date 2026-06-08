@@ -193,8 +193,45 @@ export function drawXiangqi(deps, view) {
     }
   }
 
+  // 最佳變化預想（PV）：箭頭 + 序號（覆盤分析後）
+  if (view.pv && view.pv.length) {
+    view.pv.forEach((mv, i) => {
+      const a = view.rc(mv.from), b = view.rc(mv.to);
+      const op = i === 0 ? 0.92 : i === 1 ? 0.62 : 0.4;
+      drawArrow(ctx, ix(deps, a.col), iy(deps, a.row), ix(deps, b.col), iy(deps, b.row), `rgba(30,111,192,${op})`, Math.max(2.5, cell * 0.11), radius * 0.62);
+      // 序號徽章於終點
+      const bx = ix(deps, b.col), by = iy(deps, b.row);
+      ctx.beginPath();
+      ctx.arc(bx + radius * 0.5, by - radius * 0.5, radius * 0.32, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(30,111,192,${op})`;
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = `700 ${Math.round(radius * 0.42)}px ${SERIF}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), bx + radius * 0.5, by - radius * 0.5 + 1);
+    });
+  }
+
   // 浮動（移動中）棋子畫最上層，帶 lifted 陰影
   if (view.anim && view.anim.piece) {
     drawPiece(ctx, view.anim.x, view.anim.y, radius, view.anim.piece, true);
   }
+}
+
+/** 由 (x1,y1) 指向 (x2,y2) 的箭頭；shrink 為兩端內縮（避免蓋住棋子中心）。 */
+function drawArrow(ctx, x1, y1, x2, y2, color, width, shrink) {
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const sx = x1 + Math.cos(ang) * shrink, sy = y1 + Math.sin(ang) * shrink;
+  const ex = x2 - Math.cos(ang) * shrink, ey = y2 - Math.sin(ang) * shrink;
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = width; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+  const head = width * 2.6;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 6), ey - head * Math.sin(ang - Math.PI / 6));
+  ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 6), ey - head * Math.sin(ang + Math.PI / 6));
+  ctx.closePath(); ctx.fill();
+  ctx.lineCap = 'butt';
 }

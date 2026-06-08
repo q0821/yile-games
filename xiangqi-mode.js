@@ -168,6 +168,7 @@ function reviewGoTo(ply) {
   if (dom.rvSlider) dom.rvSlider.value = String(reviewPly);
   renderReview();
   updateReviewInfo();
+  if (reviewNodes) drawEvalGraph();
 }
 
 function renderReview() {
@@ -175,11 +176,49 @@ function renderReview() {
   resizeXiangqiCanvas(deps, w);
   const grid = Game.gridFromFen(reviewFens[reviewPly]);
   const last = reviewPly > 0 ? Game.splitMove(reviewMoves[reviewPly - 1]) : null;
+  // 最佳變化預想：分析後，取目前局面的 PV 前 3 手畫成箭頭
+  let pv = null;
+  const node = reviewNodes && reviewNodes[reviewPly];
+  if (node && node.pv && node.pv.length) {
+    pv = node.pv.slice(0, 3).map((uci) => { const m = Game.splitMove(uci); return { from: m.from, to: m.to }; });
+  }
   drawXiangqi(deps, {
     grid, selected: null, legalTargets: null, checkRC: null,
     lastMove: last ? [last.from, last.to] : null,
+    pv,
     rc: (sq) => Game.squareToRC(sq),
   });
+}
+
+/** 優勢曲線：每手紅方視角評估分，紅優正、黑優負；標目前手。 */
+function drawEvalGraph() {
+  const cv = dom.evalGraph;
+  if (!cv || !reviewNodes) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, pad = 5, mid = H / 2, CLAMP = 800;
+  const N = reviewMoves.length;
+  const xOf = (k) => pad + (N ? k / N : 0) * (W - 2 * pad);
+  const yOf = (cp) => mid - (Math.max(-CLAMP, Math.min(CLAMP, cp)) / CLAMP) * (H / 2 - pad);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(192,57,43,0.10)'; ctx.fillRect(0, 0, W, mid);       // 上半=紅優
+  ctx.fillStyle = 'rgba(44,36,23,0.12)'; ctx.fillRect(0, mid, W, H - mid);  // 下半=黑優
+  ctx.strokeStyle = 'rgba(91,68,35,0.45)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+  ctx.strokeStyle = '#7a5a18'; ctx.lineWidth = 1.8; ctx.beginPath();
+  reviewNodes.forEach((n, k) => { const x = xOf(k), y = yOf(n.redCp); k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.stroke();
+  const cx = xOf(reviewPly);
+  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath(); ctx.arc(cx, yOf(reviewNodes[reviewPly].redCp), 3.5, 0, Math.PI * 2); ctx.fill();
+}
+
+function onGraphClick(e) {
+  if (!reviewNodes) return;
+  const r = dom.evalGraph.getBoundingClientRect();
+  const frac = r.width > 0 ? (e.clientX - r.left) / r.width : 0;
+  reviewGoTo(Math.round(Math.max(0, Math.min(1, frac)) * reviewMoves.length));
 }
 
 /** 紅方視角評估分（centipawn）→ 友善文字。 */
@@ -241,6 +280,9 @@ async function analyzeReview() {
       movetimeMs: 400,
       onProgress: (k, n) => { if (dom.rvInfo) dom.rvInfo.textContent = `分析中… ${k}/${n}`; },
     });
+    if (dom.evalGraph) dom.evalGraph.style.display = 'block';
+    drawEvalGraph();
+    renderReview();   // 重繪以顯示 PV 箭頭
     updateReviewInfo();
   } catch (err) {
     if (dom.rvInfo) dom.rvInfo.textContent = 'AI 分析失敗：' + (err?.message || err);
@@ -452,6 +494,7 @@ function wireEvents() {
   dom.rvLast?.addEventListener('click', () => reviewGoTo(reviewMoves.length));
   dom.rvSlider?.addEventListener('input', () => reviewGoTo(Number(dom.rvSlider.value)));
   dom.rvAnalyze?.addEventListener('click', () => analyzeReview());
+  dom.evalGraph?.addEventListener('click', onGraphClick);
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
   dom.color?.addEventListener('change', () => { playerRed = dom.color.value !== 'black'; saveSettings(); newGame(); });
   dom.level?.addEventListener('change', () => { level = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
