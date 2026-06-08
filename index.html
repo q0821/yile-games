@@ -369,6 +369,7 @@
         <div class="board-end-title" id="xiangqiEndTitle">紅方勝</div>
         <div class="board-end-sub" id="xiangqiEndSub"></div>
         <button class="board-end-btn" id="xiangqiEndBtn">再來一局</button>
+        <button class="board-end-btn ghost" id="xiangqiReviewBtn">覆盤檢討</button>
       </div>
     </div>
   </div>
@@ -376,9 +377,25 @@
     <span class="gomoku-status" id="xiangqiStatus" role="status" aria-live="polite"></span>
     <span class="xiangqi-spinner" id="xiangqiThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
   </div>
-  <div class="gomoku-controls">
+  <div class="gomoku-controls" id="xiangqiControls">
     <button id="xiangqiRestart">重新開始</button>
     <button id="xiangqiUndo">悔棋</button>
+  </div>
+  <!-- 覆盤面板（覆盤模式才顯示） -->
+  <div class="xiangqi-review" id="xiangqiReview" style="display:none">
+    <canvas id="xiangqiEvalGraph" class="xiangqi-eval-graph" width="460" height="64" style="display:none" title="點擊跳到該手"></canvas>
+    <input type="range" id="xiangqiReviewSlider" class="review-slider" min="0" value="0" step="1" aria-label="覆盤進度">
+    <div class="xiangqi-review-controls">
+      <button id="xqRvFirst">最初</button>
+      <button id="xqRvPrev">上一手</button>
+      <button id="xqRvNext">下一手</button>
+      <button id="xqRvLast">最新</button>
+    </div>
+    <div class="xiangqi-review-info" id="xiangqiReviewInfo"></div>
+    <div class="xiangqi-review-actions">
+      <button id="xqRvAnalyze">分析本局（評估每手）</button>
+      <button id="xqRvExit">退出覆盤</button>
+    </div>
   </div>
 </div>
 

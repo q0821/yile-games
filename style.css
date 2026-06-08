@@ -1382,3 +1382,63 @@ h1.brush-title {
   margin-bottom: 6px;
 }
 #resultModal #modalDetail { color: var(--text-dim) !important; }
+
+/* ===== 象棋覆盤 ===== */
+.board-end-btn.ghost {
+  margin-top: 10px;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+.board-end-btn.ghost:hover { background: rgba(133, 98, 25, 0.08); filter: none; }
+
+.xiangqi-review {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+}
+.xiangqi-eval-graph {
+  width: 100%;
+  height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  cursor: pointer;
+}
+.xiangqi-review .review-slider { width: 100%; }
+.xiangqi-review-controls,
+.xiangqi-review-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.xiangqi-review-controls button,
+.xiangqi-review-actions button {
+  flex: 1;
+  font-size: 14px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hl);
+  background: var(--bg-input);
+  color: var(--text);
+  cursor: pointer;
+}
+.xiangqi-review-controls button:hover,
+.xiangqi-review-actions button:hover { background: var(--bg-panel); }
+.xiangqi-review-actions button:disabled { opacity: 0.5; cursor: default; }
+.xiangqi-review-info {
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--text);
+}
+.xiangqi-review-info .xq-cls { font-weight: 700; }
+.xq-cls.best { color: #2e7d46; }
+.xq-cls.good { color: var(--text-dim); }
+.xq-cls.inaccuracy { color: #b5851f; }
+.xq-cls.mistake { color: #c0392b; }
+.xq-cls.blunder { color: #a01b1b; }

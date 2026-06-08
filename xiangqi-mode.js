@@ -5,6 +5,7 @@
 // 引擎在第一手 AI 才載（省首次進場等待）。
 import * as Game from './xiangqi-game.js';
 import * as Engine from './xiangqi-engine.js';
+import * as Review from './xiangqi-review.js';
 import { resizeXiangqiCanvas, drawXiangqi } from './xiangqi-ui.js';
 
 const SETTINGS_KEY = 'xiangqi-settings-v1';
@@ -24,6 +25,14 @@ let moving = false;        // 棋子移動動畫中（鎖操作避免競態）
 let gameOver = false;
 let boardReady = false;
 
+// ——— 覆盤 ———
+let reviewMode = false;
+let reviewMoves = [];
+let reviewFens = [];
+let reviewPly = 0;
+let reviewNodes = null;     // analyzeGame 結果（null = 尚未分析）
+let reviewAnalyzing = false;
+
 // ——— 設定 ———
 let mode = 'pvc';          // 'pvc' | 'pvp'
 let playerRed = true;      // pvc 時玩家是否執紅（先手）
@@ -38,7 +47,13 @@ function cacheDom() {
     mode: $('xiangqiMode'), color: $('xiangqiColor'), level: $('xiangqiLevel'),
     thinking: $('xiangqiThinking'), checkBanner: $('xiangqiCheck'),
     endOverlay: $('xiangqiEnd'), endTitle: $('xiangqiEndTitle'), endSub: $('xiangqiEndSub'), endBtn: $('xiangqiEndBtn'),
+    reviewBtn: $('xiangqiReviewBtn'), controls: $('xiangqiControls'),
+    review: $('xiangqiReview'), rvSlider: $('xiangqiReviewSlider'), rvInfo: $('xiangqiReviewInfo'),
+    rvFirst: $('xqRvFirst'), rvPrev: $('xqRvPrev'), rvNext: $('xqRvNext'), rvLast: $('xqRvLast'),
+    rvAnalyze: $('xqRvAnalyze'), rvExit: $('xqRvExit'), evalGraph: $('xiangqiEvalGraph'),
   };
+  dom.settings = dom.screen?.querySelector('.gomoku-settings');
+  dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
 }
 
 function loadSettings() {
@@ -118,6 +133,123 @@ function showEnd() {
   dom.endOverlay.style.display = 'flex';
 }
 function hideEnd() { if (dom.endOverlay) dom.endOverlay.style.display = 'none'; }
+
+// ——— 覆盤 ———
+
+function setReviewUI(on) {
+  reviewMode = on;
+  if (dom.settings) dom.settings.style.display = on ? 'none' : '';
+  if (dom.statusrow) dom.statusrow.style.display = on ? 'none' : '';
+  if (dom.controls) dom.controls.style.display = on ? 'none' : '';
+  if (dom.review) dom.review.style.display = on ? 'flex' : 'none';
+}
+
+async function enterReview() {
+  await Game.ensureReady();
+  reviewMoves = Game.moveStackList();
+  if (!reviewMoves.length) return;
+  reviewFens = Game.fensForMoves(reviewMoves);
+  reviewNodes = null;
+  hideEnd();
+  if (dom.evalGraph) dom.evalGraph.style.display = 'none';
+  if (dom.rvSlider) dom.rvSlider.max = String(reviewMoves.length);
+  setReviewUI(true);
+  reviewGoTo(reviewMoves.length);
+}
+
+function exitReview() {
+  setReviewUI(false);
+  render();                 // 回到實際對局（結束）局面
+  if (gameOver) showEnd();
+}
+
+function reviewGoTo(ply) {
+  reviewPly = Math.max(0, Math.min(reviewMoves.length, ply | 0));
+  if (dom.rvSlider) dom.rvSlider.value = String(reviewPly);
+  renderReview();
+  updateReviewInfo();
+}
+
+function renderReview() {
+  const w = Math.min((dom.screen?.clientWidth || window.innerWidth) - 24, window.innerWidth - 32, 480);
+  resizeXiangqiCanvas(deps, w);
+  const grid = Game.gridFromFen(reviewFens[reviewPly]);
+  const last = reviewPly > 0 ? Game.splitMove(reviewMoves[reviewPly - 1]) : null;
+  drawXiangqi(deps, {
+    grid, selected: null, legalTargets: null, checkRC: null,
+    lastMove: last ? [last.from, last.to] : null,
+    rc: (sq) => Game.squareToRC(sq),
+  });
+}
+
+/** 紅方視角評估分（centipawn）→ 友善文字。 */
+function fmtEval(redCp) {
+  if (redCp >= 20000) return '紅方勝勢';
+  if (redCp <= -20000) return '黑方勝勢';
+  const v = redCp / 100;
+  if (Math.abs(v) < 0.2) return '均勢';
+  return (v > 0 ? '紅優 +' : '黑優 +') + Math.abs(v).toFixed(1);
+}
+
+function sqArrow(uci) { const m = Game.splitMove(uci); return `${m.from}→${m.to}`; }
+
+function updateReviewInfo() {
+  const el = dom.rvInfo;
+  if (!el) return;
+  el.textContent = '';
+  const N = reviewMoves.length;
+  // 第一行：手數 + 本手著法
+  const l1 = document.createElement('div');
+  l1.append('第 ');
+  const b = document.createElement('b'); b.textContent = String(reviewPly); l1.append(b);
+  l1.append(` / ${N} 手`);
+  if (reviewPly > 0) {
+    const mover = (reviewPly % 2 === 1) ? '紅' : '黑'; // 第 ply 手：ply1=紅
+    l1.append(`　${mover}方 ${sqArrow(reviewMoves[reviewPly - 1])}`);
+  }
+  el.append(l1);
+  if (reviewNodes) {
+    const l2 = document.createElement('div');
+    l2.textContent = '局面評估：' + fmtEval(reviewNodes[reviewPly].redCp);
+    el.append(l2);
+    if (reviewPly > 0) {
+      const m = reviewNodes[reviewPly - 1]; // 描述「這手」的損失
+      const l3 = document.createElement('div');
+      l3.append('這手 ');
+      const span = document.createElement('span');
+      span.className = 'xq-cls ' + m.cls.key; // key 為內部常數，非外部輸入
+      span.textContent = m.cls.label;
+      l3.append(span);
+      if (m.loss >= 30) l3.append(`（丟約 ${(m.loss / 100).toFixed(1)} 分）`);
+      if (m.bestmove) l3.append('・最佳 ' + sqArrow(m.bestmove));
+      el.append(l3);
+    }
+  } else {
+    const hint = document.createElement('div');
+    hint.style.color = 'var(--text-muted)';
+    hint.textContent = '按「分析本局」評估每手好壞';
+    el.append(hint);
+  }
+}
+
+async function analyzeReview() {
+  if (reviewAnalyzing || !reviewMoves.length) return;
+  reviewAnalyzing = true;
+  if (dom.rvAnalyze) dom.rvAnalyze.disabled = true;
+  try {
+    reviewNodes = await Review.analyzeGame(reviewMoves, {
+      movetimeMs: 400,
+      onProgress: (k, n) => { if (dom.rvInfo) dom.rvInfo.textContent = `分析中… ${k}/${n}`; },
+    });
+    updateReviewInfo();
+  } catch (err) {
+    if (dom.rvInfo) dom.rvInfo.textContent = 'AI 分析失敗：' + (err?.message || err);
+    Engine.reset();
+  } finally {
+    reviewAnalyzing = false;
+    if (dom.rvAnalyze) dom.rvAnalyze.disabled = false;
+  }
+}
 
 /** 更新悔棋按鈕可用狀態（思考/動畫/無手/結束時不可悔）。 */
 function updateUndoBtn() {
@@ -207,7 +339,7 @@ async function doMove(uci) {
 }
 
 async function onPoint(row, col) {
-  if (gameOver || aiBusy || moving || !boardReady) return;
+  if (reviewMode || gameOver || aiBusy || moving || !boardReady) return;
   if (mode === 'pvc' && !isPlayerTurn()) return;
   const sq = Game.rcToSquare(row, col);
   // 已選子 → 點到合法目的就走
@@ -251,6 +383,8 @@ function maybeAiMove() {
 }
 
 async function newGame() {
+  if (reviewMode) setReviewUI(false);
+  reviewNodes = null;
   hideEnd();
   showThinking(false);
   setStatus('載入棋盤中…');
@@ -309,10 +443,19 @@ function wireEvents() {
   dom.undo?.addEventListener('click', () => undoMove());
   dom.endBtn?.addEventListener('click', () => newGame());
   dom.home?.addEventListener('click', () => { location.hash = '#home'; });
+  // 覆盤
+  dom.reviewBtn?.addEventListener('click', () => enterReview());
+  dom.rvExit?.addEventListener('click', () => exitReview());
+  dom.rvFirst?.addEventListener('click', () => reviewGoTo(0));
+  dom.rvPrev?.addEventListener('click', () => reviewGoTo(reviewPly - 1));
+  dom.rvNext?.addEventListener('click', () => reviewGoTo(reviewPly + 1));
+  dom.rvLast?.addEventListener('click', () => reviewGoTo(reviewMoves.length));
+  dom.rvSlider?.addEventListener('input', () => reviewGoTo(Number(dom.rvSlider.value)));
+  dom.rvAnalyze?.addEventListener('click', () => analyzeReview());
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
   dom.color?.addEventListener('change', () => { playerRed = dom.color.value !== 'black'; saveSettings(); newGame(); });
   dom.level?.addEventListener('change', () => { level = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
-  window.addEventListener('resize', () => { if (isActive()) render(); });
+  window.addEventListener('resize', () => { if (isActive()) (reviewMode ? renderReview() : render()); });
 }
 
 // ——— 進入 ———
