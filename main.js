@@ -15,6 +15,7 @@ import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
 import { enterGomokuMode } from './gomoku-mode.js';
 import { enterXiangqiMode } from './xiangqi-mode.js';
 import { enterShogiMode } from './shogi-mode.js';
+import { enterChessMode } from './chess-mode.js';
 import { enterOthelloMode } from './othello-mode.js';
 import { enterXiangqiPuzzleMode } from './xiangqi-puzzle-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
@@ -1122,6 +1123,7 @@ const HOME_ITEMS = [
   { id: 'shogi',   title: '日本將棋', desc: '升變打入，俘子再成軍', hash: '#shogi' },
   { id: 'gomoku',  title: '五子棋',   desc: '縱橫連珠，先連者為王', hash: '#gomoku' },
   { id: 'othello', title: '黑白棋',   desc: '黑白翻覆，一夾定乾坤', hash: '#othello' },
+  { id: 'chess',   title: '西洋棋',   desc: '兩軍對壘，將死擒敵王', hash: '#chess' },
 ];
 
 let playInited = false;
@@ -1190,6 +1192,7 @@ function showScreen(name) {
   document.getElementById('gomokuScreen').style.display = name === 'gomoku' ? 'flex' : 'none';
   document.getElementById('xiangqiScreen').style.display = name === 'xiangqi' ? 'flex' : 'none';
   document.getElementById('shogiScreen').style.display = name === 'shogi' ? 'flex' : 'none';
+  document.getElementById('chessScreen').style.display = name === 'chess' ? 'flex' : 'none';
   document.getElementById('othelloScreen').style.display = name === 'othello' ? 'flex' : 'none';
   document.getElementById('xqpScreen').style.display = name === 'xqpuzzle' ? 'flex' : 'none';
   const playHeader = document.getElementById('playHeader');
@@ -1224,6 +1227,10 @@ function applyRoute(animateTitle) {
     showScreen('shogi');
     if (title) title.style.visibility = 'visible';
     enterShogiMode();
+  } else if (hash === '#chess') {
+    showScreen('chess');
+    if (title) title.style.visibility = 'visible';
+    enterChessMode();
   } else if (hash === '#othello') {
     showScreen('othello');
     if (title) title.style.visibility = 'visible';

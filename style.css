@@ -747,15 +747,10 @@ a.version-link { display: inline-block; }
 }
 .home-menu {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(4, 1fr);   /* 上4下4：8 張＝兩列各 4，依棋種分組 */
   gap: 14px;
   width: 100%;
 }
-/* 上4下3：所有卡同寬（各佔 2/8）。上列 4 張填滿 8 欄；下列 3 張＝6 欄，
-   首張左偏移 1 欄起 → 左右各留 1 欄、整列置中（依棋種分組）。 */
-.home-card { grid-column: span 2; }
-.home-card:nth-child(5) { grid-column: 2 / span 2; }
-.home-card:nth-child(n+6) { grid-column: span 2; }
 .home-card {
   position: relative;
   display: flex;
@@ -823,11 +818,9 @@ a.version-link { display: inline-block; }
   border-radius: var(--radius-sm);
 }
 /* 平板/手機：退回 2 欄（圍棋/死活、象棋/殘局 各成對排在同一列），不再硬撐上4下3 */
+/* 平板/手機：退回 2 欄（圍棋/死活、象棋/殘局…各成對排同列） */
 @media (max-width: 700px) {
   .home-menu { grid-template-columns: repeat(2, 1fr); }
-  .home-card,
-  .home-card:nth-child(5),
-  .home-card:nth-child(n+6) { grid-column: auto; }
 }
 /* 窄螢幕：單欄 */
 @media (max-width: 430px) {

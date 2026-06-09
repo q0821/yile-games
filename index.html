@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1a1a2e">
+<meta name="theme-color" content="#f0e6cf">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="弈樂">
@@ -11,7 +11,26 @@
 <link rel="icon" href="favicon.ico?v=icons20260609c" sizes="any">
 <link rel="icon" type="image/svg+xml" href="icon.svg?v=icons20260609c">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=icons20260609c">
-<title>弈樂</title>
+<title>弈樂 · 多棋類線上對弈</title>
+<meta name="description" content="弈樂——水墨風線上棋弈，一站玩圍棋、象棋、日本將棋、西洋棋、五子棋、黑白棋，另有死活練習與象棋殘局。可與電腦對弈或雙人對局，免安裝、開網頁即玩。">
+<link rel="canonical" href="https://yile.jackie-yeh.com/">
+
+<!-- Open Graph（FB / LINE / Threads 等分享卡片） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="弈樂">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:url" content="https://yile.jackie-yeh.com/">
+<meta property="og:title" content="弈樂 · 多棋類線上對弈">
+<meta property="og:description" content="水墨風線上棋弈，一站玩圍棋、象棋、日本將棋、西洋棋、五子棋、黑白棋，另有死活練習與象棋殘局。與電腦或雙人對局，開網頁即玩。">
+<meta property="og:image" content="https://yile.jackie-yeh.com/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+
+<!-- Twitter / X 卡片 -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="弈樂 · 多棋類線上對弈">
+<meta name="twitter:description" content="水墨風線上棋弈：圍棋・象棋・日本將棋・西洋棋・五子棋・黑白棋，另有死活練習與象棋殘局。與電腦或雙人對局，開網頁即玩。">
+<meta name="twitter:image" content="https://yile.jackie-yeh.com/icon-512.png">
 <!-- 改用系統內建宋體（見 style.css --font-serif）：移除跨來源 Google Fonts，
      讓象棋引擎可用 COEP require-corp 全瀏覽器開啟 cross-origin isolation。 -->
 <link rel="stylesheet" href="style.css?v=v2026.06.06-13ae1d9">
@@ -539,6 +558,68 @@
   </div>
 </div>
 
+<!-- Chess (西洋棋) screen -->
+<div class="gomoku-screen" id="chessScreen" style="display:none">
+  <div class="mode-header">
+    <button class="mode-back" id="chessHome">回首頁</button>
+    <h2 class="mode-title">西洋棋</h2>
+  </div>
+  <div class="gomoku-settings">
+    <div class="control-group">
+      <label for="chessMode">對弈模式</label>
+      <select id="chessMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="chessColor">玩家執子</label>
+      <select id="chessColor">
+        <option value="white">執白（先手）</option>
+        <option value="black">執黑（後手）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="chessLevel">電腦難度</label>
+      <select id="chessLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+  </div>
+  <div class="board-wrap">
+    <canvas id="chessBoard" role="img" aria-label="西洋棋棋盤"></canvas>
+    <div class="xiangqi-check" id="chessCheck" aria-hidden="true">將 軍</div>
+    <div class="shogi-promo" id="chessPromo" style="display:none" role="dialog" aria-label="升變選擇">
+      <div class="shogi-promo-card">
+        <div class="shogi-promo-title">兵升變為？</div>
+        <div class="shogi-promo-btns" id="chessPromoBtns">
+          <button class="board-end-btn" data-promo="q">后</button>
+          <button class="board-end-btn" data-promo="r">車</button>
+          <button class="board-end-btn" data-promo="b">象</button>
+          <button class="board-end-btn" data-promo="n">馬</button>
+        </div>
+      </div>
+    </div>
+    <div class="board-end" id="chessEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="chessEndTitle">白方勝</div>
+        <div class="board-end-sub" id="chessEndSub"></div>
+        <button class="board-end-btn" id="chessEndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
+  <div class="xiangqi-statusrow">
+    <span class="gomoku-status" id="chessStatus" role="status" aria-live="polite"></span>
+    <span class="xiangqi-spinner" id="chessThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
+  </div>
+  <div class="gomoku-controls">
+    <button id="chessUndo">悔棋</button>
+    <button id="chessRestart">重新開始</button>
+  </div>
+</div>
+
 <!-- Result Modal -->
 <div class="modal-overlay" id="resultModal">
   <div class="modal">
@@ -592,8 +673,8 @@
       <p>底層引擎與神經網路權重來自 <a href="https://github.com/lightvector/KataGo" target="_blank" rel="noopener noreferrer">KataGo</a>（lightvector/KataGo，程式 MIT 授權）；網路權重由 KataGo 專案免費釋出供公眾使用。<br>
         <a href="licenses/katago-NOTICE.txt" target="_blank" rel="noopener noreferrer">署名說明</a></p>
 
-      <h3>象棋／將棋 AI 引擎（Fairy-Stockfish）</h3>
-      <p>瀏覽器內的象棋與日本將棋 AI 同為 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">Fairy-Stockfish</a> 的 WebAssembly 版（<a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener noreferrer">fairy-stockfish.wasm</a>），<strong>GPL-3.0</strong> 授權，作者 Fabian Fichter。<br>
+      <h3>象棋／將棋／西洋棋 AI 引擎（Fairy-Stockfish）</h3>
+      <p>瀏覽器內的象棋、日本將棋與西洋棋 AI 同為 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">Fairy-Stockfish</a> 的 WebAssembly 版（<a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener noreferrer">fairy-stockfish.wasm</a>），<strong>GPL-3.0</strong> 授權，作者 Fabian Fichter。<br>
         兩種棋的棋規與合法手皆由同專案的 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">ffish</a>（ffish-es6）提供，亦為 GPL-3.0。<br>
         依 GPL-3.0，本站原始碼已公開（見上方「本站」連結）；引擎原始碼見其 GitHub 專案。</p>
 

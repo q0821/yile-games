@@ -1,12 +1,12 @@
 {
-  "name": "弈樂",
+  "name": "弈樂 · 多棋類線上對弈",
   "short_name": "弈樂",
-  "description": "網頁棋類遊戲：圍棋對弈、死活練習、五子棋，支援人 vs 人、人 vs AI",
+  "description": "水墨風線上棋弈：圍棋、象棋、日本將棋、西洋棋、五子棋、黑白棋，另有死活練習與象棋殘局。可與電腦對弈或雙人對局。",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#1a1a2e",
-  "theme_color": "#1a1a2e",
+  "background_color": "#f7f0e0",
+  "theme_color": "#f0e6cf",
   "icons": [
     {
       "src": "icon-192.png",
