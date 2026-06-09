@@ -725,9 +725,9 @@ a.version-link { display: inline-block; }
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 560px;
-  padding: 24px 16px;
-  gap: 20px;
+  max-width: 720px;       /* 放寬以容納上列 4 張卡 */
+  padding: 12px 16px 20px;/* 收上緣間距，避免整體太往下 */
+  gap: 16px;
 }
 .home-tagline {
   display: flex;
@@ -747,21 +747,26 @@ a.version-link { display: inline-block; }
 }
 .home-menu {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 14px;
   width: 100%;
 }
+/* 上4下3：所有卡同寬（各佔 2/8）。上列 4 張填滿 8 欄；下列 3 張＝6 欄，
+   首張左偏移 1 欄起 → 左右各留 1 欄、整列置中（依棋種分組）。 */
+.home-card { grid-column: span 2; }
+.home-card:nth-child(5) { grid-column: 2 / span 2; }
+.home-card:nth-child(n+6) { grid-column: span 2; }
 .home-card {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  min-height: 104px;      /* 取代固定 aspect-ratio：同列卡片由 grid 自動等高 */
   margin: 0;
-  padding: 20px;
+  padding: 16px 12px;
   text-align: center;
   background:
     linear-gradient(135deg, rgba(255,255,255,0.018), transparent 60%),
@@ -788,15 +793,17 @@ a.version-link { display: inline-block; }
 }
 .home-card:active { transform: translateY(-1px) scale(0.99); }
 .home-card-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 900;
   color: var(--gold);
-  letter-spacing: 4px;
+  letter-spacing: 2px;
+  white-space: nowrap;
 }
 .home-card-desc {
-  font-size: 14px;
+  font-size: 12.5px;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
+  line-height: 1.45;
 }
 .home-card-hint {
   margin-top: 8px;
@@ -811,10 +818,16 @@ a.version-link { display: inline-block; }
   padding: 6px 14px;
   border-radius: var(--radius-sm);
 }
-/* 窄螢幕：方塊疊成單欄，放寬高度比避免過扁 */
-@media (max-width: 520px) {
+/* 平板/手機：退回 2 欄（圍棋/死活、象棋/殘局 各成對排在同一列），不再硬撐上4下3 */
+@media (max-width: 700px) {
+  .home-menu { grid-template-columns: repeat(2, 1fr); }
+  .home-card,
+  .home-card:nth-child(5),
+  .home-card:nth-child(n+6) { grid-column: auto; }
+}
+/* 窄螢幕：單欄 */
+@media (max-width: 430px) {
   .home-menu { grid-template-columns: 1fr; }
-  .home-card { aspect-ratio: 16 / 9; }
 }
 
 /* ===== Tsumego (Life & Death) practice ===== */
