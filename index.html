@@ -19,16 +19,6 @@
 <body>
   <h1 class="brush-title">弈樂</h1>
 
-<!-- Mobile menu button -->
-<button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleSidebar()">選單</button>
-
-<!-- Mobile sidebar overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-<div class="sidebar" id="sidebar">
-  <button class="sidebar-close" onclick="closeSidebar()">關閉</button>
-  <div id="sidebarContent"></div>
-</div>
-
 <!-- Home screen: mode menu -->
 <div class="home-screen" id="homeScreen" style="display:none">
   <p class="home-tagline">選擇練習模式</p>
@@ -39,121 +29,25 @@
 <div class="mode-header" id="playHeader" style="display:none">
   <button class="mode-back" onclick="goHome()">回首頁</button>
   <h2 class="mode-title">圍棋對弈</h2>
+  <button class="mode-settings" onclick="openGoSettings()" aria-label="遊戲設定">設定</button>
 </div>
 
-<div class="game-container" style="display:none">
-  <!-- Left Panel: Settings -->
-  <div class="panel" id="settingsPanel">
-    <h3>遊戲設定</h3>
-    <details class="rules-help">
-      <summary>新手說明：規則與術語</summary>
-      <dl>
-        <dt>執子（先手 / 後手）</dt><dd>黑棋先下為先手；白棋後下，靠貼目補償。</dd>
-        <dt>虛手（Pass）</dt><dd>這手不下、讓給對方。雙方連續虛手即終局、進入數目。</dd>
-        <dt>氣（呼吸點）</dt><dd>棋子相鄰的空點；一塊棋的氣歸零就被提走。</dd>
-        <dt>提子</dt><dd>把沒有氣的對方棋子從盤上拿掉。</dd>
-        <dt>數子法（中國規則）</dt><dd>算「活棋子＋圍住的空點」，貼目 7.5。</dd>
-        <dt>數目法（日本規則）</dt><dd>算「圍住的空點＋提子」，貼目 6.5。</dd>
-        <dt>貼目</dt><dd>補償黑棋先手優勢、固定加給白方的目數。</dd>
-        <dt>覆盤</dt><dd>對局結束後，逐手回看自己這盤怎麼下。</dd>
-      </dl>
-    </details>
-    <div class="control-group">
-      <label>棋盤大小</label>
-      <select id="boardSize">
-        <option value="9" selected>9 × 9</option>
-        <option value="13">13 × 13</option>
-        <option value="19">19 × 19</option>
-      </select>
+<!-- 圍棋對弈：單欄置中（對齊其他棋類版面）。設定收進 #goSettingsModal，對弈功能列永遠可見。 -->
+<div class="go-screen" id="goScreen" style="display:none">
+  <!-- 資訊列：回合 + 提子 + 手數 + 計時（永遠可見） -->
+  <div class="go-infobar" id="goInfobar">
+    <div class="turn-badge black" id="mobileTurn">黑方</div>
+    <div class="info-item"><span class="stone-dot black" aria-label="黑"></span> <span id="mobileBlackCap">0</span></div>
+    <div class="info-item"><span class="stone-dot white" aria-label="白"></span> <span id="mobileWhiteCap">0</span></div>
+    <div class="info-item">第 <span id="mobileMoveCount">0</span> 手</div>
+    <div class="go-timers" id="timerArea" style="display:none">
+      <span class="go-timer"><span class="stone-dot black"></span> <span id="blackTimer">10:00</span></span>
+      <span class="go-timer"><span class="stone-dot white"></span> <span id="whiteTimer">10:00</span></span>
     </div>
-    <div class="control-group">
-      <label>比賽規則</label>
-      <select id="gameRules">
-        <option value="chinese" selected>中國規則（數子法）</option>
-        <option value="japanese">日本規則（數目法）</option>
-      </select>
-      <p class="control-hint">數子法算「活棋子＋地」、貼 7.5 目；數目法算「地＋提子」、貼 6.5 目。初學建議用中國規則。</p>
-    </div>
-    <div class="control-group">
-      <label>對弈模式</label>
-      <select id="gameMode">
-        <option value="pvp">人 vs 人</option>
-        <option value="pvc" selected>人 vs 電腦</option>
-      </select>
-    </div>
-    <div class="control-group" id="playerColorGroup">
-      <label>玩家執子</label>
-      <select id="playerColor">
-        <option value="1">執黑（先手）</option>
-        <option value="2">執白（後手）</option>
-      </select>
-    </div>
-    <div class="control-group" id="aiStrengthGroup">
-      <label>電腦等級（自動調整）</label>
-      <div id="aiLevelDisplay" class="ai-level-display">第 1 級（約 25 級）</div>
-      <p class="control-hint">電腦會依你每局的勝負目數自動升降：贏夠多目會升級、輸太多會降級。等級越高棋力越強。級位為估計值，僅供參考。</p>
-      <button type="button" onclick="resetAiLevel()" class="control-reset">重設等級</button>
-    </div>
-    <div class="control-group" id="handicapGroup">
-      <label>讓子</label>
-      <select id="handicap">
-        <option value="0" selected>不讓子</option>
-        <option value="2">讓 2 子</option>
-        <option value="3">讓 3 子</option>
-        <option value="4">讓 4 子</option>
-        <option value="5">讓 5 子</option>
-        <option value="6">讓 6 子</option>
-        <option value="7">讓 7 子</option>
-        <option value="8">讓 8 子</option>
-        <option value="9">讓 9 子</option>
-      </select>
-      <p class="control-hint">讓子局：你執黑、先在星位佈下讓子，電腦執白先下、白貼 0.5 目。讓越多子越好打。只在「人 vs 電腦」有效。</p>
-    </div>
-
-    <h3>功能開關</h3>
-    <div class="toggle-row">
-      <span>計時器</span>
-      <label class="toggle"><input type="checkbox" id="timerToggle"><span class="slider"></span></label>
-    </div>
-    <div id="timerSettings" style="display:none; margin-bottom:8px;">
-      <label>每方時間（分鐘）</label>
-      <select id="timerMinutes" style="margin-top:2px">
-        <option value="5">5 分鐘</option>
-        <option value="10" selected>10 分鐘</option>
-        <option value="20">20 分鐘</option>
-        <option value="30">30 分鐘</option>
-        <option value="60">60 分鐘</option>
-      </select>
-    </div>
-    <div class="toggle-row">
-      <span>悔棋</span>
-      <label class="toggle"><input type="checkbox" id="undoToggle" checked><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <span>覆盤</span>
-      <label class="toggle"><input type="checkbox" id="reviewToggle" checked><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <span>顯示氣（呼吸點）</span>
-      <label class="toggle"><input type="checkbox" id="emotionToggle"><span class="slider"></span></label>
-    </div>
-    <div class="control-group" style="margin-top:4px">
-      <button onclick="requestMoveHint()" id="moveHintBtn">建議走法（AI）</button>
-      <button onclick="showHintOnce()" id="hintBtn">吃子提示</button>
-    </div>
-
-    <button class="primary" onclick="closeSidebar(); newGame()" style="margin-top:12px">開始新遊戲</button>
   </div>
 
-  <!-- Center: Board -->
-  <div class="board-wrapper">
-    <!-- Mobile compact info bar -->
-    <div class="mobile-info-bar" id="mobileInfoBar">
-      <div class="turn-badge black" id="mobileTurn">黑方</div>
-      <div class="info-item"><span class="stone-dot black" aria-label="黑"></span> <span id="mobileBlackCap">0</span></div>
-      <div class="info-item"><span class="stone-dot white" aria-label="白"></span> <span id="mobileWhiteCap">0</span></div>
-      <div class="info-item">第 <span id="mobileMoveCount">0</span> 手</div>
-    </div>
+  <!-- 棋盤 -->
+  <div class="board-wrap go-board-wrap">
     <canvas id="board" role="img" aria-label="圍棋棋盤"></canvas>
     <div id="aiThinkingOverlay" style="display:none" aria-hidden="true">
       <div class="ai-thinking-card">
@@ -161,103 +55,166 @@
         <span class="ai-thinking-label">思考中…</span>
       </div>
     </div>
-    <div id="reviewBar" style="display:none; width:100%; max-width:500px; margin-top:6px;">
-      <input type="range" id="reviewSlider" class="review-slider" min="0" value="0" step="1"
-             oninput="reviewGo(+this.value)" aria-label="覆盤進度">
-      <div class="review-controls">
-        <button onclick="reviewGo(0)" title="回到開始">最初</button>
-        <button onclick="reviewGo(currentReviewMove-1)" title="上一手">上一手</button>
-        <button onclick="reviewGo(currentReviewMove+1)" title="下一手">下一手</button>
-        <button onclick="reviewGo(moveHistory.length)" title="到最新">最新</button>
-      </div>
-      <div class="move-info" id="reviewInfo"></div>
-      <div class="review-analysis">
-        <button id="analyzeReviewBtn" onclick="analyzeReview()" title="用 KataGo 逐手分析本局勝率與失分">分析本局（KataGo）</button>
-        <button id="ownershipBtn" onclick="toggleReviewOwnership()" style="display:none" title="在盤面上色顯示誰圍住哪">顯示領地</button>
-        <canvas id="winrateGraph" class="winrate-graph" width="500" height="90" style="display:none"
-                onclick="onWinrateGraphClick(event)" title="點擊跳到該手"></canvas>
-        <div class="move-info" id="reviewAnalysisInfo"></div>
-      </div>
-      <button class="review-replay" onclick="replayFromHere()" title="從這手換個下法，與電腦繼續對弈">從這手換個下法重練</button>
-      <div class="review-controls" style="margin-top:6px;">
-        <button onclick="exitReview()">結束覆盤</button>
-      </div>
-    </div>
-    <!-- Mobile action buttons -->
-    <div class="mobile-action-bar" id="mobileActionBar">
-      <button onclick="doPass()">虛手（Pass）</button>
-      <button onclick="doUndo()">悔棋</button>
-      <button onclick="requestMoveHint()">建議走法</button>
-      <button onclick="showHintOnce()">吃子提示</button>
-      <button onclick="finishGame()">申請數目</button>
-      <button onclick="doResign()" class="danger">認輸</button>
-    </div>
-    <div class="mobile-status" id="mobileStatus" role="status" aria-live="polite"></div>
-    <!-- Mobile scoring result bar（手機限定，數目時直接顯示結果＋確認/取消，不必開選單） -->
-    <div class="mobile-scoring-bar" id="mobileScoringBar" style="display:none">
-      <div class="mobile-scoring-result" id="mobileScoreResult"></div>
-      <div class="mobile-scoring-hint" id="mobileScoringHint">已自動估算死子；點棋盤上的死子可修正</div>
-      <div class="mobile-scoring-actions">
-        <button class="primary" onclick="confirmScoring()">確認結果</button>
-        <button onclick="cancelScoring()">取消數目</button>
-      </div>
-    </div>
   </div>
 
-  <!-- Right Panel: Game Info -->
-  <div class="panel" id="infoPanel">
-    <h3>對局資訊</h3>
-    <div class="current-turn black" id="turnDisplay">黑方回合</div>
+  <!-- 狀態訊息 -->
+  <div class="go-status" id="mobileStatus" role="status" aria-live="polite">選擇設定後，點擊「開始新遊戲」來開始對弈</div>
 
-    <div id="timerArea" style="display:none;">
-      <div class="info-row"><span class="label"><span class="stone-dot black"></span> 黑方時間</span></div>
-      <div class="timer-display" id="blackTimer" aria-label="黑方剩餘時間">10:00</div>
-      <div class="info-row"><span class="label"><span class="stone-dot white"></span> 白方時間</span></div>
-      <div class="timer-display" id="whiteTimer" aria-label="白方剩餘時間">10:00</div>
-    </div>
+  <!-- 對弈功能列（永遠可見，不收進選單） -->
+  <div class="go-controls" id="goControls">
+    <button onclick="doPass()">虛手</button>
+    <button onclick="doUndo()" id="undoBtn">悔棋</button>
+    <button onclick="requestMoveHint()" id="moveHintBtn">建議走法</button>
+    <button onclick="showHintOnce()" id="hintBtn">吃子提示</button>
+    <button onclick="finishGame()" id="finishBtn">申請數目</button>
+    <button onclick="doResign()" class="danger">認輸</button>
+    <button onclick="enterReview()" id="reviewBtn" style="display:none">覆盤</button>
+    <button onclick="exitReview()" id="exitReviewBtn" style="display:none">結束覆盤</button>
+    <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">匯出 SGF</button>
+    <button onclick="returnToOriginal()" id="returnOriginalBtn" style="display:none">返回原譜</button>
+  </div>
 
-    <div class="info-row">
-      <span class="label"><span class="stone-dot black"></span> 黑方提子</span>
-      <span class="value black-indicator" id="blackCaptures">0</span>
+  <!-- 覆盤面板（覆盤時顯示） -->
+  <div id="reviewBar" class="go-review" style="display:none">
+    <input type="range" id="reviewSlider" class="review-slider" min="0" value="0" step="1"
+           oninput="reviewGo(+this.value)" aria-label="覆盤進度">
+    <div class="review-controls">
+      <button onclick="reviewGo(0)" title="回到開始">最初</button>
+      <button onclick="reviewGo(currentReviewMove-1)" title="上一手">上一手</button>
+      <button onclick="reviewGo(currentReviewMove+1)" title="下一手">下一手</button>
+      <button onclick="reviewGo(moveHistory.length)" title="到最新">最新</button>
     </div>
-    <div class="info-row">
-      <span class="label"><span class="stone-dot white"></span> 白方提子</span>
-      <span class="value white-indicator" id="whiteCaptures">0</span>
+    <div class="move-info" id="reviewInfo"></div>
+    <div class="review-analysis">
+      <button id="analyzeReviewBtn" onclick="analyzeReview()" title="用 KataGo 逐手分析本局勝率與失分">分析本局（KataGo）</button>
+      <button id="ownershipBtn" onclick="toggleReviewOwnership()" style="display:none" title="在盤面上色顯示誰圍住哪">顯示領地</button>
+      <canvas id="winrateGraph" class="winrate-graph" width="500" height="90" style="display:none"
+              onclick="onWinrateGraphClick(event)" title="點擊跳到該手"></canvas>
+      <div class="move-info" id="reviewAnalysisInfo"></div>
     </div>
-    <div class="info-row">
-      <span class="label">手數</span>
-      <span class="value" id="moveCount">0</span>
-    </div>
+    <button class="review-replay" onclick="replayFromHere()" title="從這手換個下法，與電腦繼續對弈">從這手換個下法重練</button>
+  </div>
 
-    <div class="status-msg" id="statusMsg" role="status" aria-live="polite">選擇設定後，點擊「開始新遊戲」來開始對弈</div>
-
-    <div style="margin-top:12px">
-      <button onclick="doPass()">虛手（Pass）</button>
-      <button onclick="doUndo()" id="undoBtn">悔棋</button>
-      <button onclick="finishGame()" id="finishBtn">申請數目</button>
-      <button onclick="doResign()" class="danger">認輸</button>
-      <button onclick="enterReview()" id="reviewBtn" style="display:none">覆盤</button>
-      <button onclick="exitReview()" id="exitReviewBtn" style="display:none">結束覆盤</button>
-      <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">匯出 SGF</button>
-      <button onclick="returnToOriginal()" id="returnOriginalBtn" style="display:none">返回原譜</button>
+  <!-- 數目結果（數目時顯示） -->
+  <div class="scoring-panel go-scoring" id="scoringPanel" style="display:none">
+    <h4>數目結果</h4>
+    <div class="score-row"><span><span class="stone-dot black"></span> 黑方</span><span id="blackScore">0</span></div>
+    <div class="score-row" style="font-size:12px;color:var(--text-muted)"><span id="blackScoreLabel">　棋子+目</span><span id="blackDetail"></span></div>
+    <div class="score-row"><span><span class="stone-dot white"></span> 白方</span><span id="whiteScore">0</span></div>
+    <div class="score-row" style="font-size:12px;color:var(--text-muted)"><span id="whiteScoreLabel">　棋子+目（含貼目）</span><span id="whiteDetail"></span></div>
+    <div class="score-row score-row-total">
+      <span style="font-weight:bold">結果</span>
+      <span style="font-weight:bold;color:var(--gold-dim)" id="resultText"></span>
     </div>
-
-    <!-- Scoring Panel -->
-    <div class="scoring-panel" id="scoringPanel" style="display:none">
-      <h4>數目結果</h4>
-      <div class="score-row"><span><span class="stone-dot black"></span> 黑方</span><span id="blackScore">0</span></div>
-      <div class="score-row" style="font-size:12px;color:#8899bb"><span id="blackScoreLabel">　棋子+目</span><span id="blackDetail"></span></div>
-      <div class="score-row"><span><span class="stone-dot white"></span> 白方</span><span id="whiteScore">0</span></div>
-      <div class="score-row" style="font-size:12px;color:#8899bb"><span id="whiteScoreLabel">　棋子+目（含貼目）</span><span id="whiteDetail"></span></div>
-      <div class="score-row" style="border-top:1px solid #3a4a6e;padding-top:8px;margin-top:4px">
-        <span style="font-weight:bold">結果</span>
-        <span style="font-weight:bold;color:#f0d060" id="resultText"></span>
-      </div>
-      <p id="scoringWarn" class="scoring-warn" style="display:none"></p>
-      <p style="font-size:11px;color:#667;margin-top:8px">點擊棋盤上的死子將其標記</p>
-      <button onclick="confirmScoring()" class="primary" style="margin-top:6px">確認結果</button>
+    <p id="scoringWarn" class="scoring-warn" style="display:none"></p>
+    <p class="scoring-tip">點擊棋盤上的死子將其標記</p>
+    <div class="scoring-actions">
+      <button onclick="confirmScoring()" class="primary">確認結果</button>
       <button onclick="cancelScoring()">取消數目</button>
     </div>
+  </div>
+</div>
+
+<!-- 圍棋遊戲設定 modal -->
+<div class="modal-overlay" id="goSettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>遊戲設定</h2>
+    <div class="changelog-body">
+      <details class="rules-help">
+        <summary>新手說明：規則與術語</summary>
+        <dl>
+          <dt>執子（先手 / 後手）</dt><dd>黑棋先下為先手；白棋後下，靠貼目補償。</dd>
+          <dt>虛手（Pass）</dt><dd>這手不下、讓給對方。雙方連續虛手即終局、進入數目。</dd>
+          <dt>氣（呼吸點）</dt><dd>棋子相鄰的空點；一塊棋的氣歸零就被提走。</dd>
+          <dt>提子</dt><dd>把沒有氣的對方棋子從盤上拿掉。</dd>
+          <dt>數子法（中國規則）</dt><dd>算「活棋子＋圍住的空點」，貼目 7.5。</dd>
+          <dt>數目法（日本規則）</dt><dd>算「圍住的空點＋提子」，貼目 6.5。</dd>
+          <dt>貼目</dt><dd>補償黑棋先手優勢、固定加給白方的目數。</dd>
+          <dt>覆盤</dt><dd>對局結束後，逐手回看自己這盤怎麼下。</dd>
+        </dl>
+      </details>
+      <div class="control-group">
+        <label>棋盤大小</label>
+        <select id="boardSize">
+          <option value="9" selected>9 × 9</option>
+          <option value="13">13 × 13</option>
+          <option value="19">19 × 19</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>比賽規則</label>
+        <select id="gameRules">
+          <option value="chinese" selected>中國規則（數子法）</option>
+          <option value="japanese">日本規則（數目法）</option>
+        </select>
+        <p class="control-hint">數子法算「活棋子＋地」、貼 7.5 目；數目法算「地＋提子」、貼 6.5 目。初學建議用中國規則。</p>
+      </div>
+      <div class="control-group">
+        <label>對弈模式</label>
+        <select id="gameMode">
+          <option value="pvp">人 vs 人</option>
+          <option value="pvc" selected>人 vs 電腦</option>
+        </select>
+      </div>
+      <div class="control-group" id="playerColorGroup">
+        <label>玩家執子</label>
+        <select id="playerColor">
+          <option value="1">執黑（先手）</option>
+          <option value="2">執白（後手）</option>
+        </select>
+      </div>
+      <div class="control-group" id="aiStrengthGroup">
+        <label>電腦等級（自動調整）</label>
+        <div id="aiLevelDisplay" class="ai-level-display">第 1 級（約 25 級）</div>
+        <p class="control-hint">電腦會依你每局的勝負目數自動升降：贏夠多目會升級、輸太多會降級。等級越高棋力越強。級位為估計值，僅供參考。</p>
+        <button type="button" onclick="resetAiLevel()" class="control-reset">重設等級</button>
+      </div>
+      <div class="control-group" id="handicapGroup">
+        <label>讓子</label>
+        <select id="handicap">
+          <option value="0" selected>不讓子</option>
+          <option value="2">讓 2 子</option>
+          <option value="3">讓 3 子</option>
+          <option value="4">讓 4 子</option>
+          <option value="5">讓 5 子</option>
+          <option value="6">讓 6 子</option>
+          <option value="7">讓 7 子</option>
+          <option value="8">讓 8 子</option>
+          <option value="9">讓 9 子</option>
+        </select>
+        <p class="control-hint">讓子局：你執黑、先在星位佈下讓子，電腦執白先下、白貼 0.5 目。讓越多子越好打。只在「人 vs 電腦」有效。</p>
+      </div>
+
+      <h3>功能開關</h3>
+      <div class="toggle-row">
+        <span>計時器</span>
+        <label class="toggle"><input type="checkbox" id="timerToggle"><span class="slider"></span></label>
+      </div>
+      <div id="timerSettings" style="display:none; margin-bottom:8px;">
+        <label>每方時間（分鐘）</label>
+        <select id="timerMinutes" style="margin-top:2px">
+          <option value="5">5 分鐘</option>
+          <option value="10" selected>10 分鐘</option>
+          <option value="20">20 分鐘</option>
+          <option value="30">30 分鐘</option>
+          <option value="60">60 分鐘</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <span>悔棋</span>
+        <label class="toggle"><input type="checkbox" id="undoToggle" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span>覆盤</span>
+        <label class="toggle"><input type="checkbox" id="reviewToggle" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span>顯示氣（呼吸點）</span>
+        <label class="toggle"><input type="checkbox" id="emotionToggle"><span class="slider"></span></label>
+      </div>
+    </div>
+    <button class="primary" onclick="closeGoSettings(); newGame()">開始新遊戲</button>
+    <button onclick="closeGoSettings()">關閉</button>
   </div>
 </div>
 

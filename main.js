@@ -8,7 +8,7 @@ import { GoTimer } from './timer.js';
 import { GoHints } from './hints.js';
 import { GoReview } from './review.js';
 import { buildSGF } from './sgf.js';
-import { toggleSidebar, openSidebar, closeSidebar } from './sidebar.js';
+import { openGoSettings, closeGoSettings, toggleGoSettings } from './go-settings.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
@@ -145,7 +145,7 @@ const app = {
   setStatus: (msg) => setStatus(msg),
   drawBoard: () => drawBoard(),
   reviewGo: (n) => reviewGo(n),
-  closeSidebar,
+  closeGoSettings,
 };
 
 // ==================== AI CONTROLLER ====================
@@ -433,7 +433,6 @@ async function endGameByScoring() {
   applyStateFromStore();
   stopTimer();
   document.getElementById('scoringPanel').style.display = 'block';
-  document.getElementById('mobileScoringBar').style.display = 'block';
   // 先用舊估算顯示「計算中」基準，再用 KataGo ownership 覆蓋成準確結果。
   updateScoringDisplay();
   setStatus('AI 數目中…');
@@ -507,7 +506,6 @@ function confirmScoring() {
   GameState.confirmScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
-  document.getElementById('mobileScoringBar').style.display = 'none';
   endGame(`${winner}勝`, detail);
 }
 
@@ -515,7 +513,6 @@ function cancelScoring() {
   GameState.cancelScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
-  document.getElementById('mobileScoringBar').style.display = 'none';
   setStatus('已取消數目');
   drawBoard();
 }
@@ -823,7 +820,6 @@ function startNewGame() {
   emotionEnabled  = document.getElementById('emotionToggle').checked;
 
   document.getElementById('scoringPanel').style.display = 'none';
-  document.getElementById('mobileScoringBar').style.display = 'none';
   document.getElementById('reviewBar').style.display = 'none';
   document.getElementById('reviewBtn').style.display = 'none';
   document.getElementById('exitReviewBtn').style.display = 'none';
@@ -1074,9 +1070,9 @@ Object.assign(window, {
   closeAbout,
   confirmScoring,
   cancelScoring,
-  toggleSidebar,
-  openSidebar,
-  closeSidebar,
+  openGoSettings,
+  closeGoSettings,
+  toggleGoSettings,
   currentReviewMove: undefined, // overwritten via getter below
   moveHistory: undefined,       // overwritten via getter below
 });
@@ -1180,7 +1176,7 @@ function renderHome() {
 
 function showScreen(name) {
   document.getElementById('homeScreen').style.display = name === 'home' ? 'flex' : 'none';
-  document.querySelector('.game-container').style.display = name === 'play' ? '' : 'none';
+  document.getElementById('goScreen').style.display = name === 'play' ? 'flex' : 'none';
   document.getElementById('tsumegoScreen').style.display = name === 'tsumego' ? 'flex' : 'none';
   document.getElementById('gomokuScreen').style.display = name === 'gomoku' ? 'flex' : 'none';
   document.getElementById('xiangqiScreen').style.display = name === 'xiangqi' ? 'flex' : 'none';
@@ -1189,8 +1185,6 @@ function showScreen(name) {
   document.getElementById('xqpScreen').style.display = name === 'xqpuzzle' ? 'flex' : 'none';
   const playHeader = document.getElementById('playHeader');
   if (playHeader) playHeader.style.display = name === 'play' ? 'flex' : 'none';
-  const menuBtn = document.getElementById('mobileMenuBtn');
-  if (menuBtn) menuBtn.style.display = name === 'play' ? '' : 'none';
 }
 
 function enterPlayMode() {

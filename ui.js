@@ -106,21 +106,25 @@ export function updateHUD(state) {
     isAIThinking: !!state.isAIThinking && state.currentPlayer !== BLACK
   };
 
+  // 桌機資訊面板已併入單欄資訊列；保留 null guard 以防元素不存在（圍棋新版只用 mobile* 系列 ID）
   const turnEl = document.getElementById('turnDisplay');
-  if (normalizedState.gameOver) {
-    turnEl.textContent = '遊戲結束';
-    turnEl.className = 'current-turn';
-  } else if (normalizedState.isAIThinking) {
-    turnEl.textContent = 'AI 思考中...';
-    turnEl.className = 'current-turn';
-  } else {
-    turnEl.textContent = normalizedState.currentPlayer === BLACK ? '黑方回合' : '白方回合';
-    turnEl.className = 'current-turn ' + (normalizedState.currentPlayer === BLACK ? 'black' : 'white');
+  if (turnEl) {
+    if (normalizedState.gameOver) {
+      turnEl.textContent = '遊戲結束';
+      turnEl.className = 'current-turn';
+    } else if (normalizedState.isAIThinking) {
+      turnEl.textContent = 'AI 思考中...';
+      turnEl.className = 'current-turn';
+    } else {
+      turnEl.textContent = normalizedState.currentPlayer === BLACK ? '黑方回合' : '白方回合';
+      turnEl.className = 'current-turn ' + (normalizedState.currentPlayer === BLACK ? 'black' : 'white');
+    }
   }
 
-  document.getElementById('blackCaptures').textContent = normalizedState.captures[BLACK];
-  document.getElementById('whiteCaptures').textContent = normalizedState.captures[WHITE];
-  document.getElementById('moveCount').textContent = normalizedState.moveHistory.length;
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setText('blackCaptures', normalizedState.captures[BLACK]);
+  setText('whiteCaptures', normalizedState.captures[WHITE]);
+  setText('moveCount', normalizedState.moveHistory.length);
 
   const mt = document.getElementById('mobileTurn');
   if (normalizedState.gameOver) {
@@ -140,8 +144,10 @@ export function updateHUD(state) {
 }
 
 export function setStatus(message) {
-  document.getElementById('statusMsg').textContent = message;
-  document.getElementById('mobileStatus').textContent = message;
+  const a = document.getElementById('statusMsg');     // 桌機舊面板（圍棋新版已移除，保留 guard）
+  if (a) a.textContent = message;
+  const b = document.getElementById('mobileStatus');  // 單欄狀態列
+  if (b) b.textContent = message;
 }
 
 export function getStatusMessage(state, fallbackMessage = '') {
@@ -206,18 +212,12 @@ export function updateScoringDisplay(state, score) {
 
 
 export function resizeCanvas(deps, state) {
+  // 單欄置中版面（.go-screen max-width 700、左右 padding 16 → 內容約 668）。盤面寬度以此為上限，
+  // 避免 canvas 內部解析度大於顯示寬度被 CSS 縮放 → 點擊座標錯位。再以視窗高度約束、留資訊列/功能列空間。
   const isMobile = window.innerWidth <= 900;
-  let maxSize;
-  if (isMobile) {
-    const maxW = window.innerWidth - 20;
-    const maxH = window.innerHeight - 160;
-    maxSize = Math.max(280, Math.min(maxW, maxH));
-  } else {
-    const panelWidth = 260;
-    const maxW = window.innerWidth - panelWidth * 2 - 80;
-    const maxH = window.innerHeight - 120;
-    maxSize = Math.max(400, Math.min(maxW, maxH, 800));
-  }
+  const maxW = Math.min(window.innerWidth - 24, 668);
+  const maxH = window.innerHeight - (isMobile ? 200 : 150);
+  const maxSize = Math.max(280, Math.min(maxW, maxH));
   const s = state.size - 1;
   const minPadding = Math.ceil((0.88 * maxSize + 16 * s) / (s + 1.76));
   deps.padding = Math.max(30, minPadding);
