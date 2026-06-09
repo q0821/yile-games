@@ -6,6 +6,7 @@
 import * as Game from './chess-game.js';
 import * as Engine from './chess-engine.js';
 import * as Review from './chess-review.js';
+import * as Adaptive from './adaptive-chess.js';
 import { resizeChessCanvas, drawChess } from './chess-ui.js';
 
 const SETTINGS_KEY = 'chess-settings-v1';
@@ -37,7 +38,11 @@ let reviewAnalyzing = false;
 // ——— 設定 ———
 let mode = 'pvc';          // 'pvc' | 'pvp'
 let playerWhite = true;    // pvc 時玩家是否執白（先手）
-let level = 2;             // 1..3
+let level = 2;             // 手動難度下拉 1=簡單 2=普通 3=困難
+let autoMode = false;      // 自動調整難度（電腦連敗升級・連勝降級）
+let autoLevel = Adaptive.DEFAULT_LEVEL; // 自動模式目前連續等級
+let streak = 0;            // 連勝/連敗計數（>0 電腦連敗朝升級、<0 連勝朝降級）
+let adaptiveApplied = false; // 本局是否已套用升降（避免同局重複）
 
 const $ = (id) => document.getElementById(id);
 
@@ -46,6 +51,8 @@ function cacheDom() {
     screen: $('chessScreen'), canvas: $('chessBoard'), status: $('chessStatus'),
     restart: $('chessRestart'), undo: $('chessUndo'), home: $('chessHome'),
     mode: $('chessMode'), color: $('chessColor'), level: $('chessLevel'),
+    auto: $('chessAuto'), autoLevelGroup: $('chessAutoLevelGroup'),
+    autoLevelLabel: $('chessAutoLevel'), autoReset: $('chessAutoReset'),
     thinking: $('chessThinking'), checkBanner: $('chessCheck'),
     endOverlay: $('chessEnd'), endTitle: $('chessEndTitle'), endSub: $('chessEndSub'), endBtn: $('chessEndBtn'),
     promo: $('chessPromo'), promoBtns: $('chessPromoBtns'),
@@ -65,11 +72,14 @@ function loadSettings() {
       if (s.mode === 'pvp' || s.mode === 'pvc') mode = s.mode;
       if (typeof s.playerWhite === 'boolean') playerWhite = s.playerWhite;
       if (s.level >= 1 && s.level <= 3) level = s.level;
+      if (typeof s.autoMode === 'boolean') autoMode = s.autoMode;
+      if (Number.isFinite(s.autoLevel)) autoLevel = Adaptive.clampLevel(s.autoLevel);
+      if (Number.isFinite(s.streak)) streak = s.streak;
     }
   } catch { /* ignore */ }
 }
 function saveSettings() {
-  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ mode, playerWhite, level })); } catch { /* ignore */ }
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ mode, playerWhite, level, autoMode, autoLevel, streak })); } catch { /* ignore */ }
 }
 
 function isActive() { return dom.screen && dom.screen.style.display !== 'none'; }
@@ -128,11 +138,45 @@ function showEnd() {
   let sub = '';
   if (mode === 'pvc' && r !== '1/2-1/2') sub = ((r === '1-0') === playerWhite) ? '你贏了！' : '電腦獲勝';
   else if (r === '1/2-1/2') sub = Game.isCheck() ? '' : '無子可動，和局';
+  const adaptMsg = maybeApplyAdaptive(r);   // 自動難度升降（每局僅一次）
+  if (adaptMsg) sub = sub ? `${sub}　${adaptMsg}` : adaptMsg;
   if (dom.endTitle) dom.endTitle.textContent = title;
   if (dom.endSub) dom.endSub.textContent = sub;
   dom.endOverlay.style.display = 'flex';
 }
 function hideEnd() { if (dom.endOverlay) dom.endOverlay.style.display = 'none'; }
+
+// ——— 自動難度（連勝連敗階梯，見 adaptive-chess.js）———
+
+/** pvc + 自動模式時，依本局結果升降等級；回傳升降提示字（無變動回空字）。每局僅套用一次。 */
+function maybeApplyAdaptive(r) {
+  if (mode !== 'pvc' || !autoMode || adaptiveApplied || !r) return '';
+  adaptiveApplied = true;
+  const outcome = r === '1/2-1/2' ? 'draw' : ((r === '1-0') === playerWhite ? 'ai-lost' : 'ai-won');
+  const res = Adaptive.nextLevel(autoLevel, streak, outcome);
+  autoLevel = res.level; streak = res.streak;
+  saveSettings();
+  updateAutoLevelDisplay();
+  if (res.change === 'up') return `電腦升級 → ${Adaptive.levelLabel(autoLevel)}`;
+  if (res.change === 'down') return `電腦降級 → ${Adaptive.levelLabel(autoLevel)}`;
+  return '';
+}
+
+function updateAutoLevelDisplay() {
+  if (dom.autoLevelLabel) dom.autoLevelLabel.textContent = Adaptive.levelLabel(autoLevel);
+}
+
+function resetAutoLevel() {
+  autoLevel = Adaptive.DEFAULT_LEVEL;
+  streak = 0;
+  saveSettings();
+  updateAutoLevelDisplay();
+}
+
+/** 實際送進引擎的難度等級：自動模式用浮動等級，否則手動下拉映射到固定等級。 */
+function effectiveLevel() {
+  return autoMode ? autoLevel : (Adaptive.MANUAL_TO_LEVEL[level] ?? Adaptive.DEFAULT_LEVEL);
+}
 
 function updateUndoBtn() {
   if (!dom.undo) return;
@@ -269,7 +313,7 @@ function maybeAiMove() {
   const t0 = performance.now();
   (async () => {
     try {
-      const mv = await Engine.bestMove({ fen: Game.fen(), level });
+      const mv = await Engine.bestMove({ fen: Game.fen(), level: effectiveLevel() });
       const rest = minDelay - (performance.now() - t0);
       if (rest > 0) await new Promise((r) => setTimeout(r, rest));
       showThinking(false);
@@ -289,6 +333,7 @@ function maybeAiMove() {
 async function newGame() {
   if (reviewMode) setReviewUI(false);
   reviewNodes = null;
+  adaptiveApplied = false;
   hideEnd();
   resolvePromotion(null);
   showThinking(false);
@@ -471,9 +516,14 @@ function applySettingsToControls() {
   if (dom.mode) dom.mode.value = mode;
   if (dom.color) dom.color.value = playerWhite ? 'white' : 'black';
   if (dom.level) dom.level.value = String(level);
+  if (dom.auto) dom.auto.value = autoMode ? 'on' : 'off';
   const pvc = mode === 'pvc';
   dom.color?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
   dom.level?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
+  dom.auto?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
+  dom.autoLevelGroup?.style.setProperty('display', (pvc && autoMode) ? '' : 'none');
+  if (dom.level) dom.level.disabled = autoMode; // 自動時手動難度下拉禁用（不採用）
+  updateAutoLevelDisplay();
 }
 
 // ——— 事件 ———
@@ -523,6 +573,8 @@ function wireEvents() {
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
   dom.color?.addEventListener('change', () => { playerWhite = dom.color.value !== 'black'; saveSettings(); newGame(); });
   dom.level?.addEventListener('change', () => { level = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
+  dom.auto?.addEventListener('change', () => { autoMode = dom.auto.value === 'on'; saveSettings(); applySettingsToControls(); });
+  dom.autoReset?.addEventListener('click', () => resetAutoLevel());
   window.addEventListener('resize', () => { if (isActive()) (reviewMode ? renderReview() : render()); });
 }
 

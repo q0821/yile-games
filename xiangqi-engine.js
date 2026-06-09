@@ -1,7 +1,7 @@
 // xiangqi-engine.js — Fairy-Stockfish AI 服務（封裝 WASM，UCI 協定）。
 //
 // 比照 katago-service：lazy-load（進對弈模式才載）、ensureReady 只初始化一次、
-// 出錯可 reset 重建。難度用 UCI_Elo（引擎自我降棋力），比限時的難度曲線平滑。
+// 出錯可 reset 重建。難度用「限搜尋深度＋MultiPV 選手窗」（見 adaptive-chess.js 等級表）。
 // ⚠️ 多執行緒 build 需頁面 cross-origin isolated（COOP/COEP，見 vite.config.js）。
 // 引擎與 ffish 共用 UCI 著法字串，毋須座標轉換。
 //
@@ -9,21 +9,18 @@
 // 接 `variant` 參數，每次求手前 `setoption UCI_Variant` + `ucinewgame` 隔離，預設 xiangqi
 // 保持象棋相容（將棋傳 'shogi'，見 shogi-engine.js）。單例引擎共用，因每手都重設變體故無污染。
 
+import { levelConfig } from './adaptive-chess.js';
+
 const ENGINE_DIR = '/engine/xiangqi/';
 
-// 難度 → 搜尋設定。
+// 難度 → 搜尋設定，由 adaptive-chess.js 的連續等級表（levelConfig）提供。
 // ⚠️ 不用 UCI_LimitStrength：它降棋力的方式是「在候選著法裡刻意挑次佳手」，
 //    而保持攻勢的往往是唯一的最佳手（棄子搶攻、緊著），次佳手多半是安全退守 →
 //    結果是「防守穩、進攻軟」。改用『限制搜尋深度的全力引擎』：牠永遠下自己在
 //    該深度看得到的最佳手（含攻擊），棋風自然、有企圖心，深度即難度旋鈕。
 // 變化性：固定深度的全力引擎是確定性的（同局面永遠同一手）→ 每局雷同。故配
 //    MultiPV 取出數個候選，在「距最佳 window 分（centipawn）內」的著法間隨機選一手；
-//    window 越大越多變、偶有鬆手但仍主動，越小越接近最佳。困難級 window=0 即純最佳。
-const LEVEL_PROFILE = {
-  1: { depth: 4,  window: 150, multipv: 4 }, // 簡單：淺算、變化大，主動但偶有鬆手
-  2: { depth: 8,  window: 60,  multipv: 3 }, // 普通：俱樂部級，保有先手
-  3: { depth: 13, window: 0,   multipv: 1 }, // 困難：全力最佳手
-};
+//    window 越大越多變、偶有鬆手但仍主動，越小越接近最佳。最高級 window=0 即純最佳。
 
 let _factoryPromise = null;
 let _engine = null;
@@ -102,14 +99,14 @@ function pickFromWindow(cand, window) {
  * 求一手（全力引擎、限深度，依難度保留攻擊性，見 LEVEL_PROFILE 註解）。
  * @param {object} o
  * @param {string} o.fen     目前局面（FEN，由 ffish 提供）
- * @param {number} o.level   1=簡單 2=普通 3=困難（對應搜尋深度與選手窗）
+ * @param {number} o.level   連續難度等級（見 adaptive-chess.js；越高越強）
  * @param {number} o.movetimeMs 思考時間安全上限（深度為主，此值防高深度久候）
  * @param {string} o.variant 棋類變體（預設 xiangqi；將棋傳 shogi）
  * @returns {Promise<string|null>} UCI 著法（如 'h2e2'），無手可走回 null
  */
-export async function bestMove({ fen, level = 2, movetimeMs = 2000, variant = 'xiangqi' }) {
+export async function bestMove({ fen, level = 5, movetimeMs = 2000, variant = 'xiangqi' }) {
   await ensureReady();
-  const prof = LEVEL_PROFILE[level] ?? LEVEL_PROFILE[2];
+  const prof = levelConfig(level);
   send('setoption name UCI_Variant value ' + variant);
   send('setoption name UCI_LimitStrength value false');     // 全力下牠看得到的最佳手
   send('setoption name MultiPV value ' + prof.multipv);

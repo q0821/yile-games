@@ -340,6 +340,19 @@
         <option value="3">困難</option>
       </select>
     </div>
+    <div class="control-group">
+      <label for="xiangqiAuto">難度自動調整</label>
+      <select id="xiangqiAuto">
+        <option value="off">關（手動選難度）</option>
+        <option value="on">開（連敗升級・連勝降級）</option>
+      </select>
+    </div>
+    <div class="control-group" id="xiangqiAutoLevelGroup" style="display:none">
+      <label>電腦等級</label>
+      <div id="xiangqiAutoLevel" class="ai-level-display">第 3 級</div>
+      <p class="control-hint">電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
+      <button type="button" id="xiangqiAutoReset" class="control-reset">重設等級</button>
+    </div>
   </div>
   <div class="board-wrap">
     <canvas id="xiangqiBoard" role="img" aria-label="象棋棋盤"></canvas>
@@ -494,6 +507,19 @@
         <option value="3">困難</option>
       </select>
     </div>
+    <div class="control-group">
+      <label for="shogiAuto">難度自動調整</label>
+      <select id="shogiAuto">
+        <option value="off">關（手動選難度）</option>
+        <option value="on">開（連敗升級・連勝降級）</option>
+      </select>
+    </div>
+    <div class="control-group" id="shogiAutoLevelGroup" style="display:none">
+      <label>電腦等級</label>
+      <div id="shogiAutoLevel" class="ai-level-display">第 3 級</div>
+      <p class="control-hint">電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
+      <button type="button" id="shogiAutoReset" class="control-reset">重設等級</button>
+    </div>
   </div>
   <div class="shogi-hand" id="shogiHandGote" aria-label="後手持駒"></div>
   <div class="board-wrap">
@@ -603,6 +629,19 @@
         <option value="2">普通</option>
         <option value="3">困難</option>
       </select>
+    </div>
+    <div class="control-group">
+      <label for="chessAuto">難度自動調整</label>
+      <select id="chessAuto">
+        <option value="off">關（手動選難度）</option>
+        <option value="on">開（連敗升級・連勝降級）</option>
+      </select>
+    </div>
+    <div class="control-group" id="chessAutoLevelGroup" style="display:none">
+      <label>電腦等級</label>
+      <div id="chessAutoLevel" class="ai-level-display">第 3 級</div>
+      <p class="control-hint">電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
+      <button type="button" id="chessAutoReset" class="control-reset">重設等級</button>
     </div>
   </div>
   <div class="board-wrap">

@@ -159,6 +159,13 @@ function sandboxWithAdaptive() {
   return ctx;
 }
 
+/** Returns a sandbox with AdaptiveChess loaded (pure logic; no DOM needed). */
+function sandboxWithAdaptiveChess() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './adaptive-chess.js');
+  return ctx;
+}
+
 /** Returns a sandbox with Gomoku rules + AI loaded (pure logic; no DOM needed). */
 function sandboxWithGomoku() {
   const { ctx, localRequire } = createSandbox();
@@ -177,4 +184,4 @@ function sandboxWithOthello() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithGomoku, sandboxWithOthello };
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello };
