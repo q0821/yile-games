@@ -1,4 +1,5 @@
 import { EMPTY, BLACK, WHITE, getGroup } from './rules.js';
+import { drawStonePixel } from './stone.js';
 
 // ——— Liberty map for emotion mode ———
 function computeLibertyMap(board, size) {
@@ -239,26 +240,8 @@ export function drawStone(deps, x, y, color, isDead) {
   const r = deps.cellSize * 0.44;
   const ctx = deps.ctx;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.beginPath();
-  ctx.arc(cx + 2, cy + 2, r, 0, Math.PI * 2);
-  ctx.fill();
-
-  const grad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
-  if (color === BLACK) {
-    grad.addColorStop(0, '#555');
-    grad.addColorStop(1, '#111');
-  } else {
-    grad.addColorStop(0, '#fff');
-    grad.addColorStop(1, '#ccc');
-  }
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = color === BLACK ? '#000' : '#aaa';
-  ctx.lineWidth = 0.5;
-  ctx.stroke();
+  // 共用棋子視覺（柔邊投影 + 三段暖漸層 + 高光，見 stone.js）
+  drawStonePixel(ctx, cx, cy, r, color === BLACK);
 
   if (isDead) {
     ctx.strokeStyle = '#ff4444';

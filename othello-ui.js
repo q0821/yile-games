@@ -3,6 +3,7 @@
 // 棋子落在「格子中心」（非交叉點）。8×8 格、暖色盤、黑白立體圓子。
 // view = { board, size, legalMoves, lastMove, hover }；座標 board[row][col]。
 import { EMPTY, BLACK } from './rules.js';
+import { drawStonePixel } from './stone.js';
 
 const BG = '#e6c98a';
 const LINE = 'rgba(91,68,35,0.55)';
@@ -31,27 +32,9 @@ export function resizeOthelloCanvas(deps, maxWidthPx) {
 function cx(deps, col) { return deps.padding + col * deps.cellSize + deps.cellSize / 2; }
 function cy(deps, row) { return deps.padding + row * deps.cellSize + deps.cellSize / 2; }
 
-/** 立體圓子（投影 + 凸面漸層 + 高光）。black=true 黑子。 */
+/** 立體圓子（共用 stone.js 的視覺，三棋種一致）。black=true 黑子。 */
 function drawStone(deps, x, y, r, black) {
-  const ctx = deps.ctx;
-  ctx.save();
-  ctx.shadowColor = 'rgba(40,28,12,0.4)';
-  ctx.shadowBlur = r * 0.34;
-  ctx.shadowOffsetY = r * 0.2;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fillStyle = black ? '#2b2b30' : '#efe6d2';
-  ctx.fill();
-  ctx.restore();
-  const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.38, r * 0.15, x, y, r);
-  if (black) { g.addColorStop(0, '#6a6a72'); g.addColorStop(0.5, '#34343a'); g.addColorStop(1, '#161618'); }
-  else { g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, '#f3ead4'); g.addColorStop(1, '#d8cbac'); }
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fillStyle = g; ctx.fill();
-  ctx.beginPath();
-  ctx.arc(x - r * 0.18, y - r * 0.2, r * 0.6, Math.PI * 1.05, Math.PI * 1.6);
-  ctx.lineWidth = r * 0.1; ctx.lineCap = 'round';
-  ctx.strokeStyle = black ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.65)';
-  ctx.stroke(); ctx.lineCap = 'butt';
+  drawStonePixel(deps.ctx, x, y, r, black);
 }
 
 export function drawOthello(deps, view) {
