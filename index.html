@@ -62,13 +62,14 @@
 
   <!-- 對弈功能列（永遠可見，不收進選單） -->
   <div class="go-controls" id="goControls">
-    <button onclick="newGame()" id="goRestartBtn">重新開始</button>
+    <!-- 依性質分組（每排一類）：行棋／提示／終局／重置 -->
     <button onclick="doPass()">虛手</button>
     <button onclick="doUndo()" id="undoBtn">悔棋</button>
     <button onclick="requestMoveHint()" id="moveHintBtn">建議走法</button>
     <button onclick="showHintOnce()" id="hintBtn">吃子提示</button>
     <button onclick="finishGame()" id="finishBtn">申請數目</button>
     <button onclick="doResign()" class="danger">認輸</button>
+    <button onclick="newGame()" id="goRestartBtn">重新開始</button>
     <button onclick="enterReview()" id="reviewBtn" style="display:none">覆盤</button>
     <button onclick="exitReview()" id="exitReviewBtn" style="display:none">結束覆盤</button>
     <button onclick="exportSGF()" id="exportSgfBtn" style="display:none">匯出 SGF</button>
@@ -286,8 +287,8 @@
   </div>
   <div class="gomoku-status" id="gomokuStatus" role="status" aria-live="polite"></div>
   <div class="gomoku-controls">
-    <button id="gomokuRestart">重新開始</button>
     <button id="gomokuUndo">悔棋</button>
+    <button id="gomokuRestart">重新開始</button>
   </div>
 </div>
 
@@ -338,8 +339,8 @@
     <span class="xiangqi-spinner" id="xiangqiThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
   </div>
   <div class="gomoku-controls" id="xiangqiControls">
-    <button id="xiangqiRestart">重新開始</button>
     <button id="xiangqiUndo">悔棋</button>
+    <button id="xiangqiRestart">重新開始</button>
   </div>
   <!-- 覆盤面板（覆盤模式才顯示） -->
   <div class="xiangqi-review" id="xiangqiReview" style="display:none">
@@ -404,8 +405,8 @@
     <span class="xiangqi-spinner" id="othelloThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
   </div>
   <div class="gomoku-controls">
-    <button id="othelloRestart">重新開始</button>
     <button id="othelloUndo">悔棋</button>
+    <button id="othelloRestart">重新開始</button>
   </div>
 </div>
 
@@ -502,9 +503,9 @@
     <span class="xiangqi-spinner" id="shogiThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
   </div>
   <div class="gomoku-controls">
-    <button id="shogiRestart">重新開始</button>
     <button id="shogiUndo">悔棋</button>
     <button id="shogiRulesBtn">規則說明</button>
+    <button id="shogiRestart">重新開始</button>
   </div>
 </div>
 

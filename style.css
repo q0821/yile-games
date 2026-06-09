@@ -1437,12 +1437,13 @@ h1.brush-title {
   max-width: 500px;
 }
 .go-controls button {
-  flex: 1 1 calc(33.333% - 8px);   /* 一排約 3 顆、可換行 */
+  flex: 1 1 calc(50% - 4px);        /* 每排 2 顆 = 一類（行棋／提示／終局） */
   width: auto;                      /* 覆蓋全域 select,button{width:100%} */
   min-width: 80px;
   margin: 0;
   min-height: 42px;
 }
+.go-controls #goRestartBtn { flex-basis: 100%; }   /* 重置／掀桌：獨立一排全寬 */
 .go-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* 覆盤面板 */
@@ -1488,5 +1489,5 @@ h1.brush-title {
 
 @media (max-width: 900px) {
   .go-screen { padding: 8px 10px 20px; }
-  .go-controls button { font-size: 13px; min-width: 0; flex-basis: calc(33.333% - 6px); }
+  .go-controls button { font-size: 13px; min-width: 0; flex-basis: calc(50% - 4px); }
 }
