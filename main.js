@@ -1113,14 +1113,15 @@ applyAppVersion().then((version) => {
 // 以 location.hash 為單一路由來源：
 //   ''/'#home' → 首頁、'#play' → 對弈、'#tsumego' → 死活練習。
 // 對弈只在首次進入「對弈」時初始化（保留 loadGame 自動恢復未完成對局）。
+// desc 寫成「上句，下句」對句（意象＋氣勢），renderHome 會固定在逗號處斷成兩行（對聯感、不孤字）。
 const HOME_ITEMS = [
-  { id: 'play',    title: '圍棋對弈', desc: '與電腦對弈或雙人對局',     hash: '#play' },
-  { id: 'tsumego', title: '死活練習', desc: '題庫做活／殺棋，提升棋力', hash: '#tsumego' },
-  { id: 'xiangqi', title: '象棋對弈', desc: '中國象棋，與電腦或雙人對局', hash: '#xiangqi' },
-  { id: 'xqpuzzle',title: '象棋殘局', desc: '古典殘局，執先手求殺取勝',     hash: '#xqpuzzle' },
-  { id: 'shogi',   title: '日本將棋', desc: '九宮格盤，升變打入，與電腦或雙人對局', hash: '#shogi' },
-  { id: 'gomoku',  title: '五子棋',   desc: '五子連線，先連成一線者勝', hash: '#gomoku' },
-  { id: 'othello', title: '黑白棋',   desc: '翻轉棋，圍地翻子、子多者勝',   hash: '#othello' },
+  { id: 'play',    title: '圍棋對弈', desc: '黑白手談，方圓論天地', hash: '#play' },
+  { id: 'tsumego', title: '死活練習', desc: '方寸之間，一子定生死', hash: '#tsumego' },
+  { id: 'xiangqi', title: '象棋對弈', desc: '楚河漢界，車馬論英雄', hash: '#xiangqi' },
+  { id: 'xqpuzzle',title: '象棋殘局', desc: '古譜殘局，絕處覓殺機', hash: '#xqpuzzle' },
+  { id: 'shogi',   title: '日本將棋', desc: '升變打入，俘子再成軍', hash: '#shogi' },
+  { id: 'gomoku',  title: '五子棋',   desc: '縱橫連珠，先連者為王', hash: '#gomoku' },
+  { id: 'othello', title: '黑白棋',   desc: '黑白翻覆，一夾定乾坤', hash: '#othello' },
 ];
 
 let playInited = false;
@@ -1135,7 +1136,7 @@ function hasUnfinishedGame() {
 }
 
 function homeItemHint(id) {
-  if (id === 'play') return hasUnfinishedGame() ? '有進行中的對局，可繼續' : '';
+  if (id === 'play') return hasUnfinishedGame() ? '有對局可續弈' : '';
   if (id === 'tsumego') {
     const n = tsumegoSolvedTotal();
     return n > 0 ? `已解 ${n} 題` : '';
@@ -1158,7 +1159,15 @@ function renderHome() {
 
     const desc = document.createElement('span');
     desc.className = 'home-card-desc';
-    desc.textContent = item.desc;
+    // 對句固定在首個逗號／頓號處斷成上下兩行（避免 CJK 逐字斷行的孤字）
+    const parts = item.desc.split(/[，、]/);
+    if (parts.length === 2) {
+      const top = document.createElement('span'); top.textContent = parts[0];
+      const bottom = document.createElement('span'); bottom.textContent = parts[1];
+      desc.append(top, bottom);
+    } else {
+      desc.textContent = item.desc;
+    }
     card.appendChild(desc);
 
     const hint = homeItemHint(item.id);

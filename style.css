@@ -725,7 +725,7 @@ a.version-link { display: inline-block; }
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 720px;       /* 放寬以容納上列 4 張卡 */
+  max-width: 780px;       /* 放寬以容納上列 4 張卡（卡片再大一點點） */
   padding: 12px 16px 20px;/* 收上緣間距，避免整體太往下 */
   gap: 16px;
 }
@@ -762,11 +762,11 @@ a.version-link { display: inline-block; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
-  min-height: 104px;      /* 取代固定 aspect-ratio：同列卡片由 grid 自動等高 */
+  min-height: 120px;      /* 取代固定 aspect-ratio：同列卡片由 grid 自動等高 */
   margin: 0;
-  padding: 16px 12px;
+  padding: 18px 14px;
   text-align: center;
   background:
     linear-gradient(135deg, rgba(255,255,255,0.018), transparent 60%),
@@ -793,18 +793,22 @@ a.version-link { display: inline-block; }
 }
 .home-card:active { transform: translateY(-1px) scale(0.99); }
 .home-card-title {
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 900;
   color: var(--gold);
   letter-spacing: 2px;
   white-space: nowrap;
 }
 .home-card-desc {
-  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 13px;
   color: var(--text-dim);
-  letter-spacing: 0.5px;
-  line-height: 1.45;
+  letter-spacing: 1px;
+  line-height: 1.55;
 }
+.home-card-desc span { white-space: nowrap; }   /* 對句上下兩句各自不再斷字 */
 .home-card-hint {
   margin-top: 8px;
   font-size: 12px;
