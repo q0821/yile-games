@@ -10,7 +10,8 @@
   <g stroke="#5b4423" stroke-opacity="0.15" stroke-width="4">
     <path d="M150 96 V416 M256 96 V416 M362 96 V416 M96 150 H416 M96 256 H416 M96 362 H416"/>
   </g>
-  <!-- 宋體「弈」（弈樂品牌；無對應字型時退回系統 serif 仍可顯示） -->
-  <text x="256" y="300" font-family="Songti TC, STSong, Noto Serif TC, serif" font-weight="900"
-        font-size="340" fill="#2c2417" text-anchor="middle" dominant-baseline="middle">弈</text>
+  <!-- 宋體「弈」（弈樂品牌；無對應字型時退回系統 serif 仍可顯示）。
+       y 取畫布正中、用 central 基線置中（dominant-baseline=middle 之前讓字偏下）。 -->
+  <text x="252" y="238" font-family="Songti TC, STSong, Noto Serif TC, serif" font-weight="900"
+        font-size="340" fill="#2c2417" text-anchor="middle" dominant-baseline="central">弈</text>
 </svg>
