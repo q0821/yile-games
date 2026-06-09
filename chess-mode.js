@@ -5,6 +5,7 @@
 // 進模式先載 ffish 顯示盤面，引擎在第一手 AI 才載。
 import * as Game from './chess-game.js';
 import * as Engine from './chess-engine.js';
+import * as Review from './chess-review.js';
 import { resizeChessCanvas, drawChess } from './chess-ui.js';
 
 const SETTINGS_KEY = 'chess-settings-v1';
@@ -25,6 +26,14 @@ let gameOver = false;
 let boardReady = false;
 let promoResolve = null;   // 升變選子 promise 的 resolver
 
+// ——— 覆盤 ———
+let reviewMode = false;
+let reviewMoves = [];
+let reviewFens = [];
+let reviewPly = 0;
+let reviewNodes = null;     // analyzeGame 結果（null = 尚未分析）
+let reviewAnalyzing = false;
+
 // ——— 設定 ———
 let mode = 'pvc';          // 'pvc' | 'pvp'
 let playerWhite = true;    // pvc 時玩家是否執白（先手）
@@ -40,7 +49,13 @@ function cacheDom() {
     thinking: $('chessThinking'), checkBanner: $('chessCheck'),
     endOverlay: $('chessEnd'), endTitle: $('chessEndTitle'), endSub: $('chessEndSub'), endBtn: $('chessEndBtn'),
     promo: $('chessPromo'), promoBtns: $('chessPromoBtns'),
+    reviewBtn: $('chessReviewBtn'), controls: $('chessControls'),
+    review: $('chessReview'), rvSlider: $('chessReviewSlider'), rvInfo: $('chessReviewInfo'),
+    rvFirst: $('csRvFirst'), rvPrev: $('csRvPrev'), rvNext: $('csRvNext'), rvLast: $('csRvLast'),
+    rvAnalyze: $('csRvAnalyze'), rvExit: $('csRvExit'), evalGraph: $('chessEvalGraph'),
   };
+  dom.settings = dom.screen?.querySelector('.gomoku-settings');
+  dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
 }
 
 function loadSettings() {
@@ -232,7 +247,7 @@ async function tryMove(from, to) {
 }
 
 async function onPoint(row, col) {
-  if (gameOver || aiBusy || moving || !boardReady) return;
+  if (reviewMode || gameOver || aiBusy || moving || !boardReady) return;
   if (mode === 'pvc' && !isPlayerTurn()) return;
   if (promoResolve) return;            // 升變選子進行中
   const sq = Game.rcToSquare(row, col);
@@ -272,6 +287,8 @@ function maybeAiMove() {
 }
 
 async function newGame() {
+  if (reviewMode) setReviewUI(false);
+  reviewNodes = null;
   hideEnd();
   resolvePromotion(null);
   showThinking(false);
@@ -288,6 +305,164 @@ async function newGame() {
   setStatus();
   render();
   maybeAiMove(); // pvc 玩家執黑時，白（AI）先走
+}
+
+// ——— 覆盤 ———
+// 與象棋覆盤同法（見 xiangqi-mode）；白方視角分用 p1Cp。盤上不畫 PV 箭頭（與將棋對稱），
+// 最佳手以文字呈現。
+
+function setReviewUI(on) {
+  reviewMode = on;
+  if (dom.settings) dom.settings.style.display = on ? 'none' : '';
+  if (dom.statusrow) dom.statusrow.style.display = on ? 'none' : '';
+  if (dom.controls) dom.controls.style.display = on ? 'none' : '';
+  if (dom.review) dom.review.style.display = on ? 'flex' : 'none';
+}
+
+async function enterReview() {
+  await Game.ensureReady();
+  reviewMoves = Game.moveStackList();
+  if (!reviewMoves.length) return;
+  reviewFens = Game.fensForMoves(reviewMoves);
+  reviewNodes = null;
+  hideEnd();
+  if (dom.evalGraph) dom.evalGraph.style.display = 'none';
+  if (dom.rvSlider) dom.rvSlider.max = String(reviewMoves.length);
+  setReviewUI(true);
+  reviewGoTo(reviewMoves.length);
+}
+
+function exitReview() {
+  setReviewUI(false);
+  render();                 // 回到實際對局（結束）局面
+  if (gameOver) showEnd();
+}
+
+function reviewGoTo(ply) {
+  reviewPly = Math.max(0, Math.min(reviewMoves.length, ply | 0));
+  if (dom.rvSlider) dom.rvSlider.value = String(reviewPly);
+  renderReview();
+  updateReviewInfo();
+  if (reviewNodes) drawEvalGraph();
+}
+
+function renderReview() {
+  const avail = (dom.screen?.clientWidth || window.innerWidth) - 24;
+  const w = Math.min(avail, window.innerWidth - 32, 460);
+  resizeChessCanvas(deps, w);
+  const grid = Game.gridFromFen(reviewFens[reviewPly]);
+  const last = reviewPly > 0 ? Game.moveEndpoints(reviewMoves[reviewPly - 1]) : null;
+  drawChess(deps, {
+    grid, selected: null, legalTargets: null, checkRC: null,
+    lastMove: last ? [last.from, last.to] : null,
+    rc: (sq) => Game.squareToRC(sq),
+  });
+}
+
+/** 優勢曲線：每手白方視角評估分，白優正、黑優負；標目前手。 */
+function drawEvalGraph() {
+  const cv = dom.evalGraph;
+  if (!cv || !reviewNodes) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height, pad = 5, mid = H / 2, CLAMP = 800;
+  const N = reviewMoves.length;
+  const xOf = (k) => pad + (N ? k / N : 0) * (W - 2 * pad);
+  const yOf = (cp) => mid - (Math.max(-CLAMP, Math.min(CLAMP, cp)) / CLAMP) * (H / 2 - pad);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(192,57,43,0.10)'; ctx.fillRect(0, 0, W, mid);       // 上半=白優
+  ctx.fillStyle = 'rgba(44,36,23,0.12)'; ctx.fillRect(0, mid, W, H - mid);  // 下半=黑優
+  ctx.strokeStyle = 'rgba(91,68,35,0.45)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+  ctx.strokeStyle = '#7a5a18'; ctx.lineWidth = 1.8; ctx.beginPath();
+  reviewNodes.forEach((n, k) => { const x = xOf(k), y = yOf(n.p1Cp); k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.stroke();
+  const cx = xOf(reviewPly);
+  ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  ctx.fillStyle = '#c0392b';
+  ctx.beginPath(); ctx.arc(cx, yOf(reviewNodes[reviewPly].p1Cp), 3.5, 0, Math.PI * 2); ctx.fill();
+}
+
+function onGraphClick(e) {
+  if (!reviewNodes) return;
+  const r = dom.evalGraph.getBoundingClientRect();
+  const frac = r.width > 0 ? (e.clientX - r.left) / r.width : 0;
+  reviewGoTo(Math.round(Math.max(0, Math.min(1, frac)) * reviewMoves.length));
+}
+
+/** 白方視角評估分（centipawn）→ 友善文字。 */
+function fmtEval(p1Cp) {
+  if (p1Cp >= 20000) return '白方勝勢';
+  if (p1Cp <= -20000) return '黑方勝勢';
+  const v = p1Cp / 100;
+  if (Math.abs(v) < 0.2) return '均勢';
+  return (v > 0 ? '白優 +' : '黑優 +') + Math.abs(v).toFixed(1);
+}
+
+/** UCI 著法 → 顯示字串（含升變，如 e7e8q → e7→e8=Q）。 */
+function sqArrow(uci) {
+  const m = Game.splitMove(uci);
+  return `${m.from}→${m.to}${m.promo ? '=' + m.promo.toUpperCase() : ''}`;
+}
+
+function updateReviewInfo() {
+  const el = dom.rvInfo;
+  if (!el) return;
+  el.textContent = '';
+  const N = reviewMoves.length;
+  const l1 = document.createElement('div');
+  l1.append('第 ');
+  const b = document.createElement('b'); b.textContent = String(reviewPly); l1.append(b);
+  l1.append(` / ${N} 手`);
+  if (reviewPly > 0) {
+    const mover = (reviewPly % 2 === 1) ? '白方' : '黑方'; // 第 ply 手：ply1=白
+    l1.append(`　${mover} ${sqArrow(reviewMoves[reviewPly - 1])}`);
+  }
+  el.append(l1);
+  if (reviewNodes) {
+    const l2 = document.createElement('div');
+    l2.textContent = '局面評估：' + fmtEval(reviewNodes[reviewPly].p1Cp);
+    el.append(l2);
+    if (reviewPly > 0) {
+      const m = reviewNodes[reviewPly - 1]; // 描述「這手」的損失
+      const l3 = document.createElement('div');
+      l3.append('這手 ');
+      const span = document.createElement('span');
+      span.className = 'xq-cls ' + m.cls.key; // key 為內部常數，非外部輸入
+      span.textContent = m.cls.label;
+      l3.append(span);
+      if (m.loss >= 30) l3.append(`（丟約 ${(m.loss / 100).toFixed(1)} 分）`);
+      if (m.bestmove) l3.append('・最佳 ' + sqArrow(m.bestmove));
+      el.append(l3);
+    }
+  } else {
+    const hint = document.createElement('div');
+    hint.style.color = 'var(--text-muted)';
+    hint.textContent = '按「分析本局」評估每手好壞';
+    el.append(hint);
+  }
+}
+
+async function analyzeReview() {
+  if (reviewAnalyzing || !reviewMoves.length) return;
+  reviewAnalyzing = true;
+  if (dom.rvAnalyze) dom.rvAnalyze.disabled = true;
+  try {
+    reviewNodes = await Review.analyzeGame(reviewMoves, {
+      movetimeMs: 400,
+      onProgress: (k, n) => { if (dom.rvInfo) dom.rvInfo.textContent = `分析中… ${k}/${n}`; },
+    });
+    if (dom.evalGraph) dom.evalGraph.style.display = 'block';
+    drawEvalGraph();
+    renderReview();
+    updateReviewInfo();
+  } catch (err) {
+    if (dom.rvInfo) dom.rvInfo.textContent = 'AI 分析失敗：' + (err?.message || err);
+    Engine.reset();
+  } finally {
+    reviewAnalyzing = false;
+    if (dom.rvAnalyze) dom.rvAnalyze.disabled = false;
+  }
 }
 
 // ——— 設定 UI ———
@@ -335,10 +510,20 @@ function wireEvents() {
   dom.promoBtns?.querySelectorAll('[data-promo]')?.forEach((btn) => {
     btn.addEventListener('click', () => resolvePromotion(btn.getAttribute('data-promo')));
   });
+  // 覆盤
+  dom.reviewBtn?.addEventListener('click', () => enterReview());
+  dom.rvExit?.addEventListener('click', () => exitReview());
+  dom.rvFirst?.addEventListener('click', () => reviewGoTo(0));
+  dom.rvPrev?.addEventListener('click', () => reviewGoTo(reviewPly - 1));
+  dom.rvNext?.addEventListener('click', () => reviewGoTo(reviewPly + 1));
+  dom.rvLast?.addEventListener('click', () => reviewGoTo(reviewMoves.length));
+  dom.rvSlider?.addEventListener('input', () => reviewGoTo(Number(dom.rvSlider.value)));
+  dom.rvAnalyze?.addEventListener('click', () => analyzeReview());
+  dom.evalGraph?.addEventListener('click', onGraphClick);
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
   dom.color?.addEventListener('change', () => { playerWhite = dom.color.value !== 'black'; saveSettings(); newGame(); });
   dom.level?.addEventListener('change', () => { level = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
-  window.addEventListener('resize', () => { if (isActive()) render(); });
+  window.addEventListener('resize', () => { if (isActive()) (reviewMode ? renderReview() : render()); });
 }
 
 // ——— 進入 ———

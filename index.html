@@ -513,6 +513,7 @@
         <div class="board-end-title" id="shogiEndTitle">先手勝</div>
         <div class="board-end-sub" id="shogiEndSub"></div>
         <button class="board-end-btn" id="shogiEndBtn">再來一局</button>
+        <button class="board-end-btn ghost" id="shogiReviewBtn">覆盤檢討</button>
       </div>
     </div>
   </div>
@@ -521,10 +522,26 @@
     <span class="gomoku-status" id="shogiStatus" role="status" aria-live="polite"></span>
     <span class="xiangqi-spinner" id="shogiThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
   </div>
-  <div class="gomoku-controls">
+  <div class="gomoku-controls" id="shogiControls">
     <button id="shogiUndo">悔棋</button>
     <button id="shogiRulesBtn">規則說明</button>
     <button id="shogiRestart">重新開始</button>
+  </div>
+  <!-- 覆盤面板（覆盤模式才顯示） -->
+  <div class="xiangqi-review" id="shogiReview" style="display:none">
+    <canvas id="shogiEvalGraph" class="xiangqi-eval-graph" width="460" height="64" style="display:none" title="點擊跳到該手"></canvas>
+    <input type="range" id="shogiReviewSlider" class="review-slider" min="0" value="0" step="1" aria-label="覆盤進度">
+    <div class="xiangqi-review-controls">
+      <button id="sgRvFirst">最初</button>
+      <button id="sgRvPrev">上一手</button>
+      <button id="sgRvNext">下一手</button>
+      <button id="sgRvLast">最新</button>
+    </div>
+    <div class="xiangqi-review-info" id="shogiReviewInfo"></div>
+    <div class="xiangqi-review-actions">
+      <button id="sgRvAnalyze">分析本局（評估每手）</button>
+      <button id="sgRvExit">退出覆盤</button>
+    </div>
   </div>
 </div>
 
@@ -607,6 +624,7 @@
         <div class="board-end-title" id="chessEndTitle">白方勝</div>
         <div class="board-end-sub" id="chessEndSub"></div>
         <button class="board-end-btn" id="chessEndBtn">再來一局</button>
+        <button class="board-end-btn ghost" id="chessReviewBtn">覆盤檢討</button>
       </div>
     </div>
   </div>
@@ -614,9 +632,25 @@
     <span class="gomoku-status" id="chessStatus" role="status" aria-live="polite"></span>
     <span class="xiangqi-spinner" id="chessThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
   </div>
-  <div class="gomoku-controls">
+  <div class="gomoku-controls" id="chessControls">
     <button id="chessUndo">悔棋</button>
     <button id="chessRestart">重新開始</button>
+  </div>
+  <!-- 覆盤面板（覆盤模式才顯示） -->
+  <div class="xiangqi-review" id="chessReview" style="display:none">
+    <canvas id="chessEvalGraph" class="xiangqi-eval-graph" width="460" height="64" style="display:none" title="點擊跳到該手"></canvas>
+    <input type="range" id="chessReviewSlider" class="review-slider" min="0" value="0" step="1" aria-label="覆盤進度">
+    <div class="xiangqi-review-controls">
+      <button id="csRvFirst">最初</button>
+      <button id="csRvPrev">上一手</button>
+      <button id="csRvNext">下一手</button>
+      <button id="csRvLast">最新</button>
+    </div>
+    <div class="xiangqi-review-info" id="chessReviewInfo"></div>
+    <div class="xiangqi-review-actions">
+      <button id="csRvAnalyze">分析本局（評估每手）</button>
+      <button id="csRvExit">退出覆盤</button>
+    </div>
   </div>
 </div>
 

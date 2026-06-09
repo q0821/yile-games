@@ -147,5 +147,19 @@ export function gridFromFen(fenStr) {
 /** 目前局面棋子格陣。 */
 export function piecesGrid() { return gridFromFen(fen()); }
 
+// ——— 覆盤用 ———
+
+/** 整局已走的 UCI 著法陣列。 */
+export function moveStackList() { return _board.moveStack().split(/\s+/).filter(Boolean); }
+
+/** 由著法序列重播，回傳每個 ply（含開局）的 FEN 陣列（長度 = moves.length + 1）。 */
+export function fensForMoves(moves) {
+  const b = new _ffish.Board('chess');
+  const fens = [b.fen()];
+  for (const m of moves) { b.push(m); fens.push(b.fen()); }
+  b.delete();
+  return fens;
+}
+
 export const COLUMNS = COLS;
 export const ROWS = RANKS;

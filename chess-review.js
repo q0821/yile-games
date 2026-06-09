@@ -1,9 +1,10 @@
-// xiangqi-review.js — 象棋覆盤的數據式評估（用 Fairy-Stockfish 滿血逐手評估）。
+// chess-review.js — 西洋棋覆盤的數據式評估（用 Fairy-Stockfish 滿血逐手評估）。
 //
+// 與象棋覆盤同法（見 xiangqi-review.js），差別只在棋規模組與引擎變體（chess）。
 // 對每個 ply 局面取「輪到下的一方」視角的評估分（centipawn）。
 // 每手失分 loss_i = cpStm_i + cpStm_{i+1}（negamax：相鄰局面視角相反，相加即該手損失）。
-// 紅方視角分 redCp 供畫優勢曲線（紅優為正）。不臆測、純引擎輸出。
-import * as Game from './xiangqi-game.js';
+// p1Cp 為白方視角分（白優為正）供畫優勢曲線。不臆測、純引擎輸出。
+import * as Game from './chess-game.js';
 import * as Engine from './xiangqi-engine.js';
 
 const MATE_CP = 30000;
@@ -28,7 +29,7 @@ export function classifyLoss(loss) {
  * @param {string[]} moves 整局 UCI 著法
  * @param {object} o { movetimeMs, onProgress(k,N) }
  * @returns {Promise<Array>} nodes[k]（位置 0..N）：
- *   { fen, cpStm, redCp, mate, bestmove, pv,  loss, cls }
+ *   { fen, cpStm, p1Cp, mate, bestmove, pv,  loss, cls }
  *   loss/cls/bestmove/pv 描述「從位置 k 走出的那一手」（即第 k+1 手）；最後一個位置無 loss。
  */
 export async function analyzeGame(moves, { movetimeMs = 400, onProgress } = {}) {
@@ -39,13 +40,13 @@ export async function analyzeGame(moves, { movetimeMs = 400, onProgress } = {}) 
   const nodes = [];
   for (let k = 0; k <= N; k++) {
     onProgress?.(k, N);
-    const a = await Engine.analyze({ fen: fens[k], movetimeMs });
+    const a = await Engine.analyze({ fen: fens[k], movetimeMs, variant: 'chess' });
     // 終局（被將死／無合法手）：引擎不吐 score → 視為「輪到的一方必敗」(-MATE_CP)，
     // 否則 cpStm=0 會讓致勝的將死手被誤算成大失誤、終局評估顯示均勢。
     const terminal = k > 0 && a.bestmove == null && a.cp == null && a.mate == null;
     const cpStm = terminal ? -MATE_CP : evalCp(a);
-    const redToMove = (k % 2 === 0); // ply 0 = 紅先手
-    nodes.push({ fen: fens[k], cpStm, redCp: redToMove ? cpStm : -cpStm, mate: a.mate, bestmove: a.bestmove, pv: a.pv });
+    const p1ToMove = (k % 2 === 0); // ply 0 = 白先走
+    nodes.push({ fen: fens[k], cpStm, p1Cp: p1ToMove ? cpStm : -cpStm, mate: a.mate, bestmove: a.bestmove, pv: a.pv });
   }
   for (let i = 0; i < N; i++) {
     const loss = Math.max(0, nodes[i].cpStm + nodes[i + 1].cpStm);
@@ -55,4 +56,4 @@ export async function analyzeGame(moves, { movetimeMs = 400, onProgress } = {}) 
   return nodes;
 }
 
-export const XiangqiReview = { analyzeGame, classifyLoss };
+export const ChessReview = { analyzeGame, classifyLoss };
