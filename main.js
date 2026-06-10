@@ -1217,11 +1217,12 @@ const ROUTE_TITLES = {
   '#xqpuzzle': '象棋殘局', '#play': '圍棋對弈',
 };
 
-/** 對弈中切換棋種會送一次 page_view。Zaraz 的自動 Pageview 只記首次載入，hash SPA 換頁
- *  不會自動算，故在此補送。用 optional chaining：Zaraz 未載入（含尚未在 Cloudflare 設好）時
- *  為 no-op、零風險，不影響站台運作。 */
+/** 對弈中切換棋種會送一次自訂事件 `spa_pageview`。Zaraz 的自動 Pageview 只記首次載入，
+ *  hash SPA 換頁不會自動算，故在此補送。用獨立事件名（非 'Pageview'）避免與內建自動 Pageview
+ *  撞名而重複計數；後台需建一個「Event Name equals spa_pageview」的觸發器掛到 GA 的 Pageview。
+ *  用 optional chaining：Zaraz 未載入（含尚未在 Cloudflare 設好）時為 no-op、零風險。 */
 function trackPageview() {
-  try { window.zaraz?.track('Pageview'); } catch { /* 追蹤失敗不可影響對弈 */ }
+  try { window.zaraz?.track('spa_pageview'); } catch { /* 追蹤失敗不可影響對弈 */ }
 }
 
 function applyRoute(animateTitle) {
