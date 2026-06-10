@@ -53,6 +53,7 @@ function cacheDom() {
     mode: $('chessMode'), color: $('chessColor'), level: $('chessLevel'),
     auto: $('chessAuto'), autoLevelGroup: $('chessAutoLevelGroup'),
     autoLevelLabel: $('chessAutoLevel'), autoReset: $('chessAutoReset'),
+    settingsBtn: $('chessSettingsBtn'), settingsModal: $('chessSettingsModal'),
     thinking: $('chessThinking'), checkBanner: $('chessCheck'),
     endOverlay: $('chessEnd'), endTitle: $('chessEndTitle'), endSub: $('chessEndSub'), endBtn: $('chessEndBtn'),
     promo: $('chessPromo'), promoBtns: $('chessPromoBtns'),
@@ -519,12 +520,15 @@ function applySettingsToControls() {
   if (dom.auto) dom.auto.value = autoMode ? 'on' : 'off';
   const pvc = mode === 'pvc';
   dom.color?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
-  dom.level?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
+  dom.level?.closest('.control-group')?.style.setProperty('display', (pvc && !autoMode) ? '' : 'none'); // 自動時隱藏手動難度
   dom.auto?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
   dom.autoLevelGroup?.style.setProperty('display', (pvc && autoMode) ? '' : 'none');
-  if (dom.level) dom.level.disabled = autoMode; // 自動時手動難度下拉禁用（不採用）
   updateAutoLevelDisplay();
 }
+
+// ——— 設定彈窗 ———
+function openSettings() { applySettingsToControls(); dom.settingsModal?.classList.add('show'); }
+function closeSettings() { dom.settingsModal?.classList.remove('show'); }
 
 // ——— 事件 ———
 
@@ -575,6 +579,9 @@ function wireEvents() {
   dom.level?.addEventListener('change', () => { level = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
   dom.auto?.addEventListener('change', () => { autoMode = dom.auto.value === 'on'; saveSettings(); applySettingsToControls(); });
   dom.autoReset?.addEventListener('click', () => resetAutoLevel());
+  dom.settingsBtn?.addEventListener('click', () => openSettings());
+  dom.settingsModal?.addEventListener('click', (e) => { if (e.target === dom.settingsModal) closeSettings(); });
+  dom.settingsModal?.querySelector('[data-close-settings]')?.addEventListener('click', () => closeSettings());
   window.addEventListener('resize', () => { if (isActive()) (reviewMode ? renderReview() : render()); });
 }
 

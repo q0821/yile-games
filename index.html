@@ -316,43 +316,7 @@
   <div class="mode-header">
     <button class="mode-back" id="xiangqiHome">回首頁</button>
     <h2 class="mode-title">象棋對弈</h2>
-  </div>
-  <div class="gomoku-settings">
-    <div class="control-group">
-      <label for="xiangqiMode">對弈模式</label>
-      <select id="xiangqiMode">
-        <option value="pvc">人 vs 電腦</option>
-        <option value="pvp">雙人對局</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="xiangqiColor">玩家執子</label>
-      <select id="xiangqiColor">
-        <option value="red">執紅（先手）</option>
-        <option value="black">執黑（後手）</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="xiangqiLevel">電腦難度</label>
-      <select id="xiangqiLevel">
-        <option value="1">簡單</option>
-        <option value="2">普通</option>
-        <option value="3">困難</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="xiangqiAuto">難度自動調整</label>
-      <select id="xiangqiAuto">
-        <option value="off">關（手動選難度）</option>
-        <option value="on">開（連敗升級・連勝降級）</option>
-      </select>
-    </div>
-    <div class="control-group" id="xiangqiAutoLevelGroup" style="display:none">
-      <label>電腦等級</label>
-      <div id="xiangqiAutoLevel" class="ai-level-display">第 3 級</div>
-      <p class="control-hint">電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
-      <button type="button" id="xiangqiAutoReset" class="control-reset">重設等級</button>
-    </div>
+    <button class="mode-settings" id="xiangqiSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
   <div class="board-wrap">
     <canvas id="xiangqiBoard" role="img" aria-label="象棋棋盤"></canvas>
@@ -389,6 +353,49 @@
       <button id="xqRvAnalyze">分析本局（評估每手）</button>
       <button id="xqRvExit">退出覆盤</button>
     </div>
+  </div>
+</div>
+
+<!-- 象棋遊戲設定 modal -->
+<div class="modal-overlay" id="xiangqiSettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>遊戲設定</h2>
+    <div class="control-group">
+      <label for="xiangqiMode">對弈模式</label>
+      <select id="xiangqiMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="xiangqiColor">玩家執子</label>
+      <select id="xiangqiColor">
+        <option value="red">執紅（先手）</option>
+        <option value="black">執黑（後手）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="xiangqiLevel">電腦難度</label>
+      <select id="xiangqiLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="xiangqiAuto">難度自動調整</label>
+      <select id="xiangqiAuto">
+        <option value="off">關（手動選難度）</option>
+        <option value="on">開（連敗升級・連勝降級）</option>
+      </select>
+      <p class="control-hint">開啟後，電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
+    </div>
+    <div class="control-group" id="xiangqiAutoLevelGroup" style="display:none">
+      <label>電腦目前等級</label>
+      <div id="xiangqiAutoLevel" class="ai-level-display">第 3 級</div>
+      <button type="button" id="xiangqiAutoReset" class="control-reset">重設等級</button>
+    </div>
+    <button class="primary" data-close-settings>關閉</button>
   </div>
 </div>
 
@@ -483,43 +490,7 @@
   <div class="mode-header">
     <button class="mode-back" id="shogiHome">回首頁</button>
     <h2 class="mode-title">日本將棋</h2>
-  </div>
-  <div class="gomoku-settings">
-    <div class="control-group">
-      <label for="shogiMode">對弈模式</label>
-      <select id="shogiMode">
-        <option value="pvc">人 vs 電腦</option>
-        <option value="pvp">雙人對局</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="shogiColor">玩家執子</label>
-      <select id="shogiColor">
-        <option value="sente">執先手（下方）</option>
-        <option value="gote">執後手（上方）</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="shogiLevel">電腦難度</label>
-      <select id="shogiLevel">
-        <option value="1">簡單</option>
-        <option value="2">普通</option>
-        <option value="3">困難</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="shogiAuto">難度自動調整</label>
-      <select id="shogiAuto">
-        <option value="off">關（手動選難度）</option>
-        <option value="on">開（連敗升級・連勝降級）</option>
-      </select>
-    </div>
-    <div class="control-group" id="shogiAutoLevelGroup" style="display:none">
-      <label>電腦等級</label>
-      <div id="shogiAutoLevel" class="ai-level-display">第 3 級</div>
-      <p class="control-hint">電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
-      <button type="button" id="shogiAutoReset" class="control-reset">重設等級</button>
-    </div>
+    <button class="mode-settings" id="shogiSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
   <div class="shogi-hand" id="shogiHandGote" aria-label="後手持駒"></div>
   <div class="board-wrap">
@@ -571,6 +542,49 @@
   </div>
 </div>
 
+<!-- 將棋遊戲設定 modal -->
+<div class="modal-overlay" id="shogiSettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>遊戲設定</h2>
+    <div class="control-group">
+      <label for="shogiMode">對弈模式</label>
+      <select id="shogiMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="shogiColor">玩家執子</label>
+      <select id="shogiColor">
+        <option value="sente">執先手（下方）</option>
+        <option value="gote">執後手（上方）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="shogiLevel">電腦難度</label>
+      <select id="shogiLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="shogiAuto">難度自動調整</label>
+      <select id="shogiAuto">
+        <option value="off">關（手動選難度）</option>
+        <option value="on">開（連敗升級・連勝降級）</option>
+      </select>
+      <p class="control-hint">開啟後，電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
+    </div>
+    <div class="control-group" id="shogiAutoLevelGroup" style="display:none">
+      <label>電腦目前等級</label>
+      <div id="shogiAutoLevel" class="ai-level-display">第 3 級</div>
+      <button type="button" id="shogiAutoReset" class="control-reset">重設等級</button>
+    </div>
+    <button class="primary" data-close-settings>關閉</button>
+  </div>
+</div>
+
 <!-- Shogi rules modal -->
 <div class="modal-overlay" id="shogiRulesModal">
   <div class="modal changelog-modal">
@@ -606,43 +620,7 @@
   <div class="mode-header">
     <button class="mode-back" id="chessHome">回首頁</button>
     <h2 class="mode-title">西洋棋</h2>
-  </div>
-  <div class="gomoku-settings">
-    <div class="control-group">
-      <label for="chessMode">對弈模式</label>
-      <select id="chessMode">
-        <option value="pvc">人 vs 電腦</option>
-        <option value="pvp">雙人對局</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="chessColor">玩家執子</label>
-      <select id="chessColor">
-        <option value="white">執白（先手）</option>
-        <option value="black">執黑（後手）</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="chessLevel">電腦難度</label>
-      <select id="chessLevel">
-        <option value="1">簡單</option>
-        <option value="2">普通</option>
-        <option value="3">困難</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label for="chessAuto">難度自動調整</label>
-      <select id="chessAuto">
-        <option value="off">關（手動選難度）</option>
-        <option value="on">開（連敗升級・連勝降級）</option>
-      </select>
-    </div>
-    <div class="control-group" id="chessAutoLevelGroup" style="display:none">
-      <label>電腦等級</label>
-      <div id="chessAutoLevel" class="ai-level-display">第 3 級</div>
-      <p class="control-hint">電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
-      <button type="button" id="chessAutoReset" class="control-reset">重設等級</button>
-    </div>
+    <button class="mode-settings" id="chessSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
   <div class="board-wrap">
     <canvas id="chessBoard" role="img" aria-label="西洋棋棋盤"></canvas>
@@ -690,6 +668,49 @@
       <button id="csRvAnalyze">分析本局（評估每手）</button>
       <button id="csRvExit">退出覆盤</button>
     </div>
+  </div>
+</div>
+
+<!-- 西洋棋遊戲設定 modal -->
+<div class="modal-overlay" id="chessSettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>遊戲設定</h2>
+    <div class="control-group">
+      <label for="chessMode">對弈模式</label>
+      <select id="chessMode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="chessColor">玩家執子</label>
+      <select id="chessColor">
+        <option value="white">執白（先手）</option>
+        <option value="black">執黑（後手）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="chessLevel">電腦難度</label>
+      <select id="chessLevel">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="chessAuto">難度自動調整</label>
+      <select id="chessAuto">
+        <option value="off">關（手動選難度）</option>
+        <option value="on">開（連敗升級・連勝降級）</option>
+      </select>
+      <p class="control-hint">開啟後，電腦連敗 2 盤升一級、連勝 2 盤降一級；等級越高棋力越強。</p>
+    </div>
+    <div class="control-group" id="chessAutoLevelGroup" style="display:none">
+      <label>電腦目前等級</label>
+      <div id="chessAutoLevel" class="ai-level-display">第 3 級</div>
+      <button type="button" id="chessAutoReset" class="control-reset">重設等級</button>
+    </div>
+    <button class="primary" data-close-settings>關閉</button>
   </div>
 </div>
 
