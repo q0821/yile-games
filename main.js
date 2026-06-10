@@ -1208,8 +1208,25 @@ function enterPlayMode() {
 
 function goHome() { location.hash = '#home'; }
 
+// 各路由的分頁標題（供瀏覽器分頁顯示，也讓 GA4「網頁標題」報表能區分各棋類——
+// hash SPA 的 page_path 會被去掉 hash，否則各棋種在報表裡長一樣）。
+const SITE_TITLE = '弈樂 · 多棋類線上對弈';
+const ROUTE_TITLES = {
+  '#tsumego': '圍棋死活', '#gomoku': '五子棋', '#xiangqi': '象棋對弈',
+  '#shogi': '日本將棋', '#chess': '西洋棋', '#othello': '黑白棋',
+  '#xqpuzzle': '象棋殘局', '#play': '圍棋對弈',
+};
+
+/** 對弈中切換棋種會送一次 page_view。Zaraz 的自動 Pageview 只記首次載入，hash SPA 換頁
+ *  不會自動算，故在此補送。用 optional chaining：Zaraz 未載入（含尚未在 Cloudflare 設好）時
+ *  為 no-op、零風險，不影響站台運作。 */
+function trackPageview() {
+  try { window.zaraz?.track('Pageview'); } catch { /* 追蹤失敗不可影響對弈 */ }
+}
+
 function applyRoute(animateTitle) {
   const hash = location.hash;
+  document.title = ROUTE_TITLES[hash] ? `${ROUTE_TITLES[hash]} · 弈樂` : SITE_TITLE;
   const title = document.querySelector('h1');
   if (hash === '#tsumego') {
     showScreen('tsumego');
@@ -1253,7 +1270,8 @@ function applyRoute(animateTitle) {
 }
 
 window.goHome = goHome;
-// 畫面切換用墨暈過渡；過渡覆蓋到中點時才換 DOM
-window.addEventListener('hashchange', () => playTransition(() => applyRoute(false)));
-applyRoute(true);   // 初始載入：標題暈開、不走過渡
+// 畫面切換用墨暈過渡；過渡覆蓋到中點時才換 DOM。換頁後補送一次 page_view
+// （只在 hashchange 觸發＝不含初次載入，避免與 Zaraz 自動 Pageview 雙重計數）。
+window.addEventListener('hashchange', () => playTransition(() => { applyRoute(false); trackPageview(); }));
+applyRoute(true);   // 初始載入：標題暈開、不走過渡（page_view 由 Zaraz 自動 Pageview 記）
 startAmbient();     // 背景墨雲飄動（桌機）
