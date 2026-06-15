@@ -113,6 +113,8 @@ export async function genmove(state, { visits = 32, maxTimeMs = 8000 } = {}) {
   const moves = analysis?.moves || [];
   if (!moves.length) return { pass: true };
   const best = moves.find((m) => m.order === 0) || moves[0];
+  // pass 手的 x/y 為 -1（見 analyzeMcts），需明確視為虛手，否則座標越界。
+  if (best.x < 0 || best.y < 0) return { pass: true };
   // web Move x=col,y=row → 本專案 x=row(best.y), y=col(best.x)
   return { x: best.y, y: best.x };
 }
@@ -142,6 +144,10 @@ export async function suggest(state, { visits = 24, maxTimeMs = 8000 } = {}) {
   const moves = analysis?.moves || [];
   if (!moves.length) return { move: null, winrate: analysis?.rootWinRate ?? null, scoreLead: analysis?.rootScoreLead ?? null, pointsLost: 0, pv: [] };
   const best = moves.find((m) => m.order === 0) || moves[0];
+  // pass 手的 x/y 為 -1（見 analyzeMcts）→ 視為建議虛手，move=null，避免座標越界畫到盤外。
+  if (best.x < 0 || best.y < 0) {
+    return { move: null, winrate: best.winRate ?? analysis?.rootWinRate ?? null, scoreLead: best.scoreLead ?? analysis?.rootScoreLead ?? null, pointsLost: best.pointsLost ?? 0, pv: [] };
+  }
   const pv = (best.pv || []).map((g) => gtpToRowCol(g, state.size)).filter(Boolean);
   return {
     move: { x: best.y, y: best.x },
@@ -160,9 +166,11 @@ export async function genmoveCandidates(state, { visits = 32, maxTimeMs = 8000 }
   await ensureReady(state.onStatus);
   const analysis = await client().analyze(buildArgs(state, { visits, maxTimeMs }));
   const moves = analysis?.moves || [];
-  // web Move x=col,y=row → 本專案 x=row(m.y), y=col(m.x)
+  // web Move x=col,y=row → 本專案 x=row(m.y), y=col(m.x)。
+  // pass 手 x/y 為 -1 → 標記 pass:true，避免被當成盤外座標選用。
   return moves.map((m) => ({
     x: m.y, y: m.x,
+    pass: (m.x < 0 || m.y < 0),
     pointsLost: m.pointsLost ?? 0,
     order: m.order ?? 0,
   }));
