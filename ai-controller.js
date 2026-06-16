@@ -22,7 +22,8 @@ export function makeAiController(app) {
     }, { visits: cfg.visits });
     if (!cands.length) return { pass: true };
     const m = pickMove(cands, app.aiLevel);
-    return m ? { x: m.x, y: m.y } : { pass: true };
+    if (!m || m.pass) return { pass: true };
+    return { x: m.x, y: m.y };
   }
 
   // ——— AI move ———
