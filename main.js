@@ -164,6 +164,34 @@ function clearHint() {
   if (showingHint) { showingHint = false; drawBoard(); }
 }
 
+// 棋盤中央短暫浮現的醒目提示（如「電腦虛手」），約 1.8 秒後淡出。
+// 樣式以 inline 設定（不依賴 style.css），確保任何部署狀態都能正確顯示。
+let _toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('goToast');
+  if (!el) return;
+  el.textContent = msg;
+  Object.assign(el.style, {
+    display: 'block',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    padding: '14px 26px',
+    background: 'rgba(178, 58, 46, 0.95)',
+    color: '#fff',
+    fontSize: '18px',
+    fontWeight: '700',
+    letterSpacing: '1px',
+    borderRadius: '12px',
+    boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
+    zIndex: '70',
+    pointerEvents: 'none',
+  });
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.style.display = 'none'; }, 1800);
+}
+
 // 走法提示：用 KataGo 算「現在這手該下哪」+ 數據理由（值幾目）。
 // 注意：此處用全力最佳手、不套用對弈的隨機弱化，所以建議與對手強度無關。
 async function requestMoveHint() {
@@ -314,6 +342,8 @@ function doPass() {
   const aiJustPassed = gameMode === 'pvc' && !willRequestAI && currentPlayer === playerColor && !gameOver;
   if (aiJustPassed) {
     setStatus('AI 虛手了 — 你也虛手即可數目，或按「申請數目」直接計算結果');
+    showToast('電腦虛手（Pass）');   // 醒目提示，避免誤以為電腦還沒下
+    GoSound.playSound('place');
   } else {
     syncStatus();
   }
