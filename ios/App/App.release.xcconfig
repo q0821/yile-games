@@ -1,0 +1,5 @@
+// App target 的 Release base configuration。
+// 先併入 CocoaPods 產生的設定，再併入本機個人簽署設定（Team ID）。
+// Signing.xcconfig 已被 .gitignore 排除，不進版控——請由 Signing.xcconfig.example 複製建立。
+#include? "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"
+#include? "Signing.xcconfig"

@@ -11,3 +11,6 @@ capacitor-cordova-ios-plugins
 # Generated Config files
 App/App/capacitor.config.json
 App/App/config.xml
+
+# 個人簽署設定（Team ID）— 由 Signing.xcconfig.example 複製建立
+App/Signing.xcconfig

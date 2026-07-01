@@ -23,9 +23,19 @@ SCHEME="App"
 CONFIG="Debug"
 DERIVED="ios/App/build"
 APP_PATH="$DERIVED/Build/Products/$CONFIG-iphoneos/App.app"
+SIGNING_XCCONFIG="ios/App/Signing.xcconfig"
 
 SKIP_WEB=0
 LAUNCH=1
+
+# --- 簽署設定檢查（Team ID 抽到 git-ignored 的 Signing.xcconfig）---
+if [ ! -f "$SIGNING_XCCONFIG" ]; then
+  echo "✖ 缺少簽署設定：$SIGNING_XCCONFIG"
+  echo "  這是你個人的 Apple Team ID，不進版控。請建立："
+  echo "    cp ios/App/Signing.xcconfig.example $SIGNING_XCCONFIG"
+  echo "    再編輯填入 DEVELOPMENT_TEAM（Xcode > Settings > Accounts 可查）"
+  exit 1
+fi
 
 # --- 解析參數；沒帶任何參數 → 進互動選單 ---
 if [ "$#" -eq 0 ]; then
