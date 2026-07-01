@@ -24,6 +24,7 @@ export default defineConfig({
         main: 'index.html',
         'katago-spike': 'katago-spike.html',
         'xiangqi-spike': 'xiangqi-spike.html',
+        'ios-spike': 'ios-spike.html',
       },
       external: [],
     },

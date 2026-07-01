@@ -1,0 +1,10 @@
+// 複製本檔為 Signing.xcconfig（同目錄），填入你的 Apple Team ID。
+//   cp ios/App/Signing.xcconfig.example ios/App/Signing.xcconfig
+//
+// Team ID 查法：
+//   - Xcode > Settings > Accounts > 選帳號 > 點 Team 那列即可看到括號內 ID
+//   - 或 https://developer.apple.com/account 的 Membership 頁
+//   - 免費 Apple ID 也有 Team ID（Personal Team）
+//
+// Signing.xcconfig 已被 .gitignore 排除，個人 Team ID 不會進版控。
+DEVELOPMENT_TEAM =

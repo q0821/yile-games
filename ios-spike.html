@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>iOS Spike</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #ece2cd; color: #2c2417; }
+  h1 { font-size: 18px; margin: 4px 0 12px; }
+  #banner { font-size: 18px; font-weight: 800; color: #fff; background: #7a6a3a; border-radius: 10px; padding: 14px; margin-bottom: 12px; line-height: 1.4; }
+  #iso { font-size: 16px; font-weight: 700; margin: 8px 0; }
+  .row { font-size: 16px; font-weight: 600; margin: 8px 0; padding: 8px; background: #f7f0e0; border: 1px solid #cabd9f; border-radius: 8px; }
+  pre { background: #1c1a15; color: #d8ceb4; border-radius: 8px; padding: 10px; font-size: 12px; white-space: pre-wrap; word-break: break-all; min-height: 160px; }
+</style>
+</head>
+<body>
+  <h1>Capacitor iOS 引擎可行性 spike</h1>
+  <div id="banner">載入中…（自動執行，無需點擊）</div>
+  <div id="iso">crossOriginIsolated: 檢測中…</div>
+  <div class="row" id="go">圍棋 KataGo：等待中…</div>
+  <div class="row" id="xq">象棋 fairy-stockfish：等待中…</div>
+  <pre id="log"></pre>
+  <script type="module" src="/ios-spike.js"></script>
+</body>
+</html>
