@@ -1,0 +1,21 @@
+diff --git a/node_modules/@capacitor/ios/Capacitor/Capacitor/WebViewAssetHandler.swift b/node_modules/@capacitor/ios/Capacitor/Capacitor/WebViewAssetHandler.swift
+index 4571152..0b94d77 100644
+--- a/node_modules/@capacitor/ios/Capacitor/Capacitor/WebViewAssetHandler.swift
++++ b/node_modules/@capacitor/ios/Capacitor/Capacitor/WebViewAssetHandler.swift
+@@ -48,7 +48,15 @@ open class WebViewAssetHandler: NSObject, WKURLSchemeHandler {
+             let mimeType = mimeTypeForExtension(pathExtension: url.pathExtension)
+             var headers =  [
+                 "Content-Type": mimeType,
+-                "Cache-Control": "no-cache"
++                "Cache-Control": "no-cache",
++                // spike/capacitor-ios: 讓 WKWebView 具備 cross-origin isolation，
++                // 使 SharedArrayBuffer 可用（KataGo / fairy-stockfish 多執行緒 WASM 需要）。
++                // Capacitor 所有本地資源都經此 handler 送出，於共用 headers 蓋章即覆蓋
++                // 主文件、worker、.wasm、模型 .bin.gz。全部同源 capacitor://localhost，
++                // COEP require-corp 下同源子資源自動放行，毋須額外 CORP。
++                "Cross-Origin-Opener-Policy": "same-origin",
++                "Cross-Origin-Embedder-Policy": "require-corp",
++                "Cross-Origin-Resource-Policy": "same-origin"
+             ]
+ 
+             // if using live reload, then set CORS headers
