@@ -19,7 +19,7 @@ const GAME_SFX_FILES = {
   go: ['stone-place', 'stone-capture', 'pass'],
   gomoku: ['stone-place'],
   othello: ['stone-place', 'stone-capture'], // 使用者偏好：黑白棋沿用圍棋音（othello-flip 棄用）
-  xiangqi: ['shogi-place', 'shogi-capture', 'voice-xiangqi-check', 'voice-xiangqi-mate'],
+  xiangqi: ['shogi-place', 'shogi-capture', 'voice-xiangqi-check'],
   shogi: ['shogi-place', 'shogi-capture', 'voice-shogi-check', 'voice-shogi-mate'],
   chess: ['chess-place', 'chess-capture', 'voice-chess-check', 'voice-chess-mate'],
   common: ['pass', 'game-win', 'game-lose', 'game-draw', 'invalid-move']

@@ -192,9 +192,7 @@ function playEndSound(r) {
 function onGameOver() {
   const r = Game.result();
   playEndSound(r);
-  // 將死語音：僅在真正被將死（終局時仍處於被將軍狀態）才播；和局／無合法手但未被將軍（困斃）不播。
-  // 象棋/將棋/西洋棋均無認輸/逾時功能，故不用額外排除那兩種原因。
-  if (r !== '1/2-1/2' && Game.isCheck()) playVoice('voice-xiangqi-mate');
+  // 將死不播語音（使用者決定：TTS「死棋」語音質感不到位，終局結果由畫面終局卡片呈現即可）
   showEnd();
 }
 

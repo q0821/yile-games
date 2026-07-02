@@ -2,7 +2,6 @@
 =================================
 
 生成方式：ElevenLabs（AI 生成內容，依 ElevenLabs 方案授權條款可商用）
-生成日期：2026-07-02（wood-place.mp3／shogi-place.mp3／shogi-capture.mp3／voice-xiangqi-mate.mp3 已於同日重製）
 生成日期：2026-07-03（bgm-1.mp3 第四次重製，改為單曲循環；bgm-2.mp3 已移除）
 
 一、音效（public/sounds/，ElevenLabs Sound Effects）
@@ -25,7 +24,6 @@ invalid-move.mp3    無效落子／禁著點提示音
 二、語音（public/sounds/，ElevenLabs Text-to-Speech）
 ----------------------------------------------------
 voice-xiangqi-check.mp3  「將軍！」（中文，象棋將軍提示）
-voice-xiangqi-mate.mp3   「死棋！」（中文，象棋將死提示）
 voice-shogi-check.mp3    「王手！」（日文，將棋王手提示）
 voice-shogi-mate.mp3     「詰み！」（日文，將棋詰み提示）
 voice-chess-check.mp3    "Check!"（英文，西洋棋將軍提示）
