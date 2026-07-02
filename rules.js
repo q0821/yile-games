@@ -102,7 +102,11 @@ export function boardToString(board) {
 }
 
 export function tryPlaceStone(board, size, x, y, player, currentKo) {
-  if (board[x][y] !== EMPTY) return { valid: false };
+  if (board[x][y] !== EMPTY) return { valid: false, reason: 'occupied' };
+
+  // 打劫禁著點：先於落子計算檢查（即使該點恰好又是自殺形，仍以「劫」為主要原因回報，
+  // 因使用者最常誤觸的是「劫還沒解就想直接提回」）。
+  if (currentKo && currentKo[0] === x && currentKo[1] === y) return { valid: false, reason: 'ko' };
 
   const newBoard = cloneBoard(board);
   newBoard[x][y] = player;
@@ -121,9 +125,7 @@ export function tryPlaceStone(board, size, x, y, player, currentKo) {
   }
 
   const selfGroup = getGroup(newBoard, size, x, y);
-  if (selfGroup.liberties.size === 0) return { valid: false };
-
-  if (currentKo && currentKo[0] === x && currentKo[1] === y) return { valid: false };
+  if (selfGroup.liberties.size === 0) return { valid: false, reason: 'suicide' };
 
   let newKo = null;
   if (captured === 1 && capturedSingle && selfGroup.stones.length === 1 && selfGroup.liberties.size === 1) {

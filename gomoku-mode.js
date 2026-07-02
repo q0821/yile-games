@@ -9,6 +9,7 @@ import { resizeGomokuCanvas, drawGomoku } from './gomoku-ui.js';
 import { bestMove } from './gomoku-ai.js';
 import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
+import { showBoardToast } from './ui.js';
 
 const SETTINGS_KEY = 'gomoku-settings-v1'; // 只存設定，不與圍棋 SAVE_KEY 相撞
 
@@ -148,7 +149,11 @@ function newGame() {
 
 function onCellClick(r, c) {
   if (gameOver || aiBusy) return;
-  if (!canPlace(board, size, r, c)) return;
+  if (!canPlace(board, size, r, c)) {
+    showBoardToast(dom.canvas?.parentElement, '此處已有棋子');
+    playSfx('invalid-move');
+    return;
+  }
   // 回合 guard：pvc 模式只有「輪到玩家」才允許手動落子（記取圍棋出錯時點棋盤幫 AI 下子的教訓）。
   if (mode === 'pvc' && currentPlayer !== playerColor) return;
   hover = null;

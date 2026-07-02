@@ -112,6 +112,49 @@ describe('applyMove', () => {
     expect(result.ok).toBe(false);
   });
 
+  test('occupied cell returns reason:occupied', () => {
+    GameState.applyMove(4, 4);
+    const result = GameState.applyMove(4, 4); // WHITE tries same cell
+    expect(result.reason).toBe('occupied');
+  });
+
+  test('suicide move returns reason:suicide', () => {
+    // Surround (0,0) with WHITE on a 9x9 so BLACK playing there is suicide.
+    // B(0,0) 相鄰: (0,1) 與 (1,0)；先讓白佔滿即可構造自殺手。
+    GameState.sync({
+      board: (() => {
+        const b = GoRules.createBoard(9);
+        b[0][1] = WHITE;
+        b[1][0] = WHITE;
+        return b;
+      })(),
+      currentPlayer: BLACK,
+    });
+    const result = GameState.applyMove(0, 0);
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('suicide');
+  });
+
+  test('ko point move returns reason:ko', () => {
+    // 用實際打劫棋形：黑吃白單子後產生劫，白立刻回吃被禁。
+    //  . B W .
+    //  B W . W  <- black plays at (1,2) captures W at (1,1) → ko at (1,1)
+    //  . B W .
+    GameState.resetState({ size: 7 });
+    const b = GoRules.createBoard(7);
+    b[0][1] = BLACK; b[2][1] = BLACK; b[1][0] = BLACK;
+    b[1][1] = WHITE;
+    b[0][2] = WHITE; b[2][2] = WHITE; b[1][3] = WHITE;
+    GameState.sync({ board: b, currentPlayer: BLACK });
+    const capture = GameState.applyMove(1, 2); // BLACK captures, sets koPoint at (1,1)
+    expect(capture.ok).toBe(true);
+    expect(GameState.getState().koPoint).toEqual([1, 1]);
+
+    const result = GameState.applyMove(1, 1); // WHITE tries to immediately recapture
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('ko');
+  });
+
   test('boardHistory grows after each move', () => {
     GameState.applyMove(0, 0);
     GameState.applyMove(8, 8);

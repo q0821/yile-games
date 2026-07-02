@@ -213,7 +213,7 @@ function buildUndoEntry(current) {
 export function applyMove(x, y) {
   const current = ensureState();
   const result = tryPlaceStone(current.board, current.size, x, y, current.currentPlayer, current.koPoint);
-  if (!result.valid) return { ok: false };
+  if (!result.valid) return { ok: false, reason: result.reason };
 
   current.boardHistory.push(buildUndoEntry(current));
   current.board = cloneBoard(result.newBoard);

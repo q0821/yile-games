@@ -100,6 +100,45 @@ function renderBoardBackground(deps, state) {
   return offscreen;
 }
 
+// ——— 共用棋盤 toast（五子棋/黑白棋等沒有專屬 #goToast 元素的畫面用）———
+// 動態建立一個 .board-toast 節點掛在傳入的 container（需 position:relative，
+// 各棋種 .board-wrap 已符合），樣式全部 inline（不依賴 style.css），與圍棋既有
+// #goToast 視覺一致，避免另外改 index.html/style.css。
+const _boardToastTimers = new WeakMap();
+export function showBoardToast(container, msg) {
+  if (!container) return;
+  let el = container.querySelector(':scope > .board-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'board-toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'assertive');
+    container.appendChild(el);
+  }
+  el.textContent = msg;
+  Object.assign(el.style, {
+    display: 'block',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    padding: '14px 26px',
+    background: 'rgba(178, 58, 46, 0.95)',
+    color: '#fff',
+    fontSize: '18px',
+    fontWeight: '700',
+    letterSpacing: '1px',
+    borderRadius: '12px',
+    boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
+    zIndex: '70',
+    pointerEvents: 'none',
+  });
+  const prevTimer = _boardToastTimers.get(container);
+  if (prevTimer) clearTimeout(prevTimer);
+  const t = setTimeout(() => { el.style.display = 'none'; }, 1800);
+  _boardToastTimers.set(container, t);
+}
+
 export function updateHUD(state) {
   const normalizedState = {
     ...state,
@@ -352,6 +391,36 @@ export function drawBoard(deps, state) {
     }
   }
 
+  // 劫爭禁著點常駐小標記（下一手解消：applyMove/applyPass 都會清 koPoint）。
+  if (state.koPoint && !state.gameOver && !state.isReviewing && !state.isScoring) {
+    const [kx, ky] = state.koPoint;
+    const cx = deps.padding + ky * deps.cellSize;
+    const cy = deps.padding + kx * deps.cellSize;
+    ctx.save();
+    ctx.strokeStyle = '#b23a2e'; // --seal
+    ctx.lineWidth = 2;
+    const s = deps.cellSize * 0.16;
+    ctx.strokeRect(cx - s, cy - s, s * 2, s * 2);
+    ctx.restore();
+  }
+
+  // 禁著點落子失敗：交叉點紅 X 閃現約 600ms（main.js 觸發後由計時器清除）。
+  if (state.invalidFlash) {
+    const [ix, iy] = state.invalidFlash;
+    const cx = deps.padding + iy * deps.cellSize;
+    const cy = deps.padding + ix * deps.cellSize;
+    ctx.save();
+    ctx.strokeStyle = '#b23a2e'; // --seal
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    const r = deps.cellSize * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(cx - r, cy - r); ctx.lineTo(cx + r, cy + r);
+    ctx.moveTo(cx + r, cy - r); ctx.lineTo(cx - r, cy + r);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   if (state.showingHint && !state.gameOver && !state.isReviewing && !state.isScoring && !state.isAIThinking) {
     for (const [hx, hy] of state.captureHints || []) {
       const cx = deps.padding + hy * deps.cellSize;
@@ -497,5 +566,5 @@ export const GoUI = {
   updateHUD, setStatus, getStatusMessage, syncStatus, updateReviewInfo,
   updateReviewAnalysisInfo, drawWinrateGraph,
   updateScoringDisplay,
-  resizeCanvas, drawStone, drawBoard
+  resizeCanvas, drawStone, drawBoard, showBoardToast
 };

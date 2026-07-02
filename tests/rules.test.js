@@ -186,6 +186,13 @@ describe('tryPlaceStone', () => {
     expect(result.valid).toBe(false);
   });
 
+  test('occupied cell reports reason:occupied', () => {
+    const b = GoRules.createBoard(9);
+    b[4][4] = WHITE;
+    const result = GoRules.tryPlaceStone(b, 9, 4, 4, BLACK, null);
+    expect(result.reason).toBe('occupied');
+  });
+
   test('does not mutate original board', () => {
     const b = GoRules.createBoard(9);
     GoRules.tryPlaceStone(b, 9, 4, 4, BLACK, null);
@@ -222,6 +229,14 @@ describe('tryPlaceStone', () => {
     expect(result.valid).toBe(false); // suicide
   });
 
+  test('suicide move reports reason:suicide', () => {
+    const b = GoRules.createBoard(5);
+    b[0][1] = WHITE;
+    b[1][0] = WHITE;
+    const result = GoRules.tryPlaceStone(b, 5, 0, 0, BLACK, null);
+    expect(result.reason).toBe('suicide');
+  });
+
   test('ko point blocks replaying the capture', () => {
     // Classic ko: white just captured at (2,2), koPoint = [2,2]
     const b = GoRules.createBoard(9);
@@ -229,6 +244,14 @@ describe('tryPlaceStone', () => {
     const koPoint = [2, 2];
     const result = GoRules.tryPlaceStone(b, 9, 2, 2, BLACK, koPoint);
     expect(result.valid).toBe(false);
+  });
+
+  test('ko point move reports reason:ko', () => {
+    const b = GoRules.createBoard(9);
+    b[2][2] = EMPTY;
+    const koPoint = [2, 2];
+    const result = GoRules.tryPlaceStone(b, 9, 2, 2, BLACK, koPoint);
+    expect(result.reason).toBe('ko');
   });
 
   test('ko point is set after a single-stone capture that creates ko', () => {

@@ -8,6 +8,7 @@ import { bestMove } from './othello-ai.js';
 import { resizeOthelloCanvas, drawOthello } from './othello-ui.js';
 import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
+import { showBoardToast } from './ui.js';
 
 const SETTINGS_KEY = 'othello-settings-v1';
 
@@ -172,7 +173,12 @@ async function makeMove(r, c, player) {
 async function onCellClick(r, c) {
   if (gameOver || aiBusy || animating || !board) return;
   if (mode === 'pvc' && !isPlayerTurn()) return;
-  if (!flips(board, size, r, c, currentPlayer).length) return; // 非合法手
+  if (!flips(board, size, r, c, currentPlayer).length) {
+    // 非合法手：黑白棋最常見的無聲失敗（點了不能翻子的格）
+    showBoardToast(dom.canvas?.parentElement, '此處無法落子（不能翻子）');
+    playSfx('invalid-move');
+    return;
+  }
   await makeMove(r, c, currentPlayer);
   setStatus();
   render();

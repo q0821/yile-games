@@ -70,6 +70,9 @@ let showingHint = false;
 let suggestMove = null; // KataGo 建議走法 [row,col]，null=不顯示
 let _suggestBusy = false;
 
+let invalidFlash = null; // 禁著點落子失敗時短暫閃現的紅 X [x,y]，null=不顯示
+let _invalidFlashTimer = null;
+
 let emotionEnabled = false;
 
 const canvas = document.getElementById('board');
@@ -237,6 +240,25 @@ function clearSuggest() {
   suggestMove = null;
 }
 
+// 禁著點/無效點擊回饋：該交叉點紅 X 閃現約 600ms（見 ui.js drawBoard 的 invalidFlash）。
+function flashInvalid(x, y) {
+  invalidFlash = [x, y];
+  drawBoard();
+  if (_invalidFlashTimer) clearTimeout(_invalidFlashTimer);
+  _invalidFlashTimer = setTimeout(() => {
+    invalidFlash = null;
+    drawBoard();
+  }, 600);
+}
+
+// 落子失敗原因 → 使用者看得懂的中文提示。
+function invalidMoveReasonText(reason) {
+  if (reason === 'occupied') return '此處已有棋子';
+  if (reason === 'suicide') return '禁著點：自殺手';
+  if (reason === 'ko') return '打劫禁著點，需先在他處下一手';
+  return '此處不能下子';
+}
+
 function getCaptureHints(b, player) {
   return GoHints.getCaptureHints(b, size, player, koPoint);
 }
@@ -271,6 +293,7 @@ function buildBoardViewState() {
     suggestMove,
     emotionEnabled,
     hoverPos,
+    invalidFlash,
     ownership: (isReviewing && reviewOwnershipOn && reviewAnalysis && reviewAnalysis[currentReviewMove])
       ? reviewAnalysis[currentReviewMove].ownership : null,
   };
@@ -294,7 +317,12 @@ function placeStone(x, y) {
   if (isAIThinking && gameMode === 'pvc') return false;
 
   const result = GameState.applyMove(x, y);
-  if (!result.ok) return false;
+  if (!result.ok) {
+    flashInvalid(x, y);
+    showToast(invalidMoveReasonText(result.reason));
+    playSfx('invalid-move');
+    return false;
+  }
   applyStateFromStore();
 
   showingHint = false;
