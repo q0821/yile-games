@@ -185,6 +185,12 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 - 劫爭進行中：劫的禁著點**常駐畫小標記**（下一手解消），不做全盤禁著點掃描標示（視覺太吵）
 - 其他棋種順手檢查：象棋/將棋/西洋棋點不合法目標時已有「取消選取」回饋，維持現狀；五子棋/黑白棋點無效格若也是無聲失敗，套同樣 toast＋提示音模式（黑白棋「無合法手需 pass」情境既有處理保留）
 
+### 8.2 圍棋終局判定邊界修正（已重現的 bug）
+
+- **Bug**：`cancelScoring()`（game-state.js:307）未重置 `passCount`——雙虛手進數目後按「取消數目」返回對局，之後只虛手**一次**（passCount 2→3）就立刻又被判終局。已在瀏覽器實測重現（取消後單次虛手，數目面板立刻重開）。
+- **修法**：`cancelScoring()` 重置 `current.passCount = 0` ＋ 補單元測試（取消數目後需重新累積兩次連續虛手才終局）
+- **順帶 UX 預警**：任一方虛手後（passCount=1 時）toast 預告「再虛手一次將進入數目」——成本一行，消除「不小心連按兩次虛手直接進數目」的突兀感（PvC 中 AI 虛手已有既有提示，維持）
+
 ## 9. 測試與驗證
 
 - Jest：audio-manager 設定邏輯（預設值、讀寫、邊界）、版面調整不破壞各 mode 既有測試
@@ -199,7 +205,7 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 |---|---|---|
 | P1 | audio-manager＋素材生成（音效/語音/BGM）＋六棋接線＋全域設定 UI | 素材生成與接線交 subagent（Sonnet），Fable 5 整合把關 |
 | P2 | APP icon 生成與全平台替換 | subagent（Sonnet） |
-| P3 | AI 建議（三棋）＋版面一致化＋iOS safe-area＋圍棋禁著點回饋 | subagent（Sonnet） |
+| P3 | AI 建議（三棋）＋版面一致化＋iOS safe-area＋圍棋禁著點回饋＋圍棋終局判定邊界修正（§8.2） | subagent（Sonnet） |
 | P4 | 質感精修 | subagent（Sonnet）＋視覺 review |
 | 後續 | 深色模式（另立 PRD） | — |
 
