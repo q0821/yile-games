@@ -178,7 +178,7 @@ async function makeMove(r, c, player) {
   history.push(snapshot());
   const flipped = applyMove(board, size, r, c, player);
   lastMove = [r, c];
-  playSfx('othello-flip'); // 落子＋翻子併一聲（PLAN Task 5 對照表）
+  playSfx('stone-place'); // 使用者偏好：沿用圍棋落子音（原 othello-flip 棄用）
   animating = true;
   await animateFlips(flipped, [r, c], player);
   animating = false;

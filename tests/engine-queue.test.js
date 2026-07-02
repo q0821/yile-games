@@ -65,7 +65,7 @@ describe('引擎請求序列化：並發不交錯', () => {
     mock.emit('bestmove e2e4');
     const mv2 = await p2;
     expect(mv2).toBe('e2e4');
-  });
+  }, 20000); // 滿載並行時 vm sandbox 初始化偶發吃掉預設 5s，放寬避免 flake
 });
 
 describe('hint() 取消語意', () => {

@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS = { sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVol
 const GAME_SFX_FILES = {
   go: ['stone-place', 'stone-capture', 'pass'],
   gomoku: ['stone-place'],
-  othello: ['othello-flip'],
+  othello: ['stone-place', 'stone-capture'], // 使用者偏好：黑白棋沿用圍棋音（othello-flip 棄用）
   xiangqi: ['wood-place', 'wood-capture', 'voice-xiangqi-check', 'voice-xiangqi-mate'],
   shogi: ['shogi-place', 'shogi-capture', 'voice-shogi-check', 'voice-shogi-mate'],
   chess: ['chess-place', 'chess-capture', 'voice-chess-check', 'voice-chess-mate'],
