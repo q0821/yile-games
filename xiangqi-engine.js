@@ -67,7 +67,14 @@ export function ensureReady(onStatus) {
     onStatus?.('AI 載入中…（首次需下載約 1.6MB）');
     const Stockfish = await loadFactory();
     if (typeof self !== 'undefined' && !self.crossOriginIsolated) {
-      throw new Error('需 cross-origin isolated（COOP/COEP 標頭）才能載入多執行緒引擎');
+      // 附上實際狀態，讓 iOS/Android WebView 上的錯誤 banner 直接可診斷：
+      // crossOriginIsolated=false 通常代表 COOP/COEP 回應標頭沒生效
+      //（Capacitor iOS 需 WebViewAssetHandler 補丁；見 patches/ 與 scripts/ios-deploy.sh）。
+      const hasSAB = typeof SharedArrayBuffer !== 'undefined';
+      throw new Error(
+        '需 cross-origin isolated（COOP/COEP 標頭）才能載入多執行緒引擎'
+        + `［crossOriginIsolated=${self.crossOriginIsolated}, SharedArrayBuffer=${hasSAB}］`
+      );
     }
     _engine = await Stockfish({ locateFile: (p) => ENGINE_DIR + p });
     _engine.addMessageListener(onLine);
