@@ -4,11 +4,47 @@
 // view = { board, size, legalMoves, lastMove, hover }；座標 board[row][col]。
 import { EMPTY, BLACK } from './rules.js';
 import { drawStonePixel } from './stone.js';
+import { paintWoodGrain, paintVignette } from './board-texture.js';
 
 const BG = '#e6c98a';
 const LINE = 'rgba(91,68,35,0.55)';
 const HINT = 'rgba(43,90,40,0.45)';
 const LAST = '#c0392b';
+
+// ——— 棋盤背景 offscreen 快取（底色＋木紋＋格線＋定位點＋vignette，只在尺寸變動時重算） ———
+let _bg = null;
+let _bgKey = '';
+
+function buildBackground(deps) {
+  const key = `${deps._w}_${deps.size}`;
+  if (_bg && _bgKey === key) return _bg;
+  const off = document.createElement('canvas');
+  off.width = deps._w; off.height = deps._w;
+  const ctx = off.getContext('2d');
+  const size = deps.size, cell = deps.cellSize, pad = deps.padding;
+
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, deps._w, deps._w);
+  paintWoodGrain(ctx, deps._w, deps._w, { seed: 13, grainColor: 'rgba(80,58,26,0.10)', speckColor: 'rgba(255,244,214,0.10)' });
+
+  ctx.strokeStyle = LINE; ctx.lineWidth = 1;
+  for (let i = 0; i <= size; i++) {
+    const p = pad + i * cell;
+    ctx.beginPath(); ctx.moveTo(pad, p); ctx.lineTo(pad + size * cell, p); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p, pad); ctx.lineTo(p, pad + size * cell); ctx.stroke();
+  }
+  if (size === 8) {
+    ctx.fillStyle = LINE;
+    for (const [r, c] of [[2, 2], [2, 6], [6, 2], [6, 6]]) {
+      ctx.beginPath(); ctx.arc(pad + r * cell, pad + c * cell, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  paintVignette(ctx, deps._w, deps._w);
+
+  _bg = off; _bgKey = key;
+  return off;
+}
 
 /** 依容器寬度算 cellSize、設定 canvas 尺寸（含 DPR）。 */
 export function resizeOthelloCanvas(deps, maxWidthPx) {
@@ -41,23 +77,7 @@ export function drawOthello(deps, view) {
   const { ctx } = deps;
   const size = deps.size, cell = deps.cellSize, pad = deps.padding;
   ctx.clearRect(0, 0, deps._w, deps._w);
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, deps._w, deps._w);
-
-  // 格線（9×9 邊界）
-  ctx.strokeStyle = LINE; ctx.lineWidth = 1;
-  for (let i = 0; i <= size; i++) {
-    const p = pad + i * cell;
-    ctx.beginPath(); ctx.moveTo(pad, p); ctx.lineTo(pad + size * cell, p); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(p, pad); ctx.lineTo(p, pad + size * cell); ctx.stroke();
-  }
-  // 8×8 盤的四個定位點（小圓點，標準黑白棋有）
-  if (size === 8) {
-    ctx.fillStyle = LINE;
-    for (const [r, c] of [[2, 2], [2, 6], [6, 2], [6, 6]]) {
-      ctx.beginPath(); ctx.arc(pad + r * cell, pad + c * cell, 2.5, 0, Math.PI * 2); ctx.fill();
-    }
-  }
+  ctx.drawImage(buildBackground(deps), 0, 0);
 
   const radius = cell * 0.42;
   const anim = view.anim;

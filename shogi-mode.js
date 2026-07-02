@@ -8,6 +8,7 @@ import * as Engine from './shogi-engine.js';
 import * as Review from './shogi-review.js';
 import * as Adaptive from './adaptive-chess.js';
 import { resizeShogiCanvas, drawShogi } from './shogi-ui.js';
+import { prefersReducedMotion } from './motion.js';
 import { loadSfxPack, playSfx, playVoice } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 
@@ -380,7 +381,7 @@ function animateMove(fromSq, toSq) {
     const fromRC = Game.squareToRC(fromSq);
     const grid = Game.piecesGrid();
     const piece = grid[fromRC.row] && grid[fromRC.row][fromRC.col];
-    if (!piece) { resolve(); return; }
+    if (!piece || prefersReducedMotion()) { resolve(); return; }
     const p0 = pixelCenterOf(fromSq), p1 = pixelCenterOf(toSq);
     let start = null, done = false;
     const finish = () => { if (!done) { done = true; resolve(); } };

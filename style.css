@@ -103,10 +103,18 @@ canvas {
   cursor: pointer;
   border-radius: var(--radius);
   /* 暖色陰影（配合亮宣紙主題）。先前用 rgba(0,0,0,0.7) 純黑重陰影是舊深色主題遺留，
-     在亮底上偏髒，也讓棋盤視覺上黏住上下工具列 */
+     在亮底上偏髒，也讓棋盤視覺上黏住上下工具列。
+     疊層 box-shadow 模擬實木棋盤的側面厚度立面（上緣淺色反光、下緣一圈漸深的「木塊斷面」）
+     ＋桌面投影（大範圍柔和暗影），純 CSS 做、不需改 canvas 繪製，六棋 .board-wrap 內的
+     canvas 共用同一視覺語言。 */
   box-shadow:
-    0 8px 28px rgba(60,46,24,0.20),
-    0 0 0 1px rgba(205,176,121,0.22);
+    inset 0 1px 0 rgba(255,250,235,0.4),
+    inset 0 -2px 0 rgba(58,40,16,0.18),
+    0 2px 0 rgba(170,138,74,0.65),
+    0 4px 0 rgba(140,110,56,0.55),
+    0 6px 0 rgba(112,86,42,0.45),
+    0 14px 28px rgba(40,28,12,0.30),
+    0 0 0 1px rgba(205,176,121,0.25);
   display: block;
   max-width: 100%;
   touch-action: manipulation;
@@ -198,11 +206,17 @@ button {
   margin-bottom: 6px;
   font-weight: 500;
 }
-button:hover {
+button:hover:not(:disabled) {
   background: var(--border-hl);
   border-color: var(--border-hl);
+  box-shadow: 0 3px 10px rgba(60,46,24,0.16);
+  transform: translateY(-1px);
 }
-button:active { transform: scale(0.97); }
+button:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
+button:focus-visible {
+  outline: 2px solid var(--gold-dim);
+  outline-offset: 2px;
+}
 
 button.primary {
   background: linear-gradient(135deg, var(--gold-dim) 0%, var(--gold-mid) 100%);
@@ -212,10 +226,12 @@ button.primary {
   box-shadow: 0 2px 12px var(--gold-glow);
   letter-spacing: 1px;
 }
-button.primary:hover {
+button.primary:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--gold-mid) 0%, var(--gold) 100%);
-  box-shadow: 0 4px 22px rgba(133,98,25,0.35);
+  box-shadow: 0 6px 22px rgba(133,98,25,0.38);
+  transform: translateY(-1px);
 }
+button.primary:active:not(:disabled) { transform: scale(0.97); box-shadow: 0 2px 8px rgba(133,98,25,0.3); }
 
 button.danger {
   background: rgba(178,58,46,0.10);
@@ -223,10 +239,13 @@ button.danger {
   border-color: rgba(178,58,46,0.45);
   font-weight: 600;
 }
-button.danger:hover {
+button.danger:hover:not(:disabled) {
   background: rgba(178,58,46,0.20);
   border-color: rgba(178,58,46,0.7);
+  box-shadow: 0 3px 10px rgba(178,58,46,0.18);
+  transform: translateY(-1px);
 }
+button.danger:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
 
 /* ===== Toggle switch ===== */
 .toggle-row {
@@ -593,7 +612,11 @@ button.danger:hover {
   text-align: center;
   max-width: 360px;
   width: 90%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 80px rgba(192,148,58,0.08);
+  /* 三層陰影：貼身柔邊（層次感）+ 主要落地陰影 + 外圍古銅微光暈，加強浮起層次 */
+  box-shadow:
+    0 2px 8px rgba(0,0,0,0.25),
+    0 20px 60px rgba(0,0,0,0.7),
+    0 0 80px rgba(192,148,58,0.08);
   animation: modalIn 0.28s cubic-bezier(0.34, 1.5, 0.64, 1);
   position: relative;
 }
@@ -1547,4 +1570,18 @@ h1.brush-title {
 @media (max-width: 900px) {
   .go-screen { padding: 8px 10px 20px; }
   .go-controls button { font-size: 13px; min-width: 0; flex-basis: calc(50% - 4px); }
+}
+
+/* ===== 減少動態效果（系統偏好） ===== */
+/* 使用者於系統開啟「減少動態效果」時，全站 CSS 動畫/轉場一律跳過、直接呈現終態
+   （modal 開合、王手橫幅、思考中 spinner、標題墨韻等）。canvas 內的落子 scale-in／
+   翻子／滑動動畫由對應 *-ui.js / *-mode.js 各自呼叫 motion.js 的 prefersReducedMotion()
+   判斷、直接畫終態，不在這裡處理。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

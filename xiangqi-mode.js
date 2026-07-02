@@ -8,6 +8,7 @@ import * as Engine from './xiangqi-engine.js';
 import * as Review from './xiangqi-review.js';
 import * as Adaptive from './adaptive-chess.js';
 import { resizeXiangqiCanvas, drawXiangqi } from './xiangqi-ui.js';
+import { prefersReducedMotion } from './motion.js';
 import { loadSfxPack, playSfx, playVoice } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 
@@ -505,7 +506,7 @@ function animateMove(uci) {
     const fromRC = Game.squareToRC(fromSq);
     const grid = Game.piecesGrid();
     const piece = grid[fromRC.row] && grid[fromRC.row][fromRC.col];
-    if (!piece) { resolve(); return; }
+    if (!piece || prefersReducedMotion()) { resolve(); return; }
     const p0 = pixelOf(fromSq), p1 = pixelOf(toSq);
     let start = null, done = false;
     const finish = () => { if (!done) { done = true; resolve(); } };

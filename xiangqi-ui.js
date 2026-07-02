@@ -5,6 +5,7 @@
 // view = { grid, selected, legalTargets, lastMove, checkRC, anim }；座標 row 0=上、col 0=左。
 //   anim = { hideRow, hideCol, piece:{char,red}, x, y }：動畫中隱藏某格、改畫浮動棋子於 (x,y)。
 import { COLUMNS, ROWS } from './xiangqi-game.js';
+import { paintWoodGrain, paintVignette } from './board-texture.js';
 
 // 與 style.css --font-serif 同步（canvas 無法吃 CSS 變數，故重複一份系統宋體 stack）
 const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
@@ -101,6 +102,22 @@ function drawPiece(ctx, x, y, r, piece, lifted) {
   ctx.lineWidth = Math.max(1, r * 0.05);
   ctx.strokeStyle = piece.red ? 'rgba(168,57,46,0.5)' : 'rgba(44,36,23,0.45)';
   ctx.stroke();
+  // 3b) 內圈淺浮雕：右下內陰影 + 左上邊緣高光，營造陰刻圓底質感（幅度小，不影響文字辨識）
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.80, 0, Math.PI * 2);
+  ctx.clip();
+  const shade = ctx.createRadialGradient(x + r * 0.3, y + r * 0.32, r * 0.3, x, y, r * 0.82);
+  shade.addColorStop(0, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, piece.red ? 'rgba(120,38,25,0.18)' : 'rgba(30,20,8,0.18)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  const rim = ctx.createRadialGradient(x - r * 0.32, y - r * 0.36, 0, x - r * 0.32, y - r * 0.36, r * 0.95);
+  rim.addColorStop(0, 'rgba(255,255,255,0.32)');
+  rim.addColorStop(0.45, 'rgba(255,255,255,0)');
+  ctx.fillStyle = rim;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  ctx.restore();
   // 4) 左上高光弧
   ctx.beginPath();
   ctx.arc(x - r * 0.18, y - r * 0.20, r * 0.62, Math.PI * 1.05, Math.PI * 1.62);
@@ -117,44 +134,66 @@ function drawPiece(ctx, x, y, r, piece, lifted) {
   ctx.fillText(piece.char, x, y + r * 0.04);
 }
 
-export function drawXiangqi(deps, view) {
-  const { ctx } = deps;
+// ——— 棋盤背景 offscreen 快取（底色＋木紋＋格線＋九宮＋標線＋河界字＋vignette，只在尺寸變動時重算） ———
+let _bg = null;
+let _bgKey = '';
+
+function buildBackground(deps) {
+  const key = `${deps._w}_${deps._h}_${deps.cellSize}`;
+  if (_bg && _bgKey === key) return _bg;
+  const off = document.createElement('canvas');
+  off.width = deps._w; off.height = deps._h;
+  const ctx = off.getContext('2d');
+  const bg = { ctx, cellSize: deps.cellSize, padding: deps.padding };
   const cell = deps.cellSize;
-  ctx.clearRect(0, 0, deps._w, deps._h);
+
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, deps._w, deps._h);
+  paintWoodGrain(ctx, deps._w, deps._h, { seed: 17, grainColor: 'rgba(80,58,26,0.10)', speckColor: 'rgba(255,244,214,0.10)' });
 
   ctx.strokeStyle = LINE;
   ctx.lineWidth = 1.4;
 
   // 橫線
-  for (let r = 0; r < ROWS; r++) line(ctx, ix(deps, 0), iy(deps, r), ix(deps, COLUMNS - 1), iy(deps, r));
+  for (let r = 0; r < ROWS; r++) line(ctx, ix(bg, 0), iy(bg, r), ix(bg, COLUMNS - 1), iy(bg, r));
   // 直線：邊線整條，內側在河界斷開
   for (let c = 0; c < COLUMNS; c++) {
     if (c === 0 || c === COLUMNS - 1) {
-      line(ctx, ix(deps, c), iy(deps, 0), ix(deps, c), iy(deps, ROWS - 1));
+      line(ctx, ix(bg, c), iy(bg, 0), ix(bg, c), iy(bg, ROWS - 1));
     } else {
-      line(ctx, ix(deps, c), iy(deps, 0), ix(deps, c), iy(deps, 4));
-      line(ctx, ix(deps, c), iy(deps, 5), ix(deps, c), iy(deps, ROWS - 1));
+      line(ctx, ix(bg, c), iy(bg, 0), ix(bg, c), iy(bg, 4));
+      line(ctx, ix(bg, c), iy(bg, 5), ix(bg, c), iy(bg, ROWS - 1));
     }
   }
   // 九宮斜線
-  line(ctx, ix(deps, 3), iy(deps, 0), ix(deps, 5), iy(deps, 2));
-  line(ctx, ix(deps, 5), iy(deps, 0), ix(deps, 3), iy(deps, 2));
-  line(ctx, ix(deps, 3), iy(deps, 7), ix(deps, 5), iy(deps, 9));
-  line(ctx, ix(deps, 5), iy(deps, 7), ix(deps, 3), iy(deps, 9));
+  line(ctx, ix(bg, 3), iy(bg, 0), ix(bg, 5), iy(bg, 2));
+  line(ctx, ix(bg, 5), iy(bg, 0), ix(bg, 3), iy(bg, 2));
+  line(ctx, ix(bg, 3), iy(bg, 7), ix(bg, 5), iy(bg, 9));
+  line(ctx, ix(bg, 5), iy(bg, 7), ix(bg, 3), iy(bg, 9));
 
   // 兵卒位、炮位的傳統直角標線
-  drawPositionMarks(deps);
+  drawPositionMarks(bg);
 
   // 河界字
   ctx.fillStyle = 'rgba(91,68,35,0.5)';
   ctx.font = `${Math.round(cell * 0.46)}px ${SERIF}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const riverY = (iy(deps, 4) + iy(deps, 5)) / 2;
-  ctx.fillText('楚 河', ix(deps, 1.5), riverY);
-  ctx.fillText('漢 界', ix(deps, 6.5), riverY);
+  const riverY = (iy(bg, 4) + iy(bg, 5)) / 2;
+  ctx.fillText('楚 河', ix(bg, 1.5), riverY);
+  ctx.fillText('漢 界', ix(bg, 6.5), riverY);
+
+  paintVignette(ctx, deps._w, deps._h);
+
+  _bg = off; _bgKey = key;
+  return off;
+}
+
+export function drawXiangqi(deps, view) {
+  const { ctx } = deps;
+  const cell = deps.cellSize;
+  ctx.clearRect(0, 0, deps._w, deps._h);
+  ctx.drawImage(buildBackground(deps), 0, 0);
 
   // 最後一手標記
   if (view.lastMove) {

@@ -6,6 +6,7 @@ import { BLACK, WHITE, opponent } from './rules.js';
 import { SIZE, newBoard, flips, legalMoves, hasLegalMove, applyMove, score, isGameOver } from './othello-rules.js';
 import { bestMove } from './othello-ai.js';
 import { resizeOthelloCanvas, drawOthello } from './othello-ui.js';
+import { prefersReducedMotion } from './motion.js';
 import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 import { showBoardToast } from './ui.js';
@@ -154,6 +155,8 @@ const FLIP_ANIM_MS = 300;
 /** 翻子動畫：被翻子水平縮放換色、落子 pop-in；board 已更新。 */
 function animateFlips(flipped, place, player) {
   return new Promise((resolve) => {
+    // prefers-reduced-motion：跳過翻子/落子過場，board 已是終態，呼叫端隨後會 render() 畫出來
+    if (prefersReducedMotion()) { resolve(); return; }
     const set = new Set(flipped.map(([r, c]) => r + ',' + c));
     const black = player === BLACK;
     let start = null, done = false;

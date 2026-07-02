@@ -7,6 +7,7 @@
 //   hint = { isDrop:false, from, to } 一般手箭頭 或 { isDrop:true, to } 打入目的地高亮
 //   （建議走法按鈕，見 shogi-mode.js；打入無起點，持駒列對應駒高亮另由 shogi-mode.js 的 DOM 渲染負責）。
 import { COLUMNS, ROWS } from './shogi-game.js';
+import { paintWoodGrain, paintVignette } from './board-texture.js';
 
 const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
 
@@ -95,6 +96,21 @@ function drawPiece(ctx, x, y, size, piece, lifted) {
   ctx.lineWidth = Math.max(0.8, size * 0.022);
   ctx.strokeStyle = 'rgba(91,66,34,0.4)';
   ctx.stroke();
+  // 淺浮雕：內線範圍內下方內陰影 + 上方邊緣高光，營造木駒陰刻字底質感（幅度小）
+  ctx.save();
+  komaPath(ctx, w * 0.82, h * 0.8);
+  ctx.clip();
+  const shade = ctx.createLinearGradient(0, -h * 0.2, 0, h * 0.8);
+  shade.addColorStop(0, 'rgba(0,0,0,0)');
+  shade.addColorStop(1, 'rgba(60,40,15,0.16)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(-w, -h, w * 2, h * 2);
+  const rim = ctx.createLinearGradient(0, -h, 0, -h * 0.1);
+  rim.addColorStop(0, 'rgba(255,255,255,0.30)');
+  rim.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = rim;
+  ctx.fillRect(-w, -h, w * 2, h * 2);
+  ctx.restore();
   // 字（升變駒用紅）
   ctx.fillStyle = piece.promoted ? PROMO_INK : PIECE_EDGE;
   ctx.font = `700 ${Math.round(size * 0.5)}px ${SERIF}`;
@@ -115,15 +131,46 @@ function drawStars(deps) {
   }
 }
 
+// ——— 棋盤背景 offscreen 快取（外框＋底色＋木紋＋格線＋星位＋vignette，只在尺寸變動時重算） ———
+let _bg = null;
+let _bgKey = '';
+
+function buildBackground(deps) {
+  const key = `${deps._w}_${deps._h}_${deps.cellSize}`;
+  if (_bg && _bgKey === key) return _bg;
+  const off = document.createElement('canvas');
+  off.width = deps._w; off.height = deps._h;
+  const ctx = off.getContext('2d');
+  const bg = { ctx, cellSize: deps.cellSize, padding: deps.padding };
+  const cell = deps.cellSize;
+
+  ctx.fillStyle = FRAME;
+  ctx.fillRect(0, 0, deps._w, deps._h);
+  ctx.fillStyle = BG;
+  ctx.fillRect(gx(bg, 0), gy(bg, 0), COLUMNS * cell, ROWS * cell);
+  paintWoodGrain(ctx, deps._w, deps._h, { seed: 21, grainColor: 'rgba(80,58,26,0.10)', speckColor: 'rgba(255,244,214,0.10)' });
+
+  ctx.strokeStyle = LINE;
+  ctx.lineWidth = 1.2;
+  for (let r = 0; r <= ROWS; r++) {
+    ctx.beginPath(); ctx.moveTo(gx(bg, 0), gy(bg, r)); ctx.lineTo(gx(bg, COLUMNS), gy(bg, r)); ctx.stroke();
+  }
+  for (let c = 0; c <= COLUMNS; c++) {
+    ctx.beginPath(); ctx.moveTo(gx(bg, c), gy(bg, 0)); ctx.lineTo(gx(bg, c), gy(bg, ROWS)); ctx.stroke();
+  }
+  drawStars(bg);
+
+  paintVignette(ctx, deps._w, deps._h);
+
+  _bg = off; _bgKey = key;
+  return off;
+}
+
 export function drawShogi(deps, view) {
   const { ctx } = deps;
   const cell = deps.cellSize;
   ctx.clearRect(0, 0, deps._w, deps._h);
-  // 外框
-  ctx.fillStyle = FRAME;
-  ctx.fillRect(0, 0, deps._w, deps._h);
-  ctx.fillStyle = BG;
-  ctx.fillRect(gx(deps, 0), gy(deps, 0), COLUMNS * cell, ROWS * cell);
+  ctx.drawImage(buildBackground(deps), 0, 0);
 
   // 最後一手底色（from + to 格）
   if (view.lastMove) {
@@ -134,17 +181,6 @@ export function drawShogi(deps, view) {
       ctx.fillRect(gx(deps, p.col), gy(deps, p.row), cell, cell);
     }
   }
-
-  // 格線
-  ctx.strokeStyle = LINE;
-  ctx.lineWidth = 1.2;
-  for (let r = 0; r <= ROWS; r++) {
-    ctx.beginPath(); ctx.moveTo(gx(deps, 0), gy(deps, r)); ctx.lineTo(gx(deps, COLUMNS), gy(deps, r)); ctx.stroke();
-  }
-  for (let c = 0; c <= COLUMNS; c++) {
-    ctx.beginPath(); ctx.moveTo(gx(deps, c), gy(deps, 0)); ctx.lineTo(gx(deps, c), gy(deps, ROWS)); ctx.stroke();
-  }
-  drawStars(deps);
 
   // 王手：被將王格紅框
   if (view.checkRC) {

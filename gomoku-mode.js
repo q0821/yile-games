@@ -300,7 +300,8 @@ export async function enterGomokuMode() {
   if (!initialized) {
     cacheDom();
     loadSettings();
-    deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), padding: 24, cellSize: 30 };
+    // scheduleRedraw：借給 gomoku-ui.js 的落子 scale-in 動畫用，動畫進行中才會被呼叫。
+    deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), padding: 24, cellSize: 30, scheduleRedraw: () => render() };
     applySettingsToControls();
     wireEvents();
     renderAudioControls(dom.audioSettings);

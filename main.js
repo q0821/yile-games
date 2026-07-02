@@ -304,7 +304,9 @@ function drawBoard() {
   if (_drawRaf) return;
   _drawRaf = requestAnimationFrame(() => {
     _drawRaf = null;
-    const deps = { canvas, ctx, padding, cellSize, starPoints: STAR_POINTS };
+    // scheduleRedraw：借給 ui.js 的落子 scale-in / 提子淡出動畫用，動畫進行中才會被呼叫
+    // （drawBoard 本身已有 _drawRaf 節流 guard，不會疊加出常駐 loop）。
+    const deps = { canvas, ctx, padding, cellSize, starPoints: STAR_POINTS, scheduleRedraw: drawBoard };
     GoUI.drawBoard(deps, buildBoardViewState());
     cellSize = deps.cellSize;
     padding = deps.padding;

@@ -5,6 +5,7 @@
 // view = { grid, selected, legalTargets, lastMove, checkRC, anim, hint, rc }；座標 row 0=上、col 0=左。
 //   hint = { from, to }：建議走法箭頭（AI 建議按鈕，見 chess-mode.js）。
 import { COLUMNS, ROWS } from './chess-game.js';
+import { paintWoodGrain, paintVignette } from './board-texture.js';
 
 // 棋子用系統西洋棋符號字型（macOS/iOS=Apple Symbols；其餘退回）
 const PIECEFONT = '"Apple Symbols","Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif';
@@ -55,9 +56,9 @@ function drawPiece(ctx, x, y, size, piece) {
   ctx.font = `${Math.round(size * 0.82)}px ${PIECEFONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(40,28,12,0.45)';
-  ctx.shadowBlur = size * 0.10;
-  ctx.shadowOffsetY = size * 0.05;
+  ctx.shadowColor = 'rgba(40,28,12,0.5)';
+  ctx.shadowBlur = size * 0.13;
+  ctx.shadowOffsetY = size * 0.07;
   if (piece.white) {
     ctx.fillStyle = IVORY; ctx.fillText(g, x, y + size * 0.02);
     ctx.shadowColor = 'transparent';
@@ -68,18 +69,47 @@ function drawPiece(ctx, x, y, size, piece) {
   ctx.restore();
 }
 
+// ——— 棋盤背景 offscreen 快取（底色＋棋格＋木紋＋細框＋座標＋vignette，只在尺寸變動時重算） ———
+let _bg = null;
+let _bgKey = '';
+
+function buildBackground(deps) {
+  const key = `${deps._w}_${deps.cellSize}`;
+  if (_bg && _bgKey === key) return _bg;
+  const off = document.createElement('canvas');
+  off.width = deps._w; off.height = deps._w;
+  const ctx = off.getContext('2d');
+  const cell = deps.cellSize;
+  const W = deps._w;
+
+  ctx.fillStyle = MARGIN; ctx.fillRect(0, 0, W, W);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLUMNS; c++) {
+    ctx.fillStyle = ((r + c) % 2 === 0) ? LIGHT : DARK;
+    ctx.fillRect(gx(deps, c), gy(deps, r), cell, cell);
+  }
+  paintWoodGrain(ctx, W, W, { seed: 25, grainColor: 'rgba(70,50,20,0.08)', speckColor: 'rgba(255,244,214,0.08)' });
+
+  ctx.strokeStyle = FRAMELINE; ctx.lineWidth = 2;
+  ctx.strokeRect(gx(deps, 0) - 1, gy(deps, 0) - 1, COLUMNS * cell + 2, ROWS * cell + 2);
+
+  ctx.fillStyle = 'rgba(91,68,35,0.55)';
+  ctx.font = `600 ${Math.max(8, Math.round(cell * 0.18))}px "Noto Serif TC","Songti TC",serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let c = 0; c < COLUMNS; c++) ctx.fillText('abcdefgh'[c], cx(deps, c), W - deps.padding / 2);
+  for (let r = 0; r < ROWS; r++) ctx.fillText(String(8 - r), deps.padding / 2, cy(deps, r));
+
+  paintVignette(ctx, W, W);
+
+  _bg = off; _bgKey = key;
+  return off;
+}
+
 export function drawChess(deps, view) {
   const { ctx } = deps;
   const cell = deps.cellSize;
   const W = deps._w;
   ctx.clearRect(0, 0, W, W);
-  ctx.fillStyle = MARGIN; ctx.fillRect(0, 0, W, W);
-
-  // 棋盤格
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLUMNS; c++) {
-    ctx.fillStyle = ((r + c) % 2 === 0) ? LIGHT : DARK;
-    ctx.fillRect(gx(deps, c), gy(deps, r), cell, cell);
-  }
+  ctx.drawImage(buildBackground(deps), 0, 0);
 
   // 最後一手底色（from + to）
   if (view.lastMove) {
@@ -90,17 +120,6 @@ export function drawChess(deps, view) {
       ctx.fillRect(gx(deps, p.col), gy(deps, p.row), cell, cell);
     }
   }
-
-  // 細框線
-  ctx.strokeStyle = FRAMELINE; ctx.lineWidth = 2;
-  ctx.strokeRect(gx(deps, 0) - 1, gy(deps, 0) - 1, COLUMNS * cell + 2, ROWS * cell + 2);
-
-  // 座標（小而淡）
-  ctx.fillStyle = 'rgba(91,68,35,0.55)';
-  ctx.font = `600 ${Math.max(8, Math.round(cell * 0.18))}px "Noto Serif TC","Songti TC",serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for (let c = 0; c < COLUMNS; c++) ctx.fillText('abcdefgh'[c], cx(deps, c), W - deps.padding / 2);
-  for (let r = 0; r < ROWS; r++) ctx.fillText(String(8 - r), deps.padding / 2, cy(deps, r));
 
   // 將軍：被將王格紅框
   if (view.checkRC) {

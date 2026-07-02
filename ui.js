@@ -1,5 +1,7 @@
 import { EMPTY, BLACK, WHITE, getGroup } from './rules.js';
 import { drawStonePixel } from './stone.js';
+import { paintWoodGrain, paintVignette } from './board-texture.js';
+import { prefersReducedMotion } from './motion.js';
 
 // ——— Liberty map for emotion mode ———
 function computeLibertyMap(board, size) {
@@ -31,6 +33,20 @@ let _bgCacheKey = '';
 // every draw tick.
 let _lastCanvasKey = '';
 
+// ——— 落子 scale-in / 提子淡出動畫 ———
+// 事件觸發才跑：偵測到 state.lastMove 變動（新落子）或棋子從盤面消失（被提）時各自
+// 起一段短動畫，rAF 只在動畫進行中才被排程（透過 deps.scheduleRedraw 借用呼叫端既有的
+// 重繪節流），動畫結束即不再排程，靜止時無常駐 loop。prefers-reduced-motion 時完全跳過，
+// 直接呈現終態（不畫任何過場）。
+const PLACE_ANIM_MS = 150;
+const CAPTURE_FADE_MS = 220;
+let _placeAnimKey = null;   // `${x},${y}` 最近一次觸發動畫的 lastMove（避免同一手重複觸發）
+let _placeAnimStart = 0;
+let _placeAnimRunning = false;
+let _prevBoardFlat = null;  // 上次繪製時的盤面快照（扁平陣列），用來偵測被提走的子
+let _captureFade = null;    // { stones: [{x,y,color}], start }
+const _easeOutBack = (t) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
+
 function _layoutKey(deps, state) {
   return `${window.innerWidth}_${window.innerHeight}_${state.size}`;
 }
@@ -47,17 +63,8 @@ function renderBoardBackground(deps, state) {
 
   ctx.fillStyle = '#dcb35c';
   ctx.fillRect(0, 0, w, w);
-  ctx.save();
-  ctx.globalAlpha = 0.15;
-  for (let i = 0; i < w; i += 8) {
-    ctx.strokeStyle = i % 24 === 0 ? '#a08030' : '#c4a04c';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, i);
-    ctx.lineTo(w, i + (Math.sin(i * 0.05) * 3));
-    ctx.stroke();
-  }
-  ctx.restore();
+  // 低對比 procedural 木紋（纖維弧線＋木孔斑），一次畫進快取，不每 frame 重算
+  paintWoodGrain(ctx, w, w, { seed: 5, grainColor: 'rgba(90,64,24,0.12)', speckColor: 'rgba(255,244,214,0.10)' });
 
   ctx.strokeStyle = '#5a4420';
   ctx.lineWidth = 1;
@@ -94,6 +101,9 @@ function renderBoardBackground(deps, state) {
     ctx.fillText(state.size - i, labelOffset, pos);
     ctx.fillText(state.size - i, deps.padding + (state.size - 1) * deps.cellSize + labelOffset, pos);
   }
+
+  // 外圍柔和 vignette（角落微暗，桌面實木棋盤的立體感）
+  paintVignette(ctx, w, w);
 
   _bgCache = offscreen;
   _bgCacheKey = cacheKey;
@@ -269,7 +279,7 @@ export function resizeCanvas(deps, state) {
   return cellSize;
 }
 
-export function drawStone(deps, x, y, color, isDead) {
+export function drawStone(deps, x, y, color, isDead, scale = 1, alpha = 1) {
   // origin 偏移：死活局部裁切時，deps.originRow/originCol 為視窗左上角的盤面座標；
   // 對弈不傳 → 預設 0 → 行為與原本完全相同（x=row 對應垂直、y=col 對應水平）。
   const ox = deps.originRow || 0;
@@ -279,8 +289,17 @@ export function drawStone(deps, x, y, color, isDead) {
   const r = deps.cellSize * 0.44;
   const ctx = deps.ctx;
 
-  // 共用棋子視覺（柔邊投影 + 三段暖漸層 + 高光，見 stone.js）
-  drawStonePixel(ctx, cx, cy, r, color === BLACK);
+  // 共用棋子視覺（柔邊投影 + 三段暖漸層 + 高光，見 stone.js）；scale≠1 用於落子 scale-in 動畫。
+  if (scale !== 1) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(Math.max(0.02, scale), Math.max(0.02, scale));
+    ctx.translate(-cx, -cy);
+    drawStonePixel(ctx, cx, cy, r, color === BLACK, alpha);
+    ctx.restore();
+  } else {
+    drawStonePixel(ctx, cx, cy, r, color === BLACK, alpha);
+  }
 
   if (isDead) {
     ctx.strokeStyle = '#ff4444';
@@ -295,6 +314,52 @@ export function drawStone(deps, x, y, color, isDead) {
   }
 }
 
+/**
+ * 偵測落子（lastMove 變動）與提子（棋子從盤面消失），起 scale-in / 淡出動畫。
+ * 事件觸發才寫入動畫狀態；prefers-reduced-motion 時直接跳過，只更新比對基準。
+ */
+function _detectBoardChanges(state) {
+  const size = state.size;
+  const flat = new Array(size * size);
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) flat[x * size + y] = state.displayBoard[x][y];
+  }
+
+  const reduceMotion = prefersReducedMotion();
+  const sameSize = _prevBoardFlat && _prevBoardFlat.length === flat.length;
+
+  if (!reduceMotion && sameSize) {
+    // 提子：上次有子、這次變空 → 淡出
+    const removed = [];
+    for (let i = 0; i < flat.length; i++) {
+      if (_prevBoardFlat[i] !== EMPTY && flat[i] === EMPTY) {
+        removed.push({ x: Math.floor(i / size), y: i % size, color: _prevBoardFlat[i] });
+      }
+    }
+    if (removed.length > 0) _captureFade = { stones: removed, start: performance.now() };
+  }
+
+  // 落子：lastMove 座標變動且該點現在有子 → scale-in
+  if (state.lastMove) {
+    const [lx, ly] = state.lastMove;
+    const key = `${lx},${ly}`;
+    if (key !== _placeAnimKey) {
+      _placeAnimKey = key;
+      if (!reduceMotion && state.displayBoard[lx] && state.displayBoard[lx][ly] !== EMPTY) {
+        _placeAnimStart = performance.now();
+        _placeAnimRunning = true;
+      } else {
+        _placeAnimRunning = false;
+      }
+    }
+  } else {
+    _placeAnimKey = null;
+    _placeAnimRunning = false;
+  }
+
+  _prevBoardFlat = flat;
+}
+
 export function drawBoard(deps, state) {
   // ——— Dirty-rect: only resize when the viewport or board size changed ———
   const layoutKey = _layoutKey(deps, state);
@@ -305,6 +370,9 @@ export function drawBoard(deps, state) {
     _bgCache = null;
     _bgCacheKey = '';
   }
+
+  _detectBoardChanges(state);
+  const now = performance.now();
 
   const ctx = deps.ctx;
   const canvas = deps.canvas;
@@ -344,12 +412,40 @@ export function drawBoard(deps, state) {
     }
   }
 
+  // 提子淡出：畫已從盤面消失、動畫尚未結束的子（見 _detectBoardChanges）
+  let captureAnimActive = false;
+  if (_captureFade) {
+    const elapsed = now - _captureFade.start;
+    if (elapsed < CAPTURE_FADE_MS) {
+      const alpha = 1 - elapsed / CAPTURE_FADE_MS;
+      for (const s of _captureFade.stones) drawStone(deps, s.x, s.y, s.color, false, 1, alpha);
+      captureAnimActive = true;
+    } else {
+      _captureFade = null;
+    }
+  }
+
+  let placeAnimActive = false;
   for (let x = 0; x < state.size; x++) {
     for (let y = 0; y < state.size; y++) {
-      if (state.displayBoard[x][y] !== EMPTY) {
-        drawStone(deps, x, y, state.displayBoard[x][y], state.deadStones.has(x * state.size + y));
+      if (state.displayBoard[x][y] === EMPTY) continue;
+      let scale = 1;
+      if (_placeAnimRunning && state.lastMove && state.lastMove[0] === x && state.lastMove[1] === y) {
+        const elapsed = now - _placeAnimStart;
+        if (elapsed < PLACE_ANIM_MS) {
+          scale = Math.max(0.05, _easeOutBack(Math.min(1, elapsed / PLACE_ANIM_MS)));
+          placeAnimActive = true;
+        } else {
+          _placeAnimRunning = false;
+        }
       }
+      drawStone(deps, x, y, state.displayBoard[x][y], state.deadStones.has(x * state.size + y), scale);
     }
+  }
+
+  // 動畫進行中才排下一幀（借用呼叫端既有的重繪節流），靜止時不留常駐 rAF loop。
+  if ((placeAnimActive || captureAnimActive) && deps.scheduleRedraw) {
+    requestAnimationFrame(() => deps.scheduleRedraw());
   }
 
   if (state.emotionEnabled && !state.isScoring) {
@@ -384,10 +480,21 @@ export function drawBoard(deps, state) {
   if (state.lastMove) {
     const [lx, ly] = state.lastMove;
     if (state.displayBoard[lx][ly] !== EMPTY) {
-      ctx.fillStyle = state.displayBoard[lx][ly] === BLACK ? '#fff' : '#000';
+      const mcx = deps.padding + ly * deps.cellSize;
+      const mcy = deps.padding + lx * deps.cellSize;
+      const isBlackStone = state.displayBoard[lx][ly] === BLACK;
+      // 最後一手標記：對比色實心點 + 細圈，比純點更好辨識、與朱砂印章語彙呼應
+      ctx.save();
+      ctx.strokeStyle = isBlackStone ? 'rgba(255,255,255,0.55)' : 'rgba(178,58,46,0.6)';
+      ctx.lineWidth = Math.max(1, deps.cellSize * 0.035);
       ctx.beginPath();
-      ctx.arc(deps.padding + ly * deps.cellSize, deps.padding + lx * deps.cellSize, deps.cellSize * 0.15, 0, Math.PI * 2);
+      ctx.arc(mcx, mcy, deps.cellSize * 0.24, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = isBlackStone ? '#fff' : '#b23a2e';
+      ctx.beginPath();
+      ctx.arc(mcx, mcy, deps.cellSize * 0.13, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
     }
   }
 
