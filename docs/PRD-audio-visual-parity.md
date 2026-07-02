@@ -53,13 +53,13 @@ getAudioSettings() / setAudioSettings(patch)   // 變更即時生效並廣播
 - Schema：`{ sfxOn: bool, sfxVolume: 0..1, musicOn: bool, musicVolume: 0..1 }`
 - 預設：**音效開（0.8）、音樂關（0.5）**——音樂偏好分歧大，讓使用者主動開
 - 入口：首頁設定入口＋六棋各自設定區嵌同一份音訊控制，讀寫同一 key
-- 既有 `sound.js`（WebAudio 合成）退役，圍棋改接 audio-manager；合成程式碼可保留作 fallback（音檔載入失敗時）
+- **Fallback 政策**：音檔載入失敗一律 fail-soft 靜音（不噴錯、不擋遊戲）；僅圍棋既有四種合成音（place/capture/pass/gameend）保留 `sound.js` 合成作 fallback——其餘棋種的音效（木子、駒音、翻子、語音）**沒有**合成版可退，失敗即靜音
 
 ### 3.3 相容性注意
 
-- iOS WKWebView：AudioContext 需 user gesture 解鎖；BGM `<audio>` 自動播放同樣受限，一律在手勢後啟動
-- 切到背景/回前景：`visibilitychange` 時暫停/恢復 BGM
-- 音檔經內嵌 HTTP server（localhost:3333）服務，COOP/COEP header 已涵蓋同源資產，無額外 CORP 問題
+- **解鎖手勢明確定義**：app 啟動時在 `document` 掛一次性 `pointerdown`/`touchstart`/`keydown` 監聽（`{ once: true }` 語意），觸發時 `AudioContext.resume()` 並標記 unlocked；BGM 只在 unlocked 之後才嘗試 `play()`。所有 `<audio>.play()` 的 promise rejection 一律捕捉（fail-soft），解鎖前的 `playSfx` 呼叫直接丟棄不排隊
+- **背景/前景**：同時監聽 `visibilitychange` 與 `pagehide`（iOS WKWebView 上 `visibilitychange` 不完全可靠）暫停 BGM；回前景**不自動恢復**，除非 `musicOn === true` 且暫停前正在播放。iOS 實機的背景暫停/恢復行為列入 P1 驗收必測項
+- **Header 環境差異**：COOP/COEP 在 iOS 由內嵌 server（AppDelegate 全 response 蓋 header）處理、dev/preview 由 vite.config.js 處理、正式 web 部署由 hosting 設定處理——音檔皆為同源靜態資產，三個環境都不需額外 CORP 設定，但不可將三者混為一談
 
 ## 4. 音訊素材（以既有 skills 生成）
 
@@ -89,7 +89,11 @@ getAudioSettings() / setAudioSettings(patch)   // 變更即時生效並廣播
 | shogi-check / shogi-mate | 「王手！」／「詰み！」 | 日文 |
 | chess-check / chess-mate | "Check!" ／ "Checkmate!" | 英文 |
 
-觸發點：三棋的 mode 層已有將軍/王手偵測（狀態提示條），在同一處接語音。
+觸發點（依實際程式流程，兩處分開接）：
+
+- **將軍**：接在各 mode 既有的將軍偵測/提示條路徑（`flashCheck` 等）
+- **將死**：現有流程 `gameOver` 時直接走終局處理、**不會經過**將軍提示路徑，所以 mate 語音接在終局處理（`showEnd`）內，依終局原因（ffish 的 checkmate 判定/終局 reason）觸發；認輸、和局、逾時不播 mate 語音
+- **節流**：同一語音播放中不重複觸發（快速連將不疊音）
 
 ### 4.3 背景音樂（music skill / ElevenLabs Music）
 
@@ -106,13 +110,19 @@ getAudioSettings() / setAudioSettings(patch)   // 變更即時生效並廣播
   - `ios/App/App/Assets.xcassets/AppIcon.appiconset/`（single-size 格式，換掉 AppIcon-512@2x.png）
   - `public/icon-512.png`、`public/icon-192.png`、`public/apple-touch-icon.png`、`public/favicon.ico`、`public/icon.svg`（或改為 PNG 引用）
   - `public/manifest.json` icons 欄位核對
+- 驗收：Xcode asset catalog 實際 build 確認（不是換一張 PNG 就算完成）；主畫面、設定 app、Spotlight 三種尺寸目視檢查
 
 ## 6. AI 建議（象棋／將棋／西洋棋）
 
 - 常駐功能列新增「建議走法」按鈕，行為對齊圍棋既有的 `requestMoveHint`
-- 實作：呼叫既有 Fairy-Stockfish 引擎（xiangqi-engine 共用單例）搜一手 bestmove，於棋盤 canvas overlay 畫 from→to 箭頭，下一手落子或按鈕再按時清除
-- 思考中沿用既有 spinner；與 AI 對弈回合互斥（AI 思考中停用按鈕）
-- 難度：建議走法固定用較高強度（不吃 adaptive difficulty 的削弱設定），因為目的是「教學」
+- **引擎併發（關鍵設計）**：`xiangqi-engine.js` 是三棋共用的**單一 UCI process**（全域 `_tap` 與 waiter），對弈 AI（`bestMove`）、覆盤分析（`analyze`）、建議走法若並發會互搶輸出。所有引擎請求一律經**序列化佇列**（一次一個、支援取消），建議走法排入同一佇列
+- **按鈕停用條件**（不只 AI 思考中）：`aiBusy`、`reviewAnalyzing`、覆盤模式中、升變對話框開啟中、終局後；回覆抵達時若局面已變（FEN 不符）則丟棄結果不畫
+- **建議的呈現（逐棋不同，不能一套通用）**：
+  - 象棋：重用既有 `view.pv` 箭頭繪製
+  - 西洋棋：新增 from→to 箭頭 overlay（現無 pv 支援）
+  - 將棋：一般手畫箭頭；**打入（drop）沒有起點**，改為「目的地高亮＋持駒列對應駒高亮」
+  - 清除時機：下一手落子、再按一次按鈕、或悔棋時
+- 思考中沿用既有 spinner；難度固定用較高強度（不吃 adaptive difficulty 的削弱設定），目的為「教學」
 
 ## 7. 版面一致化
 
@@ -128,9 +138,19 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 
 常駐功能列統一「順序與樣式」，但按鈕**依棋種既有能力顯示**：認輸與匯出目前僅圍棋有（SGF），不為象棋/將棋/西洋棋新做 PGN/KIF 匯出或認輸功能（如日後需要另立需求）。
 
+資訊列欄位**逐棋定義**（不套單一模板）：
+
+| 棋種 | 資訊列欄位 |
+|---|---|
+| 圍棋 | 回合徽章、雙方提子、手數、計時（既有，套統一樣式） |
+| 象棋/西洋棋 | 回合徽章、手數、雙方被吃子摘要 |
+| 將棋 | 回合徽章、手數（持駒維持既有獨立駒台列，不塞進資訊列） |
+| 五子棋 | 回合徽章、手數 |
+| 黑白棋 | 回合徽章、雙方子數（從狀態文字移入資訊列） |
+
 各棋調整：
 
-- **象棋/將棋/西洋棋**：補資訊列（回合、手數、被吃子；將棋持駒列既有保留）；「覆盤檢討」從終局卡片移到常駐功能列（行為對齊圍棋：對局中可入覆盤）；新增「AI 建議」按鈕
+- **象棋/將棋/西洋棋**：補資訊列；「覆盤檢討」按鈕**移到常駐功能列但終局前 disabled**（位置與圍棋一致；不做「對局中進覆盤」——那需要暫停 AI、返回對局等狀態管理，成本效益不划算，行為維持終局後進入）；新增「AI 建議」按鈕
 - **圍棋**：header 改用統一 `mode-header` 結構（含設定鈕），既有資訊列/功能列保留並套統一樣式
 - **五子棋/黑白棋**：套統一資訊列＋功能列樣式；功能只有「悔棋、重新開始」（無 AI 建議/覆盤/認輸），設定從內嵌精簡列改為與其他棋一致的設定 modal
 - 按鈕命名、順序、圖示風格、間距全站統一；`docs/ADD-NEW-GAME.md` 的版面規範章節同步更新
@@ -147,6 +167,7 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 ## 9. 測試與驗證
 
 - Jest：audio-manager 設定邏輯（預設值、讀寫、邊界）、版面調整不破壞各 mode 既有測試
+- **測試可行性設計**：audio-manager 把音訊後端（AudioContext、`<audio>` 元素）設計為可注入介面，Jest 以 mock backend 測「設定變更 → 對後端的呼叫」（音量套用、開關停播、解鎖前丟棄、play() rejection 不外洩），不假裝能在 jsdom 裡測真實聲音
 - 手動驗證：六棋逐一過音效/語音觸發點、全域設定即時生效、BGM 輪播與背景暫停
 - iOS 實機：AudioContext 解鎖、BGM 背景行為、icon 顯示、體積增幅確認
 - 質感精修後跑視覺回顧（手機/平板/桌機三斷點）
@@ -169,7 +190,8 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 | 風險 | 緩解 |
 |---|---|
 | ElevenLabs 生成音效質感不合預期（如落子聲不像棋子） | 每個音效生成 2-3 個候選挑選；不合格者退回用 WebAudio 合成 fallback |
-| BGM 體積推高 APP 大小 | 控制在 2-3 首、128kbps mono/立體聲取捨；必要時降為 2 首 |
+| BGM 體積推高 APP 大小 | 音樂總量預算上限 8MB；128kbps mono/立體聲取捨；必要時降為 2 首；P1 驗收時實測 bundle 增幅並記錄 |
+| 引擎單例被建議/覆盤/對弈並發互搶 | 引擎請求序列化佇列＋取消機制（見 §6），實作為 P3 前置任務 |
 | iOS 音訊自動播放限制導致 BGM 不響 | 一律在 user gesture 後啟動；實機驗證列入 P1 驗收 |
 | 版面重排破壞既有互動（六棋各自的事件綁定） | 逐棋改、逐棋驗證；Jest 既有測試全綠為前提 |
 | 語音在快速連將時重疊吵雜 | 同名語音節流（播放中不重複觸發） |
