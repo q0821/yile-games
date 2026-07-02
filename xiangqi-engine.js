@@ -54,9 +54,12 @@ function send(cmd) { _engine.postMessage(cmd); }
 
 function waitFor(pred, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
-    const w = { pred, resolve };
+    const w = { pred, resolve: null, timer: null };
+    // 命中時（onLine 呼叫 w.resolve）順便清掉逾時計時器，避免長逾時（如 20s）的
+    // setTimeout 在測試／短生命週期頁面中殘留成懸掛的 timer handle。
+    w.resolve = (line) => { clearTimeout(w.timer); resolve(line); };
     _waiters.add(w);
-    setTimeout(() => { if (_waiters.has(w)) { _waiters.delete(w); reject(new Error('引擎回應逾時')); } }, timeoutMs);
+    w.timer = setTimeout(() => { if (_waiters.has(w)) { _waiters.delete(w); reject(new Error('引擎回應逾時')); } }, timeoutMs);
   });
 }
 
