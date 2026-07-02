@@ -43,6 +43,8 @@ function cacheDom() {
     mode: $('othelloMode'), color: $('othelloColor'), level: $('othelloLevel'),
     end: $('othelloEnd'), endTitle: $('othelloEndTitle'), endSub: $('othelloEndSub'), endBtn: $('othelloEndBtn'),
     audioSettings: $('othelloAudioSettings'),
+    settingsBtn: $('othelloSettingsBtn'), settingsModal: $('othelloSettingsModal'),
+    turnBadge: $('othelloTurnBadge'), blackCount: $('othelloBlackCount'), whiteCount: $('othelloWhiteCount'),
   };
 }
 
@@ -78,16 +80,26 @@ function render() {
   drawOthello(deps, view());
 }
 
+/** 資訊列：回合徽章 + 雙方子數（PRD §7：黑白棋子數從狀態文字移入資訊列）。 */
+function updateInfobar() {
+  const s = score(board, size);
+  if (dom.turnBadge) {
+    dom.turnBadge.textContent = currentPlayer === BLACK ? '黑方' : '白方';
+    dom.turnBadge.className = 'turn-badge ' + (currentPlayer === BLACK ? 'black' : 'white');
+  }
+  if (dom.blackCount) dom.blackCount.textContent = String(s.black);
+  if (dom.whiteCount) dom.whiteCount.textContent = String(s.white);
+}
+
 function setStatus(msg) {
+  updateInfobar();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
-  const s = score(board, size);
-  const tally = `黑 ${s.black}：白 ${s.white}`;
   if (gameOver) {
-    dom.status.textContent = `${tally}　` + (winner === null ? '和局' : (winner === BLACK ? '黑方勝' : '白方勝'));
+    dom.status.textContent = winner === null ? '和局' : (winner === BLACK ? '黑方勝' : '白方勝');
   } else {
     const who = currentPlayer === BLACK ? '黑方' : '白方';
-    dom.status.textContent = `${tally}　${who}回合` + (passNotice ? `（${passNotice}）` : '');
+    dom.status.textContent = `${who}回合` + (passNotice ? `（${passNotice}）` : '');
   }
   if (dom.undo) dom.undo.disabled = aiBusy || history.length === 0;
 }
@@ -257,6 +269,10 @@ function applySettingsToControls() {
   dom.level?.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
 }
 
+// ——— 設定彈窗（比照三棋，沿用同一份 .go-settings-modal 樣式） ———
+function openSettings() { applySettingsToControls(); dom.settingsModal?.classList.add('show'); }
+function closeSettings() { dom.settingsModal?.classList.remove('show'); }
+
 // ——— 事件 ———
 
 function cellFromEvent(e) {
@@ -290,6 +306,9 @@ function wireEvents() {
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
   dom.color?.addEventListener('change', () => { playerColor = Number(dom.color.value) === WHITE ? WHITE : BLACK; saveSettings(); newGame(); });
   dom.level?.addEventListener('change', () => { level = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
+  dom.settingsBtn?.addEventListener('click', () => openSettings());
+  dom.settingsModal?.addEventListener('click', (e) => { if (e.target === dom.settingsModal) closeSettings(); });
+  dom.settingsModal?.querySelector('[data-close-settings]')?.addEventListener('click', () => closeSettings());
   window.addEventListener('resize', () => { if (isActive()) render(); });
 }
 

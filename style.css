@@ -1087,12 +1087,16 @@ h1.brush-title {
 }
 .gomoku-controls {
   display: flex;
+  flex-wrap: wrap;             /* 常駐功能列最多可到 5 顆（如將棋悔棋/建議/重新開始/覆盤/規則說明），需要換行 */
+  justify-content: center;
   gap: 8px;
   width: 100%;
-  max-width: 360px;
+  max-width: 500px;            /* 對齊 .go-controls 寬度 */
 }
 .gomoku-controls button {
-  flex: 1;
+  flex: 1 1 calc(50% - 4px);   /* 每排 2 顆，與 .go-controls 一致 */
+  width: auto;
+  min-width: 80px;
   margin: 0;
 }
 .gomoku-controls button:disabled {
@@ -1434,8 +1438,9 @@ h1.brush-title {
   border-radius: var(--radius-sm);
 }
 
-/* 資訊列：回合 + 提子 + 手數 + 計時 */
-.go-infobar {
+/* 資訊列（六棋共用）：回合徽章 + 逐棋欄位（提子/手數/被吃摘要/子數…，見 PRD §7 表）。
+   六棋一體套用同一個外框與徽章樣式，欄位內容各自的 mode.js 依表組裝、不套單一模板。 */
+.game-infobar {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1449,7 +1454,7 @@ h1.brush-title {
   padding: 8px 14px;
   font-size: 13px;
 }
-.go-infobar .turn-badge {
+.game-infobar .turn-badge {
   padding: 4px 12px;
   border-radius: var(--radius-sm);
   font-weight: 700;
@@ -1457,10 +1462,11 @@ h1.brush-title {
   background: var(--bg-card);
   color: var(--text-dim);
 }
-.go-infobar .turn-badge.black { background: #2b2b30; color: #f0ece0; }
-.go-infobar .turn-badge.white { background: #efe6d2; color: #2c2417; }
-.go-infobar .info-item { color: var(--text-muted); white-space: nowrap; }
-.go-infobar .info-item span { color: var(--text); font-weight: 700; }
+.game-infobar .turn-badge.black { background: #2b2b30; color: #f0ece0; }
+.game-infobar .turn-badge.white { background: #efe6d2; color: #2c2417; }
+.game-infobar .turn-badge.red { background: #8f3226; color: #fff8ec; }
+.game-infobar .info-item { color: var(--text-muted); white-space: nowrap; }
+.game-infobar .info-item span { color: var(--text); font-weight: 700; }
 .go-timers { display: flex; gap: 12px; align-items: center; }
 .go-timer { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 

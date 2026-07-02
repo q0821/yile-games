@@ -68,9 +68,30 @@ function cacheDom() {
     rvFirst: $('xqRvFirst'), rvPrev: $('xqRvPrev'), rvNext: $('xqRvNext'), rvLast: $('xqRvLast'),
     rvAnalyze: $('xqRvAnalyze'), rvExit: $('xqRvExit'), evalGraph: $('xiangqiEvalGraph'),
     audioSettings: $('xiangqiAudioSettings'),
+    infobar: $('xiangqiInfobar'), turnBadge: $('xiangqiTurnBadge'), moveCount: $('xiangqiMoveCount'),
+    redLost: $('xiangqiRedLost'), blackLost: $('xiangqiBlackLost'),
   };
   dom.settings = dom.screen?.querySelector('.gomoku-settings');
   dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
+}
+
+// ——— 資訊列：雙方被吃子摘要（PRD §7）———
+// 直接解析 FEN 子力字元計數，和開局標準子力數比對算損失，不需引擎/game.js 額外介面。
+const XQ_INITIAL_PIECES = { K: 1, A: 2, B: 2, N: 2, R: 2, C: 2, P: 5, k: 1, a: 2, b: 2, n: 2, r: 2, c: 2, p: 5 };
+function countFenPieces(fenStr) {
+  const counts = {};
+  for (const ch of fenStr.split(' ')[0]) { if (/[a-zA-Z]/.test(ch)) counts[ch] = (counts[ch] || 0) + 1; }
+  return counts;
+}
+/** 回傳 { redLost, blackLost }：紅方被吃掉幾子、黑方被吃掉幾子。 */
+function capturedCounts() {
+  const counts = countFenPieces(Game.fen());
+  let redLost = 0, blackLost = 0;
+  for (const [ch, init] of Object.entries(XQ_INITIAL_PIECES)) {
+    const lost = Math.max(0, init - (counts[ch] || 0));
+    if (ch === ch.toUpperCase()) redLost += lost; else blackLost += lost;
+  }
+  return { redLost, blackLost };
 }
 
 function loadSettings() {
@@ -212,6 +233,7 @@ function effectiveLevel() {
 
 function setReviewUI(on) {
   reviewMode = on;
+  if (dom.infobar) dom.infobar.style.display = on ? 'none' : '';
   if (dom.settings) dom.settings.style.display = on ? 'none' : '';
   if (dom.statusrow) dom.statusrow.style.display = on ? 'none' : '';
   if (dom.controls) dom.controls.style.display = on ? 'none' : '';
@@ -382,6 +404,24 @@ function updateHintBtn() {
   dom.hint.disabled = !boardReady || hintBusy || aiBusy || reviewAnalyzing || reviewMode || gameOver;
 }
 
+/** 更新「覆盤」按鈕可用狀態：常駐於功能列，終局前 disabled（title 已註明「終局後可用」）。 */
+function updateReviewBtn() {
+  if (!dom.reviewBtn) return;
+  dom.reviewBtn.disabled = !boardReady || !gameOver;
+}
+
+/** 資訊列：回合徽章 + 手數 + 雙方被吃子摘要（PRD §7）。棋盤未就緒（載入中）時略過，避免呼叫 Game 拋錯。 */
+function updateInfobar() {
+  if (!boardReady || !dom.turnBadge) return;
+  const red = Game.turn();
+  dom.turnBadge.textContent = red ? '紅方' : '黑方';
+  dom.turnBadge.className = 'turn-badge ' + (red ? 'red' : 'black');
+  if (dom.moveCount) dom.moveCount.textContent = String(Game.gamePly());
+  const c = capturedCounts();
+  if (dom.redLost) dom.redLost.textContent = String(c.redLost);
+  if (dom.blackLost) dom.blackLost.textContent = String(c.blackLost);
+}
+
 /** 清除目前顯示的建議走法箭頭，並取消尚在等待中的建議請求（引擎仍會跑完，但結果會被丟棄）。 */
 function clearHint() {
   if (hintReq) { hintReq.cancel(); hintReq = null; }
@@ -439,6 +479,8 @@ function undoMove() {
 function setStatus(msg) {
   updateUndoBtn();
   updateHintBtn();
+  updateReviewBtn();
+  updateInfobar();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {

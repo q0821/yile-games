@@ -69,9 +69,30 @@ function cacheDom() {
     rvFirst: $('csRvFirst'), rvPrev: $('csRvPrev'), rvNext: $('csRvNext'), rvLast: $('csRvLast'),
     rvAnalyze: $('csRvAnalyze'), rvExit: $('csRvExit'), evalGraph: $('chessEvalGraph'),
     audioSettings: $('chessAudioSettings'),
+    infobar: $('chessInfobar'), turnBadge: $('chessTurnBadge'), moveCount: $('chessMoveCount'),
+    whiteLost: $('chessWhiteLost'), blackLost: $('chessBlackLost'),
   };
   dom.settings = dom.screen?.querySelector('.gomoku-settings');
   dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
+}
+
+// ——— 資訊列：雙方被吃子摘要（PRD §7）———
+// 直接解析 FEN 子力字元計數，和開局標準子力數比對算損失，不需引擎/game.js 額外介面。
+const CHESS_INITIAL_PIECES = { K: 1, Q: 1, R: 2, B: 2, N: 2, P: 8, k: 1, q: 1, r: 2, b: 2, n: 2, p: 8 };
+function countFenPieces(fenStr) {
+  const counts = {};
+  for (const ch of fenStr.split(' ')[0]) { if (/[a-zA-Z]/.test(ch)) counts[ch] = (counts[ch] || 0) + 1; }
+  return counts;
+}
+/** 回傳 { whiteLost, blackLost }：白方被吃掉幾子、黑方被吃掉幾子。 */
+function capturedCounts() {
+  const counts = countFenPieces(Game.fen());
+  let whiteLost = 0, blackLost = 0;
+  for (const [ch, init] of Object.entries(CHESS_INITIAL_PIECES)) {
+    const lost = Math.max(0, init - (counts[ch] || 0));
+    if (ch === ch.toUpperCase()) whiteLost += lost; else blackLost += lost;
+  }
+  return { whiteLost, blackLost };
 }
 
 function loadSettings() {
@@ -217,6 +238,24 @@ function updateHintBtn() {
   dom.hint.disabled = !boardReady || hintBusy || aiBusy || reviewAnalyzing || reviewMode || !!promoResolve || gameOver;
 }
 
+/** 更新「覆盤」按鈕可用狀態：常駐於功能列，終局前 disabled（title 已註明「終局後可用」）。 */
+function updateReviewBtn() {
+  if (!dom.reviewBtn) return;
+  dom.reviewBtn.disabled = !boardReady || !gameOver;
+}
+
+/** 資訊列：回合徽章 + 手數 + 雙方被吃子摘要（PRD §7）。 */
+function updateInfobar() {
+  if (!boardReady || !dom.turnBadge) return;
+  const white = Game.turn();
+  dom.turnBadge.textContent = white ? '白方' : '黑方';
+  dom.turnBadge.className = 'turn-badge ' + (white ? 'white' : 'black');
+  if (dom.moveCount) dom.moveCount.textContent = String(Game.gamePly());
+  const c = capturedCounts();
+  if (dom.whiteLost) dom.whiteLost.textContent = String(c.whiteLost);
+  if (dom.blackLost) dom.blackLost.textContent = String(c.blackLost);
+}
+
 /** 清除目前顯示的建議走法箭頭，並取消尚在等待中的建議請求（引擎仍會跑完，但結果會被丟棄）。 */
 function clearHint() {
   if (hintReq) { hintReq.cancel(); hintReq = null; }
@@ -273,6 +312,8 @@ function endpointsArr(uci) { const e = Game.moveEndpoints(uci); return [e.from, 
 function setStatus(msg) {
   updateUndoBtn();
   updateHintBtn();
+  updateReviewBtn();
+  updateInfobar();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {
@@ -441,6 +482,7 @@ async function newGame() {
 
 function setReviewUI(on) {
   reviewMode = on;
+  if (dom.infobar) dom.infobar.style.display = on ? 'none' : '';
   if (dom.settings) dom.settings.style.display = on ? 'none' : '';
   if (dom.statusrow) dom.statusrow.style.display = on ? 'none' : '';
   if (dom.controls) dom.controls.style.display = on ? 'none' : '';

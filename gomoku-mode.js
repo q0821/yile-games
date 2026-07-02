@@ -48,6 +48,8 @@ function cacheDom() {
     level: $('gomokuLevel'),
     end: $('gomokuEnd'), endTitle: $('gomokuEndTitle'), endSub: $('gomokuEndSub'), endBtn: $('gomokuEndBtn'),
     audioSettings: $('gomokuAudioSettings'),
+    settingsBtn: $('gomokuSettingsBtn'), settingsModal: $('gomokuSettingsModal'),
+    turnBadge: $('gomokuTurnBadge'), moveCount: $('gomokuMoveCount'),
   };
 }
 
@@ -87,7 +89,17 @@ function render() {
   drawGomoku(deps, view());
 }
 
+/** 資訊列：回合徽章 + 手數（PRD §7：五子棋只需這兩欄）。 */
+function updateInfobar() {
+  if (dom.turnBadge) {
+    dom.turnBadge.textContent = currentPlayer === BLACK ? '黑方' : '白方';
+    dom.turnBadge.className = 'turn-badge ' + (currentPlayer === BLACK ? 'black' : 'white');
+  }
+  if (dom.moveCount) dom.moveCount.textContent = String(history.length);
+}
+
 function setStatus(msg) {
+  updateInfobar();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {
@@ -216,6 +228,10 @@ function applySettingsToControls() {
   if (dom.level) dom.level.closest('.control-group')?.style.setProperty('display', pvc ? '' : 'none');
 }
 
+// ——— 設定彈窗（比照三棋，沿用同一份 .go-settings-modal 樣式） ———
+function openSettings() { applySettingsToControls(); dom.settingsModal?.classList.add('show'); }
+function closeSettings() { dom.settingsModal?.classList.remove('show'); }
+
 // ——— 事件 ———
 
 function cellFromEvent(e) {
@@ -271,6 +287,9 @@ function wireEvents() {
   dom.mode?.addEventListener('change', () => { mode = dom.mode.value === 'pvp' ? 'pvp' : 'pvc'; saveSettings(); applySettingsToControls(); newGame(); });
   dom.color?.addEventListener('change', () => { playerColor = Number(dom.color.value) === WHITE ? WHITE : BLACK; saveSettings(); newGame(); });
   dom.level?.addEventListener('change', () => { aiLevel = Math.min(3, Math.max(1, Number(dom.level.value) || 2)); saveSettings(); });
+  dom.settingsBtn?.addEventListener('click', () => openSettings());
+  dom.settingsModal?.addEventListener('click', (e) => { if (e.target === dom.settingsModal) closeSettings(); });
+  dom.settingsModal?.querySelector('[data-close-settings]')?.addEventListener('click', () => closeSettings());
 
   window.addEventListener('resize', () => { if (isActive()) render(); });
 }

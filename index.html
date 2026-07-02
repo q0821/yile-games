@@ -68,8 +68,8 @@
 
 <!-- 圍棋對弈：單欄置中（對齊其他棋類版面）。設定收進 #goSettingsModal，對弈功能列永遠可見。 -->
 <div class="go-screen" id="goScreen" style="display:none">
-  <!-- 資訊列：回合 + 提子 + 手數 + 計時（永遠可見） -->
-  <div class="go-infobar" id="goInfobar">
+  <!-- 資訊列：回合 + 提子 + 手數 + 計時（永遠可見；.game-infobar 為六棋共用樣式） -->
+  <div class="game-infobar go-infobar" id="goInfobar">
     <div class="turn-badge black" id="mobileTurn">黑方</div>
     <div class="info-item"><span class="stone-dot black" aria-label="黑"></span> <span id="mobileBlackCap">0</span></div>
     <div class="info-item"><span class="stone-dot white" aria-label="白"></span> <span id="mobileWhiteCap">0</span></div>
@@ -288,8 +288,33 @@
   <div class="mode-header">
     <button class="mode-back" id="gomokuHome">回首頁</button>
     <h2 class="mode-title">五子棋對弈</h2>
+    <button class="mode-settings" id="gomokuSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
-  <div class="gomoku-settings">
+  <div class="game-infobar" id="gomokuInfobar">
+    <div class="turn-badge black" id="gomokuTurnBadge">黑方</div>
+    <div class="info-item">第 <span id="gomokuMoveCount">0</span> 手</div>
+  </div>
+  <div class="board-wrap">
+    <canvas id="gomokuBoard" role="img" aria-label="五子棋棋盤"></canvas>
+    <div class="board-end" id="gomokuEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="gomokuEndTitle">黑方勝</div>
+        <div class="board-end-sub" id="gomokuEndSub"></div>
+        <button class="board-end-btn" id="gomokuEndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
+  <div class="gomoku-status" id="gomokuStatus" role="status" aria-live="polite"></div>
+  <div class="gomoku-controls">
+    <button id="gomokuUndo">悔棋</button>
+    <button id="gomokuRestart">重新開始</button>
+  </div>
+</div>
+
+<!-- 五子棋遊戲設定 modal -->
+<div class="modal-overlay" id="gomokuSettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>遊戲設定</h2>
     <div class="control-group">
       <label for="gomokuMode">對弈模式</label>
       <select id="gomokuMode">
@@ -312,22 +337,11 @@
         <option value="3">困難</option>
       </select>
     </div>
-    <div class="audio-settings-embed" id="gomokuAudioSettings"></div>
-  </div>
-  <div class="board-wrap">
-    <canvas id="gomokuBoard" role="img" aria-label="五子棋棋盤"></canvas>
-    <div class="board-end" id="gomokuEnd" style="display:none" role="dialog" aria-live="assertive">
-      <div class="board-end-card">
-        <div class="board-end-title" id="gomokuEndTitle">黑方勝</div>
-        <div class="board-end-sub" id="gomokuEndSub"></div>
-        <button class="board-end-btn" id="gomokuEndBtn">再來一局</button>
-      </div>
-    </div>
-  </div>
-  <div class="gomoku-status" id="gomokuStatus" role="status" aria-live="polite"></div>
-  <div class="gomoku-controls">
-    <button id="gomokuUndo">悔棋</button>
-    <button id="gomokuRestart">重新開始</button>
+
+    <h3>音效與音樂</h3>
+    <div id="gomokuAudioSettings"></div>
+
+    <button class="primary" data-close-settings>關閉</button>
   </div>
 </div>
 
@@ -338,6 +352,12 @@
     <h2 class="mode-title">象棋對弈</h2>
     <button class="mode-settings" id="xiangqiSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
+  <div class="game-infobar" id="xiangqiInfobar">
+    <div class="turn-badge red" id="xiangqiTurnBadge">紅方</div>
+    <div class="info-item">第 <span id="xiangqiMoveCount">0</span> 手</div>
+    <div class="info-item">紅損 <span id="xiangqiRedLost">0</span></div>
+    <div class="info-item">黑損 <span id="xiangqiBlackLost">0</span></div>
+  </div>
   <div class="board-wrap">
     <canvas id="xiangqiBoard" role="img" aria-label="象棋棋盤"></canvas>
     <div class="xiangqi-check" id="xiangqiCheck" aria-hidden="true">將 軍</div>
@@ -346,7 +366,6 @@
         <div class="board-end-title" id="xiangqiEndTitle">紅方勝</div>
         <div class="board-end-sub" id="xiangqiEndSub"></div>
         <button class="board-end-btn" id="xiangqiEndBtn">再來一局</button>
-        <button class="board-end-btn ghost" id="xiangqiReviewBtn">覆盤檢討</button>
       </div>
     </div>
   </div>
@@ -358,6 +377,7 @@
     <button id="xiangqiUndo">悔棋</button>
     <button id="xiangqiHint">建議走法</button>
     <button id="xiangqiRestart">重新開始</button>
+    <button id="xiangqiReviewBtn" title="終局後可用">覆盤</button>
   </div>
   <!-- 覆盤面板（覆盤模式才顯示） -->
   <div class="xiangqi-review" id="xiangqiReview" style="display:none">
@@ -429,8 +449,37 @@
   <div class="mode-header">
     <button class="mode-back" id="othelloHome">回首頁</button>
     <h2 class="mode-title">黑白棋</h2>
+    <button class="mode-settings" id="othelloSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
-  <div class="gomoku-settings">
+  <div class="game-infobar" id="othelloInfobar">
+    <div class="turn-badge black" id="othelloTurnBadge">黑方</div>
+    <div class="info-item"><span class="stone-dot black" aria-label="黑"></span> <span id="othelloBlackCount">2</span></div>
+    <div class="info-item"><span class="stone-dot white" aria-label="白"></span> <span id="othelloWhiteCount">2</span></div>
+  </div>
+  <div class="board-wrap">
+    <canvas id="othelloBoard" role="img" aria-label="黑白棋棋盤"></canvas>
+    <div class="board-end" id="othelloEnd" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="othelloEndTitle">黑方勝</div>
+        <div class="board-end-sub" id="othelloEndSub"></div>
+        <button class="board-end-btn" id="othelloEndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
+  <div class="xiangqi-statusrow">
+    <span class="gomoku-status" id="othelloStatus" role="status" aria-live="polite"></span>
+    <span class="xiangqi-spinner" id="othelloThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
+  </div>
+  <div class="gomoku-controls">
+    <button id="othelloUndo">悔棋</button>
+    <button id="othelloRestart">重新開始</button>
+  </div>
+</div>
+
+<!-- 黑白棋遊戲設定 modal -->
+<div class="modal-overlay" id="othelloSettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>遊戲設定</h2>
     <div class="control-group">
       <label for="othelloMode">對弈模式</label>
       <select id="othelloMode">
@@ -453,25 +502,11 @@
         <option value="3">困難</option>
       </select>
     </div>
-    <div class="audio-settings-embed" id="othelloAudioSettings"></div>
-  </div>
-  <div class="board-wrap">
-    <canvas id="othelloBoard" role="img" aria-label="黑白棋棋盤"></canvas>
-    <div class="board-end" id="othelloEnd" style="display:none" role="dialog" aria-live="assertive">
-      <div class="board-end-card">
-        <div class="board-end-title" id="othelloEndTitle">黑方勝</div>
-        <div class="board-end-sub" id="othelloEndSub"></div>
-        <button class="board-end-btn" id="othelloEndBtn">再來一局</button>
-      </div>
-    </div>
-  </div>
-  <div class="xiangqi-statusrow">
-    <span class="gomoku-status" id="othelloStatus" role="status" aria-live="polite"></span>
-    <span class="xiangqi-spinner" id="othelloThinking" style="display:none" aria-hidden="true"><i></i><i></i><i></i></span>
-  </div>
-  <div class="gomoku-controls">
-    <button id="othelloUndo">悔棋</button>
-    <button id="othelloRestart">重新開始</button>
+
+    <h3>音效與音樂</h3>
+    <div id="othelloAudioSettings"></div>
+
+    <button class="primary" data-close-settings>關閉</button>
   </div>
 </div>
 
@@ -518,6 +553,10 @@
     <h2 class="mode-title">日本將棋</h2>
     <button class="mode-settings" id="shogiSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
+  <div class="game-infobar" id="shogiInfobar">
+    <div class="turn-badge black" id="shogiTurnBadge">先手</div>
+    <div class="info-item">第 <span id="shogiMoveCount">0</span> 手</div>
+  </div>
   <div class="shogi-hand" id="shogiHandGote" aria-label="後手持駒"></div>
   <div class="board-wrap">
     <canvas id="shogiBoard" role="img" aria-label="將棋棋盤"></canvas>
@@ -536,7 +575,6 @@
         <div class="board-end-title" id="shogiEndTitle">先手勝</div>
         <div class="board-end-sub" id="shogiEndSub"></div>
         <button class="board-end-btn" id="shogiEndBtn">再來一局</button>
-        <button class="board-end-btn ghost" id="shogiReviewBtn">覆盤檢討</button>
       </div>
     </div>
   </div>
@@ -548,8 +586,9 @@
   <div class="gomoku-controls" id="shogiControls">
     <button id="shogiUndo">悔棋</button>
     <button id="shogiHint">建議走法</button>
-    <button id="shogiRulesBtn">規則說明</button>
     <button id="shogiRestart">重新開始</button>
+    <button id="shogiReviewBtn" title="終局後可用">覆盤</button>
+    <button id="shogiRulesBtn">規則說明</button>
   </div>
   <!-- 覆盤面板（覆盤模式才顯示） -->
   <div class="xiangqi-review" id="shogiReview" style="display:none">
@@ -653,6 +692,12 @@
     <h2 class="mode-title">西洋棋</h2>
     <button class="mode-settings" id="chessSettingsBtn" aria-label="遊戲設定">設定</button>
   </div>
+  <div class="game-infobar" id="chessInfobar">
+    <div class="turn-badge white" id="chessTurnBadge">白方</div>
+    <div class="info-item">第 <span id="chessMoveCount">0</span> 手</div>
+    <div class="info-item">白損 <span id="chessWhiteLost">0</span></div>
+    <div class="info-item">黑損 <span id="chessBlackLost">0</span></div>
+  </div>
   <div class="board-wrap">
     <canvas id="chessBoard" role="img" aria-label="西洋棋棋盤"></canvas>
     <div class="xiangqi-check" id="chessCheck" aria-hidden="true">將 軍</div>
@@ -672,7 +717,6 @@
         <div class="board-end-title" id="chessEndTitle">白方勝</div>
         <div class="board-end-sub" id="chessEndSub"></div>
         <button class="board-end-btn" id="chessEndBtn">再來一局</button>
-        <button class="board-end-btn ghost" id="chessReviewBtn">覆盤檢討</button>
       </div>
     </div>
   </div>
@@ -684,6 +728,7 @@
     <button id="chessUndo">悔棋</button>
     <button id="chessHint">建議走法</button>
     <button id="chessRestart">重新開始</button>
+    <button id="chessReviewBtn" title="終局後可用">覆盤</button>
   </div>
   <!-- 覆盤面板（覆盤模式才顯示） -->
   <div class="xiangqi-review" id="chessReview" style="display:none">

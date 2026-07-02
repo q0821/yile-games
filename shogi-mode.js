@@ -73,6 +73,7 @@ function cacheDom() {
     rvFirst: $('sgRvFirst'), rvPrev: $('sgRvPrev'), rvNext: $('sgRvNext'), rvLast: $('sgRvLast'),
     rvAnalyze: $('sgRvAnalyze'), rvExit: $('sgRvExit'), evalGraph: $('shogiEvalGraph'),
     audioSettings: $('shogiAudioSettings'),
+    infobar: $('shogiInfobar'), turnBadge: $('shogiTurnBadge'), moveCount: $('shogiMoveCount'),
   };
   dom.settings = dom.screen?.querySelector('.gomoku-settings');
   dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
@@ -274,6 +275,21 @@ function updateHintBtn() {
   dom.hint.disabled = !boardReady || hintBusy || aiBusy || reviewAnalyzing || reviewMode || !!promoResolve || gameOver;
 }
 
+/** 更新「覆盤」按鈕可用狀態：常駐於功能列，終局前 disabled（title 已註明「終局後可用」）。 */
+function updateReviewBtn() {
+  if (!dom.reviewBtn) return;
+  dom.reviewBtn.disabled = !boardReady || !gameOver;
+}
+
+/** 資訊列：回合徽章 + 手數（PRD §7：持駒維持既有獨立駒台列，不塞進資訊列）。 */
+function updateInfobar() {
+  if (!boardReady || !dom.turnBadge) return;
+  const sente = Game.turn();
+  dom.turnBadge.textContent = sente ? '先手' : '後手';
+  dom.turnBadge.className = 'turn-badge ' + (sente ? 'black' : 'white');
+  if (dom.moveCount) dom.moveCount.textContent = String(Game.gamePly());
+}
+
 /** 清除目前顯示的建議走法（箭頭／打入高亮＋持駒列高亮），並取消尚在等待中的建議請求
  *  （引擎仍會跑完，但結果會被丟棄）。 */
 function clearHint() {
@@ -339,6 +355,8 @@ function endpointsArr(uci) { const e = Game.moveEndpoints(uci); return [e.from, 
 function setStatus(msg) {
   updateUndoBtn();
   updateHintBtn();
+  updateReviewBtn();
+  updateInfobar();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {
@@ -520,6 +538,7 @@ async function newGame() {
 
 function setReviewUI(on) {
   reviewMode = on;
+  if (dom.infobar) dom.infobar.style.display = on ? 'none' : '';
   if (dom.settings) dom.settings.style.display = on ? 'none' : '';
   if (dom.statusrow) dom.statusrow.style.display = on ? 'none' : '';
   if (dom.controls) dom.controls.style.display = on ? 'none' : '';

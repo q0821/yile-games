@@ -100,24 +100,45 @@ export function bestMove(o){ return Engine.bestMove({ ...o, variant: '<variant>'
 
 ## 6. 共用資產與版面一致性（重要）
 
-**所有棋的版面語言要一致**（2026-06-09 已把圍棋從三欄改成跟其他棋一致的單欄）。標準結構：
+**所有棋的版面語言要一致**（2026-06-09 已把圍棋從三欄改成跟其他棋一致的單欄；2026-07 六棋資訊列與
+常駐功能列再做一次「版面一致化」，見 `docs/PRD-audio-visual-parity.md` §7）。標準結構（六棋一體適用）：
 ```
-mode-header（回首頁 │ 標題 │ 可選右側鈕）
-設定（精簡列 .gomoku-settings；圍棋因設定多改用「設定」鈕開 modal）
+mode-header（回首頁 │ 標題 │ 設定鈕，開 modal）
+資訊列 .game-infobar（回合徽章 │ 逐棋欄位，永遠可見）
 board-wrap（position:relative；內含 canvas + AI 思考/結束/數目 覆蓋）
 狀態列（.gomoku-status / .go-status）
 功能列（.gomoku-controls / .go-controls）——對弈中會用的功能一律放這、永遠可見
 ```
+設定一律收進「設定」鈕開的 `.go-settings-modal`（沿用 `.changelog-modal` 可捲動容器），**不要**用內嵌精簡列
+（五子棋/黑白棋 2026-07 前的 `.gomoku-settings` 內嵌列已改成 modal；`.gomoku-settings` class 目前僅
+象棋殘局 `#xqpScreen` 這類非六棋主線畫面在用，新棋不要再用這個內嵌模式）。
+
+**資訊列 `.game-infobar` 逐棋欄位慣例**（不套單一模板，依棋種既有能力決定，見 PRD §7 表）：
+- 共同：`.turn-badge`（回合徽章，`black`/`white`/`red` 三色 class 對應棋子顏色；先手/後手類棋種借用
+  `black`=先、`white`=後）＋ `.info-item`（其餘欄位，數字包 `<span>` 讓 CSS 加粗）。
+- 有「吃子」概念的棋種（象棋/西洋棋）：回合徽章＋手數＋雙方被吃子摘要（依開局標準子力數與目前 FEN
+  比對算損失，見 `xiangqi-mode.js`/`chess-mode.js` 的 `capturedCounts()`，不需要引擎額外介面）。
+- 有「持駒」的棋種（將棋）：回合徽章＋手數，持駒維持既有獨立駒台列、**不**塞進資訊列。
+- 純落子無吃子概念（五子棋）：回合徽章＋手數。
+- 子數制（黑白棋）：回合徽章＋雙方子數（原本擠在狀態文字裡，移入資訊列，狀態文字只留回合/結果）。
+- 圍棋沿用既有回合＋提子＋手數＋計時，只套 `.game-infobar` 統一樣式、內容不變。
+
+**常駐功能列按鈕順序**（六棋統一，但按鈕依棋種既有能力顯示，沒有的功能不新做）：
+`悔棋 │ AI建議 │ 認輸 │ 重新開始 │ 覆盤 │ 匯出`。認輸與匯出目前僅圍棋有（SGF）。三棋（象/將/西洋）的
+「覆盤」按鈕常駐在功能列、**終局前 `disabled`**（`title="終局後可用"`），不要放在終局卡片裡（那樣對弈中
+完全找不到、且終局卡片重開新局後按鈕就消失）。棋種特有的額外功能（如將棋「規則說明」）附加在標準順序
+最後，不佔標準欄位。
+
 可直接沿用的 class：`.gomoku-screen`/`.go-screen`(單欄置中)、`.board-wrap`、`.board-end`(結束畫面)、
-`.control-group`、`.gomoku-settings`、`.gomoku-controls`、`.modal-overlay`/`.changelog-modal`、
-`.xiangqi-statusrow`/`.xiangqi-spinner`(思考點)、`stone.js`(立體棋子)。
+`.control-group`、`.game-infobar`(資訊列)、`.gomoku-controls`、`.modal-overlay`/`.changelog-modal`/
+`.go-settings-modal`(設定 modal)、`.xiangqi-statusrow`/`.xiangqi-spinner`(思考點)、`stone.js`(立體棋子)。
 
 **幾條硬原則：**
 - **對弈中功能不要收進選單/sidebar**（虛手、悔棋、認輸、數目、提示…常駐功能列）。圍棋舊版把這些
   塞進漢堡選單被打槍，已移除 sidebar、改設定進 modal、功能列常駐。
 - **桌機手機同一套響應式單欄**，別再做桌機/手機兩份重複的資訊列＋按鈕。
 - 全域有 `select, button { width: 100% }`：功能列若要一排多顆，button 要 `width:auto` + 設 `flex-basis`，
-  否則每顆撐滿一行（見 `.go-controls button`）。
+  否則每顆撐滿一行（見 `.go-controls button` / `.gomoku-controls button`）。
 - **canvas 尺寸**：盤面內部解析度別大於容器顯示寬，否則被 CSS 縮放、**點擊座標會錯位**。
   以容器寬度（≤ 約 668）與視窗高度求 size（見 `ui.js resizeCanvas`）。
 - **無 Emoji**；CJK 棋子用系統宋體 stack（canvas 吃不到 CSS 變數，字型 stack 要重複一份）。
