@@ -11,7 +11,7 @@ function createMockBackend() {
   const audios = [];
 
   function makeGain() {
-    return { gain: { value: 1 }, connect: jest.fn() };
+    return { gain: { value: 1 }, connect: jest.fn(), disconnect: jest.fn() };
   }
 
   function makeBufferSource() {
@@ -27,6 +27,9 @@ function createMockBackend() {
       resume: jest.fn(() => Promise.resolve()),
       createGain: jest.fn(() => makeGain()),
       createBufferSource: jest.fn(() => makeBufferSource()),
+      // iOS 上 HTMLMediaElement.volume 唯讀，BGM 音量改經這個節點控制（見 audio-manager.js
+      // wireTrackToWebAudio）；預設模擬「支援」，個別測試需要模擬不支援時可 delete 此屬性。
+      createMediaElementSource: jest.fn(() => ({ connect: jest.fn(), disconnect: jest.fn() })),
       decodeAudioData: jest.fn((arrayBuffer, resolve) => {
         resolve({ __decoded: true });
       }),
@@ -352,12 +355,102 @@ describe('音量套用到後端物件', () => {
     expect(gain.gain.value).toBe(0.3);
   });
 
-  test('musicVolume 變更即時套用到播放中的 <audio>.volume', () => {
+  test('musicVolume 變更即時套用到播放中的 <audio>.volume（不支援 WebAudio graph 的 fallback 路徑）', () => {
     unlock(ctx); // 需先解鎖，set({musicOn:true}) 才會真的觸發 startMusic
+    const c = mock.audioContexts[0];
+    delete c.createMediaElementSource; // 模擬不支援 MediaElementSource：走舊的 el.volume 邏輯
     ctx.AudioSettings.set({ musicOn: true }); // 觸發 startMusic 建立 <audio>
     const el = mock.audios[mock.audios.length - 1];
     ctx.AudioSettings.set({ musicVolume: 0.3 });
     expect(el.volume).toBe(0.3);
+  });
+});
+
+// iOS 上 HTMLMediaElement.volume 是唯讀的（Apple 平台限制，JS 賦值被靜默忽略），導致 BGM
+// 音量滑桿在真機完全無效（桌面瀏覽器正常，此機制本身沒 bug，是 iOS 特例）。修法：BGM 改經
+// WebAudio GainNode 控音量——功能偵測 ctx.createMediaElementSource 存在才走此路徑，否則完全
+// 沿用舊的 el.volume 邏輯（桌面與測試環境不因此退化）。
+describe('BGM 音量改經 WebAudio gain（修正 iOS <audio>.volume 唯讀問題）', () => {
+  /** masterGain（SFX 用）也直接接 ctx.destination，且一定先於 musicGain 建立（ensureCtx 在
+   *  unlock() 當下就建立）；跳過第一個 createGain 結果（= masterGain），在剩下的裡面找「直接接
+   *  destination」的，就是 musicGain——per-track gain（crossfade 用）接的是 musicGain，不是
+   *  destination，不會誤判。 */
+  function findMusicGain(c) {
+    const candidates = c.createGain.mock.results
+      .slice(1)
+      .map((r) => r.value)
+      .filter((g) => g.connect.mock.calls.some((call) => call[0] === c.destination));
+    return candidates[candidates.length - 1];
+  }
+
+  function listenerFor(el, type) {
+    const call = el.addEventListener.mock.calls.find(([t]) => t === type);
+    return call && call[1];
+  }
+
+  test('musicVolume 變更即時套用到 musicGain.gain.value（WebAudio 路徑）', () => {
+    unlock(ctx);
+    ctx.AudioSettings.set({ musicOn: true });
+    const c = mock.audioContexts[0];
+    ctx.AudioSettings.set({ musicVolume: 0.6 });
+    const musicGain = findMusicGain(c);
+    expect(musicGain).toBeTruthy();
+    expect(musicGain.gain.value).toBe(0.6);
+  });
+
+  test('WebAudio 路徑下 <audio>.volume 固定為 1，音量交給 gain 節點（不再依賴唯讀屬性）', () => {
+    unlock(ctx);
+    ctx.AudioSettings.set({ musicOn: true });
+    const el = mock.audios[mock.audios.length - 1];
+    ctx.AudioSettings.set({ musicVolume: 0.2 });
+    expect(el.volume).toBe(1);
+  });
+
+  test('不支援 createMediaElementSource 時完全退回 el.volume 舊邏輯，不建立 gain 節點', () => {
+    unlock(ctx);
+    const c = mock.audioContexts[0];
+    delete c.createMediaElementSource;
+    ctx.AudioSettings.set({ musicOn: true });
+    const el = mock.audios[mock.audios.length - 1];
+    ctx.AudioSettings.set({ musicVolume: 0.55 });
+    expect(el.volume).toBe(0.55);
+    expect(findMusicGain(c)).toBeUndefined();
+  });
+
+  test('crossfade 過程中 musicGain 不被覆寫：滑桿中途調整仍立即生效', async () => {
+    unlock(ctx);
+    ctx.AudioSettings.set({ musicOn: true });
+    const c = mock.audioContexts[0];
+    const firstEl = mock.audios[mock.audios.length - 1];
+    // 模擬曲目快播完（剩餘時間 <= CROSSFADE_MS），觸發 crossfadeToNext
+    firstEl.duration = 10;
+    firstEl.currentTime = 8; // 剩 2000ms < 2500ms 門檻
+    listenerFor(firstEl, 'timeupdate')();
+
+    const secondEl = mock.audios[mock.audios.length - 1];
+    expect(secondEl).not.toBe(firstEl); // 確認真的換了下一首（crossfade 已啟動）
+
+    ctx.AudioSettings.set({ musicVolume: 0.9 }); // crossfade 進行中，使用者中途調整滑桿
+    const musicGain = findMusicGain(c);
+    expect(musicGain.gain.value).toBe(0.9); // 立即生效，不等 crossfade 跑完
+
+    // 讓 crossfade 的 fadeTimer（真實 setInterval，100ms/步）跑幾步，確認 musicGain 仍不被蓋回
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(musicGain.gain.value).toBe(0.9);
+
+    ctx.stopMusic(); // 清掉尚未跑完的 fadeTimer，避免 jest 遺留 open handle
+  });
+
+  test('stopMusic 會斷開 WebAudio 節點（MediaElementSource 只能對同一 el 建立一次，需 disconnect 避免累積）', () => {
+    unlock(ctx);
+    ctx.AudioSettings.set({ musicOn: true });
+    const c = mock.audioContexts[0];
+    const source = c.createMediaElementSource.mock.results[0].value;
+    // per-track gain 是繼 masterGain、musicGain 之後第三個建立的 GainNode
+    const trackGain = c.createGain.mock.results[2].value;
+    ctx.stopMusic();
+    expect(source.disconnect).toHaveBeenCalled();
+    expect(trackGain.disconnect).toHaveBeenCalled();
   });
 });
 

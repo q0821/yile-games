@@ -93,6 +93,11 @@ let loadingPacks = new Map(); // game -> 進行中的載入 promise（併發呼�
 let voicePlaying = new Set(); // 節流：正在播放中的語音 name
 
 let musicEls = [null, null]; // 雙軌交替播放（crossfade 用）
+let musicGain = null;              // BGM 總音量 GainNode（接 ctx.destination）；iOS 上 <audio>.volume
+                                    // 唯讀（JS 賦值被靜默忽略），改由這裡控音量
+let musicTrackNodes = [null, null]; // 各軌 { source, gain }：source 是 MediaElementAudioSourceNode，
+                                    // gain 是 per-track GainNode（crossfade 用的 0..1 比例，接到 musicGain）；
+                                    // 只有支援 createMediaElementSource 時才建立，否則維持 null（走 el.volume fallback）
 let musicActiveIndex = 0;
 let musicQueue = [];
 let musicQueuePos = 0;
@@ -141,13 +146,21 @@ function broadcastSettings() {
   } catch (_) { /* 非瀏覽器環境或 CustomEvent 不存在時忽略 */ }
 }
 
-/** 設定變更即時生效：套用音量到目前存在的後端物件、開關連動啟停 BGM。 */
+/** 設定變更即時生效：套用音量到目前存在的後端物件、開關連動啟停 BGM。
+ *  BGM 音量分兩條路：有 musicGain（WebAudio 路徑）就調 gain；沒有 WebAudio 節點的軌道
+ *  （fallback：ctx 不支援 createMediaElementSource）才直接改 el.volume——iOS 上 <audio>.volume
+ *  是唯讀的，JS 賦值會被靜默忽略，所以兩條路不能互相取代。 */
 function applySettingsToBackend(settings) {
   if (masterGain) {
     try { masterGain.gain.value = settings.sfxVolume; } catch (_) { /* ignore */ }
   }
-  musicEls.forEach((el) => {
-    if (el) { try { el.volume = settings.musicVolume; } catch (_) { /* ignore */ } }
+  if (musicGain) {
+    try { musicGain.gain.value = settings.musicVolume; } catch (_) { /* ignore */ }
+  }
+  musicEls.forEach((el, i) => {
+    if (el && !musicTrackNodes[i]) {
+      try { el.volume = settings.musicVolume; } catch (_) { /* ignore */ }
+    }
   });
   if (!settings.musicOn && musicPlaying) {
     stopMusic();
@@ -392,6 +405,47 @@ function safePlay(el) {
   } catch (_) { /* ignore */ }
 }
 
+/** BGM 總 GainNode：延遲建立（第一次真的有軌道要接 WebAudio 圖時才建），只建一次。 */
+function ensureMusicGain() {
+  if (!musicGain && ctx) {
+    musicGain = ctx.createGain();
+    musicGain.gain.value = getSettings().musicVolume;
+    musicGain.connect(ctx.destination);
+  }
+  return musicGain;
+}
+
+/** 功能偵測：iOS 上 <audio>.volume 唯讀（JS 賦值被靜默忽略），改走 WebAudio gain 控音量；
+ *  只有 ctx 存在且支援 createMediaElementSource 才走這條路，否則完全沿用 el.volume 舊邏輯
+ *  （桌面瀏覽器與測試環境不因此退化）。MediaElementSource 對同一個 <audio> 元素只能建立一次，
+ *  呼叫端須在換曲／停止時 disconnect（見 disconnectTrackNode）。
+ *  initialGain：per-track gain 的起始值——一般播放給 1（滿音量比例），crossfade 淡入的新軌給 0。 */
+function wireTrackToWebAudio(el, initialGain) {
+  if (!ctx || typeof ctx.createMediaElementSource !== 'function') return null;
+  try {
+    const gainOut = ensureMusicGain();
+    if (!gainOut) return null;
+    const source = ctx.createMediaElementSource(el);
+    const trackGain = ctx.createGain();
+    trackGain.gain.value = initialGain;
+    source.connect(trackGain);
+    trackGain.connect(gainOut);
+    return { source, gain: trackGain };
+  } catch (_) {
+    return null; // 建立失敗（例如同一 el 已建立過 source）：退回 el.volume fallback
+  }
+}
+
+/** 斷開指定軌道的 WebAudio 節點，避免累積（MediaElementSource 只能對同一 el 建立一次）。 */
+function disconnectTrackNode(idx) {
+  const node = musicTrackNodes[idx];
+  if (node) {
+    try { node.source.disconnect(); } catch (_) { /* ignore */ }
+    try { node.gain.disconnect(); } catch (_) { /* ignore */ }
+  }
+  musicTrackNodes[idx] = null;
+}
+
 /** 掛上換曲監聽：優先用 timeupdate 抓「剩餘時間 <= crossfade 長度」提前換曲；ended 當保底（duration 拿不到時）；
  *  error 為載入／播放失敗時的補救（跳下一首，見 handleTrackError）。三者互斥，只會走其中一條路徑。 */
 function attachTrackWatchers(el, idx) {
@@ -440,6 +494,7 @@ function attachTrackWatchers(el, idx) {
 function handleTrackError(idx) {
   const el = musicEls[idx];
   if (el) { try { el.pause(); } catch (_) { /* ignore */ } }
+  disconnectTrackNode(idx);
   musicEls[idx] = null;
   if (!musicPlaying) return;
   musicConsecutiveErrors += 1;
@@ -456,35 +511,52 @@ function playNextTrack() {
   const idx = musicActiveIndex;
   const el = backend.createAudio();
   el.src = nextTrackUrl();
-  el.volume = getSettings().musicVolume;
+  const node = wireTrackToWebAudio(el, 1); // 滿音量比例，總音量交給 musicGain
+  musicTrackNodes[idx] = node;
+  el.volume = node ? 1 : getSettings().musicVolume; // WebAudio 路徑固定 1；否則走舊 el.volume 邏輯
   attachTrackWatchers(el, idx);
   musicEls[idx] = el;
   safePlay(el);
 }
 
+/** crossfade：有 WebAudio 節點時，淡入淡出改調 per-track gain（0..1 比例)，musicGain（總音量）
+ *  全程不動——這樣使用者中途調整音量滑桿會立刻反映在 musicGain，不會被 crossfade 的計時器蓋掉，
+ *  也不用等 crossfade 跑完。沒有 WebAudio 節點（fallback）才維持舊的「el.volume = 目標音量 * 比例」。 */
 function crossfadeToNext(fromIdx) {
   const toIdx = fromIdx === 0 ? 1 : 0;
   const fromEl = musicEls[fromIdx];
+  const fromNode = musicTrackNodes[fromIdx];
   const toEl = backend.createAudio();
   toEl.src = nextTrackUrl();
-  toEl.volume = 0;
+  const toNode = wireTrackToWebAudio(toEl, 0); // 從 0 淡入
+  musicTrackNodes[toIdx] = toNode;
+  toEl.volume = toNode ? 1 : 0;
   attachTrackWatchers(toEl, toIdx);
   musicEls[toIdx] = toEl;
   safePlay(toEl);
   musicActiveIndex = toIdx;
 
-  const targetVolume = getSettings().musicVolume;
+  const targetVolume = getSettings().musicVolume; // 僅 fallback 路徑用；WebAudio 路徑音量交給 musicGain
   const steps = Math.max(1, Math.round(CROSSFADE_MS / CROSSFADE_STEP_MS));
   let step = 0;
   clearFadeTimer();
   fadeTimer = setInterval(() => {
     step += 1;
     const ratio = Math.min(1, step / steps);
-    if (fromEl) { try { fromEl.volume = targetVolume * (1 - ratio); } catch (_) { /* ignore */ } }
-    try { toEl.volume = targetVolume * ratio; } catch (_) { /* ignore */ }
+    if (fromNode) {
+      try { fromNode.gain.gain.value = 1 - ratio; } catch (_) { /* ignore */ }
+    } else if (fromEl) {
+      try { fromEl.volume = targetVolume * (1 - ratio); } catch (_) { /* ignore */ }
+    }
+    if (toNode) {
+      try { toNode.gain.gain.value = ratio; } catch (_) { /* ignore */ }
+    } else {
+      try { toEl.volume = targetVolume * ratio; } catch (_) { /* ignore */ }
+    }
     if (ratio >= 1) {
       clearFadeTimer();
       if (fromEl) { try { fromEl.pause(); } catch (_) { /* ignore */ } }
+      disconnectTrackNode(fromIdx);
       musicEls[fromIdx] = null;
     }
   }, CROSSFADE_STEP_MS);
@@ -516,6 +588,7 @@ export function stopMusic() {
   clearFadeTimer();
   musicEls.forEach((el, i) => {
     if (el) { try { el.pause(); } catch (_) { /* ignore */ } }
+    disconnectTrackNode(i);
     musicEls[i] = null;
   });
 }
@@ -531,6 +604,7 @@ export function _setBackendForTest(overrides) {
   stopMusic();
   ctx = null;
   masterGain = null;
+  musicGain = null;
   sfxBuffers = new Map();
   loadedPacks = new Set();
   loadingPacks = new Map();
