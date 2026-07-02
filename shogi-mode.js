@@ -30,6 +30,12 @@ let gameOver = false;
 let boardReady = false;
 let promoResolve = null;   // 升變選擇 promise 的 resolver
 
+// ——— 建議走法（AI 建議按鈕，教學用途，固定高強度）———
+// 一般手：{ isDrop:false, from, to }（畫箭頭）；打入：{ isDrop:true, to, piece, sente }（目的地高亮＋持駒列對應駒高亮）
+let hintMove = null;
+let hintBusy = false;       // 建議請求進行中
+let hintReq = null;         // 目前 in-flight 的 Engine.hint() 控制物件（{promise, cancel}）
+
 // ——— 覆盤 ———
 let reviewMode = false;
 let reviewMoves = [];
@@ -60,7 +66,7 @@ function cacheDom() {
     thinking: $('shogiThinking'), checkBanner: $('shogiCheck'),
     handGote: $('shogiHandGote'), handSente: $('shogiHandSente'),
     endOverlay: $('shogiEnd'), endTitle: $('shogiEndTitle'), endSub: $('shogiEndSub'), endBtn: $('shogiEndBtn'),
-    promo: $('shogiPromo'), promoYes: $('shogiPromoYes'), promoNo: $('shogiPromoNo'),
+    promo: $('shogiPromo'), promoYes: $('shogiPromoYes'), promoNo: $('shogiPromoNo'), hint: $('shogiHint'),
     rulesBtn: $('shogiRulesBtn'), rulesModal: $('shogiRulesModal'),
     reviewBtn: $('shogiReviewBtn'), controls: $('shogiControls'),
     review: $('shogiReview'), rvSlider: $('shogiReviewSlider'), rvInfo: $('shogiReviewInfo'),
@@ -98,6 +104,7 @@ function view() {
   return {
     grid: Game.piecesGrid(),
     selected, legalTargets, lastMove, checkRC,
+    hint: hintMove,
     rc: (sq) => Game.squareToRC(sq),
   };
 }
@@ -129,7 +136,7 @@ function canSelectHand(sideSente) {
     && Game.turn() === sideSente && isPlayerTurn();
 }
 
-function fillHand(container, handObj, sideSente) {
+function fillHand(container, handObj, sideSente, hintPiece) {
   if (!container) return;
   container.innerHTML = '';
   const selectable = canSelectHand(sideSente);
@@ -141,7 +148,8 @@ function fillHand(container, handObj, sideSente) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'shogi-hand-piece' + (sideSente ? '' : ' gote')
-      + (selectedDrop === p && Game.turn() === sideSente ? ' sel' : '');
+      + (selectedDrop === p && Game.turn() === sideSente ? ' sel' : '')
+      + (hintPiece === p ? ' hint' : '');
     btn.disabled = !selectable;
     const ch = document.createElement('span');
     ch.className = 'shogi-hand-char';
@@ -167,8 +175,10 @@ function fillHand(container, handObj, sideSente) {
 function renderHands() {
   if (!boardReady) return;
   const h = Game.hands();
-  fillHand(dom.handGote, h.gote, false);
-  fillHand(dom.handSente, h.sente, true);
+  const hintGote = (hintMove && hintMove.isDrop && !hintMove.sente) ? hintMove.piece : null;
+  const hintSente = (hintMove && hintMove.isDrop && hintMove.sente) ? hintMove.piece : null;
+  fillHand(dom.handGote, h.gote, false, hintGote);
+  fillHand(dom.handSente, h.sente, true, hintSente);
 }
 
 function updateCheck() {
@@ -258,8 +268,59 @@ function updateUndoBtn() {
   dom.undo.disabled = !boardReady || aiBusy || moving || gameOver || Game.gamePly() === 0;
 }
 
+/** 更新「建議走法」按鈕可用狀態：AI 思考中／覆盤分析中／覆盤模式中／升變對話框開啟中／終局後皆不可按。 */
+function updateHintBtn() {
+  if (!dom.hint) return;
+  dom.hint.disabled = !boardReady || hintBusy || aiBusy || reviewAnalyzing || reviewMode || !!promoResolve || gameOver;
+}
+
+/** 清除目前顯示的建議走法（箭頭／打入高亮＋持駒列高亮），並取消尚在等待中的建議請求
+ *  （引擎仍會跑完，但結果會被丟棄）。 */
+function clearHint() {
+  if (hintReq) { hintReq.cancel(); hintReq = null; }
+  if (hintMove) { hintMove = null; renderHands(); }
+}
+
+/** 按下「建議走法」：固定 movetime、引擎全力（不吃 adaptive 難度削弱），教學用途。
+ *  打入手（如 P@5e）沒有起點，改標記目的地＋持駒列對應駒（見 shogi-ui.js／renderHands）。 */
+async function requestHint() {
+  if (!dom.hint || dom.hint.disabled) return;
+  clearHint();
+  hintBusy = true;
+  updateHintBtn();
+  showThinking(true);
+  const fenAtRequest = Game.fen();
+  const sideAtRequest = Game.turn();
+  const req = Engine.hint({ fen: fenAtRequest, movetime: 1500 });
+  hintReq = req;
+  try {
+    const result = await req.promise;
+    hintReq = null;
+    hintBusy = false;
+    showThinking(false);
+    updateHintBtn();
+    if (!isActive() || Game.fen() !== fenAtRequest) return; // 局面已變，丟棄不畫
+    if (result) {
+      hintMove = result.isDrop
+        ? { isDrop: true, to: result.to, piece: result.move.charAt(0), sente: sideAtRequest }
+        : { isDrop: false, from: result.from, to: result.to };
+      draw();
+      renderHands();
+    }
+  } catch (err) {
+    hintReq = null;
+    hintBusy = false;
+    showThinking(false);
+    updateHintBtn();
+    if (err?.cancelled) return; // 使用者取消／局面已變導致的取消，靜默
+    console.error('hint error:', err);
+    setStatus('建議走法失敗，請稍候再試');
+  }
+}
+
 function undoMove() {
   if (aiBusy || moving || !boardReady || Game.gamePly() === 0) return;
+  clearHint();
   Game.undo();
   if (mode === 'pvc' && Game.gamePly() > 0 && Game.turn() !== playerSente) Game.undo();
   gameOver = false;
@@ -277,6 +338,7 @@ function endpointsArr(uci) { const e = Game.moveEndpoints(uci); return [e.from, 
 
 function setStatus(msg) {
   updateUndoBtn();
+  updateHintBtn();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {
@@ -329,6 +391,7 @@ async function doMove(uci) {
   const captured = !!(preGrid[toRC.row] && preGrid[toRC.row][toRC.col]);
   moving = true;
   clearSelection();
+  clearHint();
   draw();
   if (!parts.drop) await animateMove(parts.from, parts.to);
   const ok = Game.move(uci);
@@ -350,11 +413,13 @@ function askPromotion() {
   return new Promise((resolve) => {
     promoResolve = resolve;
     if (dom.promo) dom.promo.style.display = 'flex';
+    updateHintBtn();
   });
 }
 function resolvePromotion(yes) {
   if (dom.promo) dom.promo.style.display = 'none';
   const r = promoResolve; promoResolve = null;
+  updateHintBtn();
   if (r) r(yes);
 }
 
@@ -428,6 +493,8 @@ async function newGame() {
   if (reviewMode) setReviewUI(false);
   reviewNodes = null;
   adaptiveApplied = false;
+  clearHint();
+  hintBusy = false;
   hideEnd();
   resolvePromotion(false);
   showThinking(false);
@@ -459,6 +526,7 @@ function setReviewUI(on) {
   if (dom.handGote) dom.handGote.style.display = on ? 'none' : '';
   if (dom.handSente) dom.handSente.style.display = on ? 'none' : '';
   if (dom.review) dom.review.style.display = on ? 'flex' : 'none';
+  updateHintBtn();
 }
 
 async function enterReview() {
@@ -589,6 +657,7 @@ function updateReviewInfo() {
 async function analyzeReview() {
   if (reviewAnalyzing || !reviewMoves.length) return;
   reviewAnalyzing = true;
+  updateHintBtn();
   if (dom.rvAnalyze) dom.rvAnalyze.disabled = true;
   try {
     reviewNodes = await Review.analyzeGame(reviewMoves, {
@@ -604,6 +673,7 @@ async function analyzeReview() {
     Engine.reset();
   } finally {
     reviewAnalyzing = false;
+    updateHintBtn();
     if (dom.rvAnalyze) dom.rvAnalyze.disabled = false;
   }
 }
@@ -660,6 +730,7 @@ function wireEvents() {
 
   dom.restart?.addEventListener('click', () => newGame());
   dom.undo?.addEventListener('click', () => undoMove());
+  dom.hint?.addEventListener('click', () => requestHint());
   dom.endBtn?.addEventListener('click', () => newGame());
   dom.home?.addEventListener('click', () => { location.hash = '#home'; });
   dom.promoYes?.addEventListener('click', () => resolvePromotion(true));

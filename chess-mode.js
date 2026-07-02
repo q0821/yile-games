@@ -29,6 +29,11 @@ let gameOver = false;
 let boardReady = false;
 let promoResolve = null;   // 升變選子 promise 的 resolver
 
+// ——— 建議走法（AI 建議按鈕，教學用途，固定高強度）———
+let hintMove = null;        // { from, to } 供箭頭 overlay；null=無顯示
+let hintBusy = false;       // 建議請求進行中
+let hintReq = null;         // 目前 in-flight 的 Engine.hint() 控制物件（{promise, cancel}）
+
 // ——— 覆盤 ———
 let reviewMode = false;
 let reviewMoves = [];
@@ -58,7 +63,7 @@ function cacheDom() {
     settingsBtn: $('chessSettingsBtn'), settingsModal: $('chessSettingsModal'),
     thinking: $('chessThinking'), checkBanner: $('chessCheck'),
     endOverlay: $('chessEnd'), endTitle: $('chessEndTitle'), endSub: $('chessEndSub'), endBtn: $('chessEndBtn'),
-    promo: $('chessPromo'), promoBtns: $('chessPromoBtns'),
+    promo: $('chessPromo'), promoBtns: $('chessPromoBtns'), hint: $('chessHint'),
     reviewBtn: $('chessReviewBtn'), controls: $('chessControls'),
     review: $('chessReview'), rvSlider: $('chessReviewSlider'), rvInfo: $('chessReviewInfo'),
     rvFirst: $('csRvFirst'), rvPrev: $('csRvPrev'), rvNext: $('csRvNext'), rvLast: $('csRvLast'),
@@ -95,6 +100,7 @@ function view() {
   return {
     grid: Game.piecesGrid(),
     selected, legalTargets, lastMove, checkRC,
+    hint: hintMove,
     rc: (sq) => Game.squareToRC(sq),
   };
 }
@@ -205,8 +211,50 @@ function updateUndoBtn() {
   dom.undo.disabled = !boardReady || aiBusy || moving || gameOver || Game.gamePly() === 0;
 }
 
+/** 更新「建議走法」按鈕可用狀態：AI 思考中／覆盤分析中／覆盤模式中／升變對話框開啟中／終局後皆不可按。 */
+function updateHintBtn() {
+  if (!dom.hint) return;
+  dom.hint.disabled = !boardReady || hintBusy || aiBusy || reviewAnalyzing || reviewMode || !!promoResolve || gameOver;
+}
+
+/** 清除目前顯示的建議走法箭頭，並取消尚在等待中的建議請求（引擎仍會跑完，但結果會被丟棄）。 */
+function clearHint() {
+  if (hintReq) { hintReq.cancel(); hintReq = null; }
+  hintMove = null;
+}
+
+/** 按下「建議走法」：固定 movetime、引擎全力（不吃 adaptive 難度削弱），教學用途。 */
+async function requestHint() {
+  if (!dom.hint || dom.hint.disabled) return;
+  clearHint();
+  hintBusy = true;
+  updateHintBtn();
+  showThinking(true);
+  const fenAtRequest = Game.fen();
+  const req = Engine.hint({ fen: fenAtRequest, movetime: 1500 });
+  hintReq = req;
+  try {
+    const result = await req.promise;
+    hintReq = null;
+    hintBusy = false;
+    showThinking(false);
+    updateHintBtn();
+    if (!isActive() || Game.fen() !== fenAtRequest) return; // 局面已變，丟棄不畫
+    if (result) { hintMove = { from: result.from, to: result.to }; draw(); }
+  } catch (err) {
+    hintReq = null;
+    hintBusy = false;
+    showThinking(false);
+    updateHintBtn();
+    if (err?.cancelled) return; // 使用者取消／局面已變導致的取消，靜默
+    console.error('hint error:', err);
+    setStatus('建議走法失敗，請稍候再試');
+  }
+}
+
 function undoMove() {
   if (aiBusy || moving || !boardReady || Game.gamePly() === 0) return;
+  clearHint();
   Game.undo();
   if (mode === 'pvc' && Game.gamePly() > 0 && Game.turn() !== playerWhite) Game.undo();
   gameOver = false;
@@ -224,6 +272,7 @@ function endpointsArr(uci) { const e = Game.moveEndpoints(uci); return [e.from, 
 
 function setStatus(msg) {
   updateUndoBtn();
+  updateHintBtn();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {
@@ -278,6 +327,7 @@ async function doMove(uci) {
   const captured = !!(preGrid[toRC.row] && preGrid[toRC.row][toRC.col]);
   moving = true;
   clearSelection();
+  clearHint();
   draw();
   await animateMove(parts.from, parts.to);
   const ok = Game.move(uci);
@@ -299,11 +349,13 @@ function askPromotion() {
   return new Promise((resolve) => {
     promoResolve = resolve;
     if (dom.promo) dom.promo.style.display = 'flex';
+    updateHintBtn();
   });
 }
 function resolvePromotion(code) {
   if (dom.promo) dom.promo.style.display = 'none';
   const r = promoResolve; promoResolve = null;
+  updateHintBtn();
   if (r) r(code);
 }
 
@@ -363,6 +415,8 @@ async function newGame() {
   if (reviewMode) setReviewUI(false);
   reviewNodes = null;
   adaptiveApplied = false;
+  clearHint();
+  hintBusy = false;
   hideEnd();
   resolvePromotion(null);
   showThinking(false);
@@ -391,6 +445,7 @@ function setReviewUI(on) {
   if (dom.statusrow) dom.statusrow.style.display = on ? 'none' : '';
   if (dom.controls) dom.controls.style.display = on ? 'none' : '';
   if (dom.review) dom.review.style.display = on ? 'flex' : 'none';
+  updateHintBtn();
 }
 
 async function enterReview() {
@@ -520,6 +575,7 @@ function updateReviewInfo() {
 async function analyzeReview() {
   if (reviewAnalyzing || !reviewMoves.length) return;
   reviewAnalyzing = true;
+  updateHintBtn();
   if (dom.rvAnalyze) dom.rvAnalyze.disabled = true;
   try {
     reviewNodes = await Review.analyzeGame(reviewMoves, {
@@ -535,6 +591,7 @@ async function analyzeReview() {
     Engine.reset();
   } finally {
     reviewAnalyzing = false;
+    updateHintBtn();
     if (dom.rvAnalyze) dom.rvAnalyze.disabled = false;
   }
 }
@@ -586,6 +643,7 @@ function wireEvents() {
 
   dom.restart?.addEventListener('click', () => newGame());
   dom.undo?.addEventListener('click', () => undoMove());
+  dom.hint?.addEventListener('click', () => requestHint());
   dom.endBtn?.addEventListener('click', () => newGame());
   dom.home?.addEventListener('click', () => { location.hash = '#home'; });
   // 升變四選一：按鈕 data-promo 帶 q/r/b/n

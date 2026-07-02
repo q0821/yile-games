@@ -2,8 +2,10 @@
 //
 // 駒畫在「格子內」（非交叉點），為五角楔形（將棋駒外形）。先手駒正向、後手駒整顆 180°
 // 倒置（含漢字），升變駒漢字用紅字。持駒區由 shogi-mode 以 DOM 另渲染（易點擊與計數）。
-// view = { grid, selected, legalTargets, lastMove, checkRC, anim }；座標 row 0=上、col 0=左。
+// view = { grid, selected, legalTargets, lastMove, checkRC, anim, hint }；座標 row 0=上、col 0=左。
 //   anim = { hideRow, hideCol, piece, x, y }：動畫中隱藏某格、改畫浮動駒於 (x,y)。
+//   hint = { isDrop:false, from, to } 一般手箭頭 或 { isDrop:true, to } 打入目的地高亮
+//   （建議走法按鈕，見 shogi-mode.js；打入無起點，持駒列對應駒高亮另由 shogi-mode.js 的 DOM 渲染負責）。
 import { COLUMNS, ROWS } from './shogi-game.js';
 
 const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
@@ -18,6 +20,9 @@ const CHECK = '#d23b3b';
 const PIECE_FACE = '#f7e4b6';
 const PIECE_EDGE = '#5b4222';
 const PROMO_INK = '#b23a2e';
+const HINT_ARROW = 'rgba(30,111,192,0.9)';   // 建議走法箭頭色，與象棋/西洋棋一致
+const HINT_DROP_FILL = 'rgba(30,111,192,0.22)';
+const HINT_DROP_STROKE = 'rgba(30,111,192,0.9)';
 
 /** 依容器寬度算 cellSize 並設定 canvas 尺寸（含 DPR）。 */
 export function resizeShogiCanvas(deps, maxWidthPx) {
@@ -186,8 +191,40 @@ export function drawShogi(deps, view) {
     }
   }
 
+  // 建議走法：一般手畫箭頭；打入沒有起點，改為目的地高亮（對應持駒列高亮見 shogi-mode.js renderHands）
+  if (view.hint) {
+    if (view.hint.isDrop) {
+      const p = view.rc(view.hint.to);
+      ctx.fillStyle = HINT_DROP_FILL;
+      ctx.fillRect(gx(deps, p.col), gy(deps, p.row), cell, cell);
+      ctx.strokeStyle = HINT_DROP_STROKE;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(gx(deps, p.col) + 1.5, gy(deps, p.row) + 1.5, cell - 3, cell - 3);
+    } else {
+      const a = view.rc(view.hint.from), b = view.rc(view.hint.to);
+      drawArrow(ctx, cx(deps, a.col), cy(deps, a.row), cx(deps, b.col), cy(deps, b.row), HINT_ARROW, Math.max(2.5, cell * 0.10), cell * 0.28);
+    }
+  }
+
   // 浮動（移動中）駒畫最上層
   if (view.anim && view.anim.piece) {
     drawPiece(ctx, view.anim.x, view.anim.y, size, view.anim.piece, true);
   }
+}
+
+/** 由 (x1,y1) 指向 (x2,y2) 的箭頭；shrink 為兩端內縮（避免蓋住棋子中心）。風格與象棋 PV 箭頭一致。 */
+function drawArrow(ctx, x1, y1, x2, y2, color, width, shrink) {
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const sx = x1 + Math.cos(ang) * shrink, sy = y1 + Math.sin(ang) * shrink;
+  const ex = x2 - Math.cos(ang) * shrink, ey = y2 - Math.sin(ang) * shrink;
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = width; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+  const head = width * 2.6;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 6), ey - head * Math.sin(ang - Math.PI / 6));
+  ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 6), ey - head * Math.sin(ang + Math.PI / 6));
+  ctx.closePath(); ctx.fill();
+  ctx.lineCap = 'butt';
 }

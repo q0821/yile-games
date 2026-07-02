@@ -13,3 +13,8 @@ export const isReady = Engine.isReady;
 export function bestMove({ fen, level = 2, movetimeMs = 800 }) {
   return Engine.bestMove({ fen, level, movetimeMs, variant: 'shogi' });
 }
+
+/** 建議走法（AI 建議按鈕，教學用途，固定全力不吃難度削弱）。見 xiangqi-engine.js 的 hint()。 */
+export function hint({ fen, movetime = 1500 } = {}) {
+  return Engine.hint({ fen, movetime, variant: 'shogi' });
+}

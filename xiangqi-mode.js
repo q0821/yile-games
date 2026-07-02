@@ -28,6 +28,11 @@ let moving = false;        // 棋子移動動畫中（鎖操作避免競態）
 let gameOver = false;
 let boardReady = false;
 
+// ——— 建議走法（AI 建議按鈕，教學用途，固定高強度）———
+let hintMove = null;        // { from, to } 供 view.pv 箭頭；null=無顯示
+let hintBusy = false;       // 建議請求進行中
+let hintReq = null;         // 目前 in-flight 的 Engine.hint() 控制物件（{promise, cancel}）
+
 // ——— 覆盤 ———
 let reviewMode = false;
 let reviewMoves = [];
@@ -55,6 +60,7 @@ function cacheDom() {
     auto: $('xiangqiAuto'), autoLevelGroup: $('xiangqiAutoLevelGroup'),
     autoLevelLabel: $('xiangqiAutoLevel'), autoReset: $('xiangqiAutoReset'),
     settingsBtn: $('xiangqiSettingsBtn'), settingsModal: $('xiangqiSettingsModal'),
+    hint: $('xiangqiHint'),
     thinking: $('xiangqiThinking'), checkBanner: $('xiangqiCheck'),
     endOverlay: $('xiangqiEnd'), endTitle: $('xiangqiEndTitle'), endSub: $('xiangqiEndSub'), endBtn: $('xiangqiEndBtn'),
     reviewBtn: $('xiangqiReviewBtn'), controls: $('xiangqiControls'),
@@ -93,6 +99,7 @@ function view() {
   return {
     grid: Game.piecesGrid(),
     selected, legalTargets, lastMove, checkRC,
+    pv: hintMove ? [hintMove] : null, // 重用既有 PV 箭頭繪製（見 xiangqi-ui.js）
     rc: (sq) => Game.squareToRC(sq),
   };
 }
@@ -209,6 +216,7 @@ function setReviewUI(on) {
   if (dom.statusrow) dom.statusrow.style.display = on ? 'none' : '';
   if (dom.controls) dom.controls.style.display = on ? 'none' : '';
   if (dom.review) dom.review.style.display = on ? 'flex' : 'none';
+  updateHintBtn();
 }
 
 async function enterReview() {
@@ -341,6 +349,7 @@ function updateReviewInfo() {
 async function analyzeReview() {
   if (reviewAnalyzing || !reviewMoves.length) return;
   reviewAnalyzing = true;
+  updateHintBtn();
   if (dom.rvAnalyze) dom.rvAnalyze.disabled = true;
   try {
     reviewNodes = await Review.analyzeGame(reviewMoves, {
@@ -356,6 +365,7 @@ async function analyzeReview() {
     Engine.reset();
   } finally {
     reviewAnalyzing = false;
+    updateHintBtn();
     if (dom.rvAnalyze) dom.rvAnalyze.disabled = false;
   }
 }
@@ -366,9 +376,51 @@ function updateUndoBtn() {
   dom.undo.disabled = !boardReady || aiBusy || moving || gameOver || Game.gamePly() === 0;
 }
 
+/** 更新「建議走法」按鈕可用狀態：AI 思考中／覆盤分析中／覆盤模式中／終局後皆不可按。 */
+function updateHintBtn() {
+  if (!dom.hint) return;
+  dom.hint.disabled = !boardReady || hintBusy || aiBusy || reviewAnalyzing || reviewMode || gameOver;
+}
+
+/** 清除目前顯示的建議走法箭頭，並取消尚在等待中的建議請求（引擎仍會跑完，但結果會被丟棄）。 */
+function clearHint() {
+  if (hintReq) { hintReq.cancel(); hintReq = null; }
+  hintMove = null;
+}
+
+/** 按下「建議走法」：固定 movetime、引擎全力（不吃 adaptive 難度削弱），教學用途。 */
+async function requestHint() {
+  if (!dom.hint || dom.hint.disabled) return;
+  clearHint();
+  hintBusy = true;
+  updateHintBtn();
+  showThinking(true);
+  const fenAtRequest = Game.fen();
+  const req = Engine.hint({ fen: fenAtRequest, variant: 'xiangqi', movetime: 1500 });
+  hintReq = req;
+  try {
+    const result = await req.promise;
+    hintReq = null;
+    hintBusy = false;
+    showThinking(false);
+    updateHintBtn();
+    if (!isActive() || Game.fen() !== fenAtRequest) return; // 局面已變，丟棄不畫
+    if (result) { hintMove = { from: result.from, to: result.to }; draw(); }
+  } catch (err) {
+    hintReq = null;
+    hintBusy = false;
+    showThinking(false);
+    updateHintBtn();
+    if (err?.cancelled) return; // 使用者取消／局面已變導致的取消，靜默
+    console.error('hint error:', err);
+    setStatus('建議走法失敗，請稍候再試');
+  }
+}
+
 /** 悔棋：pvc 退回玩家可下的時機（連 AI 那手一起退）。 */
 function undoMove() {
   if (aiBusy || moving || !boardReady || Game.gamePly() === 0) return;
+  clearHint();
   Game.undo();
   // pvc 若退完仍非玩家回合（剛退掉的是玩家手、輪到玩家對手）→ 再退一手回到玩家
   if (mode === 'pvc' && Game.gamePly() > 0 && Game.turn() !== playerRed) Game.undo();
@@ -386,6 +438,7 @@ function undoMove() {
 
 function setStatus(msg) {
   updateUndoBtn();
+  updateHintBtn();
   if (!dom.status) return;
   if (msg) { dom.status.textContent = msg; return; }
   if (gameOver) {
@@ -440,6 +493,7 @@ async function doMove(uci) {
   const captured = !!(preGrid[toRC.row] && preGrid[toRC.row][toRC.col]);
   moving = true;
   clearSelection();
+  clearHint();
   draw();                 // 先清掉選取/合法點視覺再滑動
   await animateMove(uci);
   const ok = Game.move(uci);
@@ -504,6 +558,8 @@ async function newGame() {
   if (reviewMode) setReviewUI(false);
   reviewNodes = null;
   adaptiveApplied = false;
+  clearHint();
+  hintBusy = false;
   hideEnd();
   showThinking(false);
   setStatus('載入棋盤中…');
@@ -568,6 +624,7 @@ function wireEvents() {
 
   dom.restart?.addEventListener('click', () => newGame());
   dom.undo?.addEventListener('click', () => undoMove());
+  dom.hint?.addEventListener('click', () => requestHint());
   dom.endBtn?.addEventListener('click', () => newGame());
   dom.home?.addEventListener('click', () => { location.hash = '#home'; });
   // 覆盤

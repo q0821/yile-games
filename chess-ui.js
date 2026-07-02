@@ -2,7 +2,8 @@
 //
 // 暖色棋盤格（淺＝宣紙暖白、深＝暖棕）、細框；棋子為 Unicode 水墨剪影
 // （黑方深墨、白方象牙底＋細描邊、柔焦投影）。風格沿用通過的示意稿。
-// view = { grid, selected, legalTargets, lastMove, checkRC, anim, rc }；座標 row 0=上、col 0=左。
+// view = { grid, selected, legalTargets, lastMove, checkRC, anim, hint, rc }；座標 row 0=上、col 0=左。
+//   hint = { from, to }：建議走法箭頭（AI 建議按鈕，見 chess-mode.js）。
 import { COLUMNS, ROWS } from './chess-game.js';
 
 // 棋子用系統西洋棋符號字型（macOS/iOS=Apple Symbols；其餘退回）
@@ -19,6 +20,7 @@ const SEL = '#c0392b';
 const HINT = 'rgba(43,90,40,0.55)';
 const LAST = 'rgba(201,140,40,0.34)';
 const CHECK = '#d23b3b';
+const HINT_ARROW = 'rgba(30,111,192,0.9)'; // 建議走法箭頭色，與象棋 PV 箭頭一致
 
 /** 依容器寬度算 cellSize 並設定 canvas 尺寸（含 DPR）。細框：padding 取 cell 小比例。 */
 export function resizeChessCanvas(deps, maxWidthPx) {
@@ -136,8 +138,31 @@ export function drawChess(deps, view) {
     }
   }
 
+  // 建議走法箭頭（AI 建議，from→to；現無 pv 支援，故獨立畫一支箭頭）
+  if (view.hint) {
+    const a = view.rc(view.hint.from), b = view.rc(view.hint.to);
+    drawArrow(ctx, cx(deps, a.col), cy(deps, a.row), cx(deps, b.col), cy(deps, b.row), HINT_ARROW, Math.max(2.5, cell * 0.09), cell * 0.30);
+  }
+
   // 浮動（移動中）駒畫最上層
   if (view.anim && view.anim.piece) {
     drawPiece(ctx, view.anim.x, view.anim.y, cell, view.anim.piece);
   }
+}
+
+/** 由 (x1,y1) 指向 (x2,y2) 的箭頭；shrink 為兩端內縮（避免蓋住棋子中心）。風格與象棋 PV 箭頭一致。 */
+function drawArrow(ctx, x1, y1, x2, y2, color, width, shrink) {
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const sx = x1 + Math.cos(ang) * shrink, sy = y1 + Math.sin(ang) * shrink;
+  const ex = x2 - Math.cos(ang) * shrink, ey = y2 - Math.sin(ang) * shrink;
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = width; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+  const head = width * 2.6;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - head * Math.cos(ang - Math.PI / 6), ey - head * Math.sin(ang - Math.PI / 6));
+  ctx.lineTo(ex - head * Math.cos(ang + Math.PI / 6), ey - head * Math.sin(ang + Math.PI / 6));
+  ctx.closePath(); ctx.fill();
+  ctx.lineCap = 'butt';
 }

@@ -1347,6 +1347,11 @@ h1.brush-title {
   box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.5);
 }
 .shogi-hand-piece:disabled { cursor: default; opacity: 0.92; }
+.shogi-hand-piece.hint {
+  background: #dce9f7;
+  border-color: #1e6fc0;
+  box-shadow: 0 0 0 2px rgba(30, 111, 192, 0.55);
+}
 .shogi-hand-count {
   position: absolute;
   right: -4px;
