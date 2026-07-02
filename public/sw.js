@@ -1,4 +1,4 @@
-const VERSION = 'v2026.07.02-6c225ff';
+const VERSION = 'v2026.07.02-ef244a8';
 const CACHE_NAME = `gogame-${VERSION}`;
 const PRECACHE_ASSETS = [
   './',
