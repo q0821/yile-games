@@ -6,7 +6,7 @@ import { BLACK, WHITE, opponent } from './rules.js';
 import { SIZE, newBoard, flips, legalMoves, hasLegalMove, applyMove, score, isGameOver } from './othello-rules.js';
 import { bestMove } from './othello-ai.js';
 import { resizeOthelloCanvas, drawOthello } from './othello-ui.js';
-import { loadSfxPack } from './audio-manager.js';
+import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'othello-settings-v1';
@@ -111,6 +111,13 @@ function hideEnd() { if (dom.end) dom.end.style.display = 'none'; }
 function snapshot() { return { board: board.map((r) => r.slice()), player: currentPlayer, last: lastMove ? lastMove.slice() : null }; }
 function restore(s) { board = s.board.map((r) => r.slice()); currentPlayer = s.player; lastMove = s.last; gameOver = false; winner = null; passNotice = null; }
 
+/** PvP 一律播「勝」音（無輸家視角）；PvC 依人類玩家是否為贏家算 win/lose，winner 為 null 代表和局。 */
+function playEndSound(w) {
+  if (mode !== 'pvc') { playSfx('game-win'); return; }
+  if (w === null) { playSfx('game-draw'); return; }
+  playSfx(w === playerColor ? 'game-win' : 'game-lose');
+}
+
 /** 一方剛走完後決定下一回合（含 pass / 終局）。 */
 function advanceTurn(justMoved) {
   const opp = opponent(justMoved);
@@ -120,10 +127,12 @@ function advanceTurn(justMoved) {
   } else if (hasLegalMove(board, size, justMoved)) {
     currentPlayer = justMoved;
     passNotice = (opp === BLACK ? '黑方' : '白方') + '無合法手，跳過';
+    playSfx('pass');
   } else {
     gameOver = true;
     const s = score(board, size);
     winner = s.black > s.white ? BLACK : s.white > s.black ? WHITE : null;
+    playEndSound(winner);
   }
 }
 
@@ -153,6 +162,7 @@ async function makeMove(r, c, player) {
   history.push(snapshot());
   const flipped = applyMove(board, size, r, c, player);
   lastMove = [r, c];
+  playSfx('othello-flip'); // 落子＋翻子併一聲（PLAN Task 5 對照表）
   animating = true;
   await animateFlips(flipped, [r, c], player);
   animating = false;

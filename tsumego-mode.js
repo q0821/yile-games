@@ -11,7 +11,7 @@ import { BLACK, WHITE, EMPTY, opponent, cloneBoard, tryPlaceStone } from './rule
 import { parseProblem, buildBoardFromProblem, checkAnswer, computeViewport } from './tsumego.js';
 import { resizeTsumegoCanvas, drawTsumego } from './tsumego-ui.js';
 import { analyzeLocal } from './katago-service.js';
-import { loadSfxPack } from './audio-manager.js';
+import { loadSfxPack, playSfx } from './audio-manager.js';
 import {
   loadProgress, saveProgress, recordResult, setLastIndex, getLastIndex,
   solvedCount, isSolved, firstTryRate, streak, bestStreak, dailyCount,
@@ -307,6 +307,7 @@ function onCellClick(row, col) {
     curBoard[row][col] = toPlayColor;
     markers = [{ row, col, type: 'correct' }];
     status = 'correct';
+    playSfx('stone-place');
     progress = recordResult(progress, curLevelId, curRaw.id, 'correct',
       { clean: !wrongThisProblem, today: todayStr() });
     saveProgress(progress);
@@ -322,6 +323,7 @@ function onCellClick(row, col) {
   } else {
     markers = [{ row, col, type: 'wrong' }];
     status = 'wrong';
+    playSfx('invalid-move');
     if (!wrongThisProblem) {
       wrongThisProblem = true;
       progress = recordResult(progress, curLevelId, curRaw.id, 'attempted');
@@ -501,6 +503,8 @@ async function playoutStep(seq) {
   playoutPlies++;
   playoutHistory.push({ x: result.move.x, y: result.move.y, player: playoutTurn });
   markers = [{ row: result.move.x, col: result.move.y, type: 'aimove' }];
+  playSfx('stone-place');
+  if (res.captured > 0) playSfx('stone-capture');
   playoutTurn = toPlayColor;
   // 遞迴：分析玩家面對的新盤面、顯示新評估
   return playoutStep(seq);
@@ -522,6 +526,8 @@ function onPlayoutClick(row, col) {
   playoutPlies++;
   playoutHistory.push({ x: row, y: col, player: toPlayColor });
   markers = [];
+  playSfx('stone-place');
+  if (res.captured > 0) playSfx('stone-capture');
   playoutTurn = opponent(toPlayColor);
   const seq = playoutSeq;
   playoutStep(seq);

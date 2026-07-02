@@ -7,7 +7,7 @@ import { BLACK, WHITE, EMPTY, createBoard, opponent } from './rules.js';
 import { SIZE, canPlace, checkWin, isBoardFull } from './gomoku-rules.js';
 import { resizeGomokuCanvas, drawGomoku } from './gomoku-ui.js';
 import { bestMove } from './gomoku-ai.js';
-import { loadSfxPack } from './audio-manager.js';
+import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'gomoku-settings-v1'; // 只存設定，不與圍棋 SAVE_KEY 相撞
@@ -114,12 +114,20 @@ function hideEnd() { if (dom.end) dom.end.style.display = 'none'; }
 
 // ——— 對局邏輯 ———
 
+/** PvP 一律播「勝」音（無輸家視角）；PvC 依人類玩家是否為贏家算 win/lose，winner 為 null 代表和局。 */
+function playEndSound(w) {
+  if (mode !== 'pvc') { playSfx('game-win'); return; }
+  if (w === null) { playSfx('game-draw'); return; }
+  playSfx(w === playerColor ? 'game-win' : 'game-lose');
+}
+
 function place(r, c, player) {
   board[r][c] = player;
   history.push({ r, c, player });
+  playSfx('stone-place');
   const w = checkWin(board, size, r, c, player);
-  if (w.won) { gameOver = true; winner = player; winningLine = w.line; }
-  else if (isBoardFull(board, size)) { gameOver = true; winner = null; }
+  if (w.won) { gameOver = true; winner = player; winningLine = w.line; playEndSound(winner); }
+  else if (isBoardFull(board, size)) { gameOver = true; winner = null; playEndSound(winner); }
   else currentPlayer = opponent(player);
 }
 
@@ -161,7 +169,7 @@ function maybeAiMove() {
     const m = bestMove(board, size, currentPlayer, aiLevel);
     aiBusy = false;
     if (m) place(m.r, m.c, currentPlayer);
-    else { gameOver = true; winner = null; } // 無手可下
+    else { gameOver = true; winner = null; playEndSound(winner); } // 無手可下
     setStatus();
     render();
   }, 350);

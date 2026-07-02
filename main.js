@@ -21,7 +21,7 @@ import { enterXiangqiPuzzleMode } from './xiangqi-puzzle-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
-import { initAudio, loadSfxPack } from './audio-manager.js';
+import { initAudio, loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 
 // ==================== CONSTANTS ====================
@@ -307,8 +307,8 @@ function placeStone(x, y) {
   syncStatus();
   isAIThinking = previousIsAIThinking;
   drawBoard();
-  GoSound.playSound('place');
-  if (result.captured > 0) setTimeout(() => GoSound.playSound('capture'), 80);
+  playSfx('stone-place');
+  if (result.captured > 0) setTimeout(() => playSfx('stone-capture'), 80);
 
   if (timerEnabled) switchTimer();
   saveGame();
@@ -329,6 +329,7 @@ function doPass() {
   const result = GameState.applyPass();
   if (!result.ok) return;
   applyStateFromStore();
+  playSfx('pass');
 
   if (result.endedByDoublePass) {
     endGameByScoring();
@@ -345,7 +346,6 @@ function doPass() {
   if (aiJustPassed) {
     setStatus('AI 虛手了 — 你也虛手即可數目，或按「申請數目」直接計算結果');
     showToast('電腦虛手（Pass）');   // 醒目提示，避免誤以為電腦還沒下
-    GoSound.playSound('place');
   } else {
     syncStatus();
   }
@@ -387,7 +387,15 @@ function doResign() {
   // 認輸視為大敗/大勝：認輸者的對手贏。以人類視角換算 margin 給自適應難度。
   const humanWon = (winner === playerColor);
   applyResultToLevel(humanWon ? 30 : -30);
-  endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`);
+  endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${currentPlayer === BLACK ? '黑' : '白'}方認輸`, outcomeFor(winner));
+}
+
+// 依對局模式與人類執子換算終局音效結果：PvP 一律視為「勝」音（無輸家視角）；
+// PvC 依人類是否為贏家算 win/lose，winnerColor 為 null 代表和局。
+function outcomeFor(winnerColor) {
+  if (gameMode !== 'pvc') return 'win';
+  if (winnerColor === null) return 'draw';
+  return winnerColor === playerColor ? 'win' : 'lose';
 }
 
 // ——— 自適應難度（電腦等級依戰績升降） ———
@@ -539,7 +547,8 @@ function confirmScoring() {
   GameState.confirmScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
-  endGame(`${winner}勝`, detail);
+  const winnerColor = diff > 0 ? BLACK : diff < 0 ? WHITE : null;
+  endGame(`${winner}勝`, detail, outcomeFor(winnerColor));
 }
 
 function cancelScoring() {
@@ -550,7 +559,7 @@ function cancelScoring() {
   drawBoard();
 }
 
-function endGame(title, detail) {
+function endGame(title, detail, outcome) {
   gameOver = true;
   stopTimer();
   document.getElementById('modalTitle').textContent = '遊戲結束';
@@ -581,7 +590,7 @@ function endGame(title, detail) {
   document.getElementById('exportSgfBtn').style.display = 'block';
   setStatus(`遊戲結束 - ${title}`);
   drawBoard();
-  GoSound.playSound('gameend');
+  playSfx(`game-${outcome || 'win'}`);
 }
 
 function exportSGF() {
@@ -605,7 +614,7 @@ function closeModal() {
 function _timerOnTimeout(losingPlayer) {
   const winner = opponent(losingPlayer);
   applyResultToLevel(winner === playerColor ? 30 : -30);
-  endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${losingPlayer === BLACK ? '黑' : '白'}方超時`);
+  endGame(`${winner === BLACK ? '黑方' : '白方'}勝`, `${losingPlayer === BLACK ? '黑' : '白'}方超時`, outcomeFor(winner));
 }
 
 function initTimer() {

@@ -8,7 +8,7 @@ import * as Engine from './chess-engine.js';
 import * as Review from './chess-review.js';
 import * as Adaptive from './adaptive-chess.js';
 import { resizeChessCanvas, drawChess } from './chess-ui.js';
-import { loadSfxPack } from './audio-manager.js';
+import { loadSfxPack, playSfx, playVoice } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'chess-settings-v1';
@@ -129,6 +129,7 @@ function updateCheck() {
 function showThinking(b) { if (dom.thinking) dom.thinking.style.display = b ? 'inline-flex' : 'none'; }
 
 function flashCheck() {
+  playVoice('voice-chess-check');
   if (!dom.checkBanner) return;
   dom.checkBanner.classList.remove('show');
   void dom.checkBanner.offsetWidth;
@@ -149,6 +150,23 @@ function showEnd() {
   dom.endOverlay.style.display = 'flex';
 }
 function hideEnd() { if (dom.endOverlay) dom.endOverlay.style.display = 'none'; }
+
+/** PvP 一律播「勝」音；PvC 依人類是否為贏家算 win/lose；和局播 draw。 */
+function playEndSound(r) {
+  if (mode !== 'pvc') { playSfx('game-win'); return; }
+  if (r === '1/2-1/2') { playSfx('game-draw'); return; }
+  playSfx(((r === '1-0') === playerWhite) ? 'game-win' : 'game-lose');
+}
+
+/** 局面剛結束（gameOver 由 false→true 那一刻）才呼叫一次：終局音效＋將死語音，再顯示結束卡片。
+ *  和 showEnd() 分開，避免覆盤結束後 exitReview() 重顯結束卡片時重播音效/語音。 */
+function onGameOver() {
+  const r = Game.result();
+  playEndSound(r);
+  // Checkmate 語音：僅在真正被將死（終局時仍處於被將軍狀態）才播；和局／無子可動（stalemate）不播。
+  if (r !== '1/2-1/2' && Game.isCheck()) playVoice('voice-chess-mate');
+  showEnd();
+}
 
 // ——— 自動難度（連勝連敗階梯，見 adaptive-chess.js）———
 
@@ -252,6 +270,12 @@ function animateMove(fromSq, toSq) {
 
 async function doMove(uci) {
   const parts = Game.splitMove(uci);
+  // 落子前先看目的格是否已有子：吃子 vs 落子音效判斷。
+  // 註：吃過路兵（en passant）目的格本身是空的，此簡化判斷會漏判為「落子」音而非「吃子」音，
+  // 屬罕見邊界情況、不影響遊戲邏輯，先接受此音效小瑕疵。
+  const toRC = Game.squareToRC(parts.to);
+  const preGrid = Game.piecesGrid();
+  const captured = !!(preGrid[toRC.row] && preGrid[toRC.row][toRC.col]);
   moving = true;
   clearSelection();
   draw();
@@ -260,11 +284,12 @@ async function doMove(uci) {
   moving = false;
   if (!ok) { render(); return false; }
   lastMove = [parts.from, parts.to];
+  playSfx(captured ? 'chess-capture' : 'chess-place');
   gameOver = Game.isGameOver();
   updateCheck();
   setStatus();
   render();
-  if (gameOver) showEnd();
+  if (gameOver) onGameOver();
   else if (Game.isCheck()) flashCheck();
   return true;
 }
@@ -324,7 +349,7 @@ function maybeAiMove() {
       aiBusy = false;
       if (!isActive() || gameOver) return;
       if (mv) await doMove(mv);
-      else { gameOver = true; setStatus(); showEnd(); }
+      else { gameOver = true; setStatus(); onGameOver(); }
     } catch (err) {
       showThinking(false);
       aiBusy = false;

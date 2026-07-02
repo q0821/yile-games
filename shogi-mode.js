@@ -8,7 +8,7 @@ import * as Engine from './shogi-engine.js';
 import * as Review from './shogi-review.js';
 import * as Adaptive from './adaptive-chess.js';
 import { resizeShogiCanvas, drawShogi } from './shogi-ui.js';
-import { loadSfxPack } from './audio-manager.js';
+import { loadSfxPack, playSfx, playVoice } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'shogi-settings-v1';
@@ -183,6 +183,7 @@ function updateCheck() {
 function showThinking(b) { if (dom.thinking) dom.thinking.style.display = b ? 'inline-flex' : 'none'; }
 
 function flashCheck() {
+  playVoice('voice-shogi-check');
   if (!dom.checkBanner) return;
   dom.checkBanner.classList.remove('show');
   void dom.checkBanner.offsetWidth;
@@ -202,6 +203,23 @@ function showEnd() {
   dom.endOverlay.style.display = 'flex';
 }
 function hideEnd() { if (dom.endOverlay) dom.endOverlay.style.display = 'none'; }
+
+/** PvP 一律播「勝」音；PvC 依人類是否為贏家算 win/lose；和局播 draw。 */
+function playEndSound(r) {
+  if (mode !== 'pvc') { playSfx('game-win'); return; }
+  if (r === '1/2-1/2') { playSfx('game-draw'); return; }
+  playSfx(((r === '1-0') === playerSente) ? 'game-win' : 'game-lose');
+}
+
+/** 局面剛結束（gameOver 由 false→true 那一刻）才呼叫一次：終局音效＋將死語音，再顯示結束卡片。
+ *  和 showEnd() 分開，避免覆盤結束後 exitReview() 重顯結束卡片時重播音效/語音。 */
+function onGameOver() {
+  const r = Game.result();
+  playEndSound(r);
+  // 王手詰み語音：僅在真正被詰み（終局時仍處於被王手狀態）才播；和局／無合法手但未被王手不播。
+  if (r !== '1/2-1/2' && Game.isCheck()) playVoice('voice-shogi-mate');
+  showEnd();
+}
 
 // ——— 自動難度（連勝連敗階梯，見 adaptive-chess.js）———
 
@@ -305,6 +323,10 @@ function animateMove(fromSq, toSq) {
 
 async function doMove(uci) {
   const parts = Game.splitMove(uci);
+  // 落子前先看目的格是否已有子：吃子 vs 落子音效判斷（打入規則上只能落空格，天然不算吃子）。
+  const toRC = Game.squareToRC(parts.to);
+  const preGrid = Game.piecesGrid();
+  const captured = !!(preGrid[toRC.row] && preGrid[toRC.row][toRC.col]);
   moving = true;
   clearSelection();
   draw();
@@ -313,11 +335,12 @@ async function doMove(uci) {
   moving = false;
   if (!ok) { render(); return false; }
   lastMove = endpointsArr(uci);
+  playSfx(captured ? 'shogi-capture' : 'shogi-place');
   gameOver = Game.isGameOver();
   updateCheck();
   setStatus();
   render();
-  if (gameOver) showEnd();
+  if (gameOver) onGameOver();
   else if (Game.isCheck()) flashCheck();
   return true;
 }
@@ -391,7 +414,7 @@ function maybeAiMove() {
       aiBusy = false;
       if (!isActive() || gameOver) return;
       if (mv) await doMove(mv);
-      else { gameOver = true; setStatus(); showEnd(); }
+      else { gameOver = true; setStatus(); onGameOver(); }
     } catch (err) {
       showThinking(false);
       aiBusy = false;

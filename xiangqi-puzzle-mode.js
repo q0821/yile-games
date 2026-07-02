@@ -7,7 +7,7 @@ import * as Game from './xiangqi-game.js';
 import * as Engine from './xiangqi-engine.js';
 import * as Progress from './xiangqi-puzzle-progress.js';
 import { resizeXiangqiCanvas, drawXiangqi } from './xiangqi-ui.js';
-import { loadSfxPack } from './audio-manager.js';
+import { loadSfxPack, playSfx } from './audio-manager.js';
 
 const WIN_CP = 150;     // 起始 ≥ 此值視為「求勝」題
 const FAIL_CP = 0;      // 求勝題：玩家走後己方評估掉到 < 此值 → 視為丟失勝勢
@@ -116,6 +116,7 @@ function goalText() {
 // ——— 結束卡片（共用 .board-end）———
 function showEnd(ok, msg) {
   if (ok && puzzles[pIdx]) { Progress.markSolved(puzzles[pIdx].fen); updateInfo(); }
+  playSfx(ok ? 'game-win' : 'game-lose'); // 殘局為單人求殺/守和練習，無 PvP／和局概念：解出=win，失敗=lose
   if (!dom.end) return;
   dom.endTitle.textContent = ok ? '解出！' : '再接再厲';
   dom.endSub.textContent = msg || '';
@@ -202,11 +203,21 @@ function onPoint(row, col) {
 
 function isWinResult() { const r = board.result(); return (playerRed && r === '1-0') || (!playerRed && r === '0-1'); }
 
+/** 落子前先看目的格是否已有子：吃子 vs 落子音效判斷（走子本身不會改變盤面，可安全先查）。 */
+function playMoveSound(uci) {
+  const { to } = Game.splitMove(uci);
+  const toRC = Game.squareToRC(to);
+  const grid = Game.gridFromFen(board.fen());
+  const captured = !!(grid[toRC.row] && grid[toRC.row][toRC.col]);
+  playSfx(captured ? 'wood-capture' : 'wood-place');
+}
+
 async function playerMove(uci) {
   busy = true;
   clearSel();
   hintMove = null;
   await animateMove(uci);
+  playMoveSound(uci);
   board.push(uci);
   const sp = Game.splitMove(uci);
   lastMove = [sp.from, sp.to];
@@ -241,6 +252,7 @@ async function playerMove(uci) {
     // 引擎防守（用 analyze 的最佳手＝全強度）
     if (a.bestmove) {
       await animateMove(a.bestmove);
+      playMoveSound(a.bestmove);
       board.push(a.bestmove);
       const d = Game.splitMove(a.bestmove);
       lastMove = [d.from, d.to];
