@@ -60,6 +60,38 @@ function waitFor(pred, timeoutMs = 20000) {
   });
 }
 
+// ——— 請求序列化佇列 ———
+//
+// 單例 UCI process 只有一份全域 `_tap`／`_waiters`：對弈 AI（bestMove）、覆盤分析（analyze）、
+// 建議走法（hint）若並發呼叫，後者的 setoption/position/go 會蓋掉前者尚在等待的 `_tap`，
+// waitFor 的 predicate（如 `l.startsWith('bestmove')`）也分不出這行 bestmove 屬於哪個請求，
+// 造成結果互搶／錯亂。故所有請求一律經這條單一 promise chain 排隊，一次一個；
+// 前一個請求無論成功或丟錯，佇列都繼續處理下一個（不卡死）。
+let _tail = Promise.resolve();
+
+/** 將一個回傳 Promise 的工作排入序列化佇列；回傳該工作自己的結果 promise（成功值或錯誤原樣透出）。 */
+export function enqueue(taskFn) {
+  const started = _tail.then(taskFn);
+  _tail = started.catch(() => {}); // 佇列本身永遠續行，不因前一個工作丟錯而卡住
+  return started;
+}
+
+/** 呼叫方取消 hint() 時丟給 promise 的 reject 原因（區分「使用者取消」與真正的引擎錯誤）。 */
+export class HintCancelledError extends Error {
+  constructor() {
+    super('AI 建議已取消');
+    this.name = 'HintCancelledError';
+    this.cancelled = true;
+  }
+}
+
+/** 拆解 UCI 著法字串：一般手回座標 from/to；將棋打入（如 'P@5e'）無起點，回 to+isDrop。 */
+function splitHintMove(uci) {
+  const drop = /^([A-Za-z])[@*](\S+)$/.exec(uci);
+  if (drop) return { from: null, to: drop[2], isDrop: true };
+  return { from: uci.slice(0, 2), to: uci.slice(2, 4), isDrop: false };
+}
+
 /** 載入並初始化引擎（變體設為 xiangqi）。可重複呼叫，只初始化一次。 */
 export function ensureReady(onStatus) {
   if (_readyPromise) return _readyPromise;
@@ -111,38 +143,40 @@ function pickFromWindow(cand, window) {
  * @param {string} o.variant 棋類變體（預設 xiangqi；將棋傳 shogi）
  * @returns {Promise<string|null>} UCI 著法（如 'h2e2'），無手可走回 null
  */
-export async function bestMove({ fen, level = 5, movetimeMs = 2000, variant = 'xiangqi' }) {
-  await ensureReady();
-  const prof = levelConfig(level);
-  send('setoption name UCI_Variant value ' + variant);
-  send('setoption name UCI_LimitStrength value false');     // 全力下牠看得到的最佳手
-  send('setoption name MultiPV value ' + prof.multipv);
-  send('ucinewgame');
-  send('position fen ' + fen);
-  send('isready');
-  await waitFor((l) => l === 'readyok');
+export function bestMove({ fen, level = 5, movetimeMs = 2000, variant = 'xiangqi' }) {
+  return enqueue(async () => {
+    await ensureReady();
+    const prof = levelConfig(level);
+    send('setoption name UCI_Variant value ' + variant);
+    send('setoption name UCI_LimitStrength value false');     // 全力下牠看得到的最佳手
+    send('setoption name MultiPV value ' + prof.multipv);
+    send('ucinewgame');
+    send('position fen ' + fen);
+    send('isready');
+    await waitFor((l) => l === 'readyok');
 
-  // 暫接搜尋輸出，逐 multipv 記錄「該分支最深一筆」的首著與分數
-  const cand = new Map();
-  _tap = (line) => {
-    if (line.lastIndexOf('info', 0) !== 0) return;
-    const pvM = line.match(/ pv (\S+)/);
-    if (!pvM) return;
-    const idx = (line.match(/ multipv (\d+)/) || [, '1'])[1];
-    const cpM = line.match(/score cp (-?\d+)/);
-    const mateM = line.match(/score mate (-?\d+)/);
-    cand.set(idx, {
-      move: pvM[1],
-      cp: cpM ? parseInt(cpM[1], 10) : null,
-      mate: mateM ? parseInt(mateM[1], 10) : null,
-    });
-  };
-  send('go depth ' + prof.depth + ' movetime ' + movetimeMs); // 深度為主、movetime 為安全上限
-  const line = await waitFor((l) => l.startsWith('bestmove'), movetimeMs + 20000);
-  _tap = null;
-  const fallback = line.split(/\s+/)[1];                     // 候選收集失敗時的保底
-  const mv = pickFromWindow(cand, prof.window) || fallback;
-  return (!mv || mv === '(none)') ? null : mv;
+    // 暫接搜尋輸出，逐 multipv 記錄「該分支最深一筆」的首著與分數
+    const cand = new Map();
+    _tap = (line) => {
+      if (line.lastIndexOf('info', 0) !== 0) return;
+      const pvM = line.match(/ pv (\S+)/);
+      if (!pvM) return;
+      const idx = (line.match(/ multipv (\d+)/) || [, '1'])[1];
+      const cpM = line.match(/score cp (-?\d+)/);
+      const mateM = line.match(/score mate (-?\d+)/);
+      cand.set(idx, {
+        move: pvM[1],
+        cp: cpM ? parseInt(cpM[1], 10) : null,
+        mate: mateM ? parseInt(mateM[1], 10) : null,
+      });
+    };
+    send('go depth ' + prof.depth + ' movetime ' + movetimeMs); // 深度為主、movetime 為安全上限
+    const line = await waitFor((l) => l.startsWith('bestmove'), movetimeMs + 20000);
+    _tap = null;
+    const fallback = line.split(/\s+/)[1];                     // 候選收集失敗時的保底
+    const mv = pickFromWindow(cand, prof.window) || fallback;
+    return (!mv || mv === '(none)') ? null : mv;
+  });
 }
 
 /**
@@ -150,34 +184,71 @@ export async function bestMove({ fen, level = 5, movetimeMs = 2000, variant = 'x
  * @returns {Promise<{cp:number|null, mate:number|null, pv:string[]|null, bestmove:string|null}>}
  *   cp/mate 為「輪到下的一方」視角（正=該方有利）。pv 為最佳變化（UCI 著法陣列）。
  */
-export async function analyze({ fen, movetimeMs = 600, variant = 'xiangqi' }) {
-  await ensureReady();
-  send('setoption name UCI_Variant value ' + variant);
-  send('setoption name UCI_LimitStrength value false'); // 分析用全力
-  send('setoption name MultiPV value 1');               // 復位：bestMove 可能留下 MultiPV>1，否則會吃到次佳變化
-  send('ucinewgame');
-  send('position fen ' + fen);
-  send('isready');
-  await waitFor((l) => l === 'readyok');
-  let cp = null, mate = null, pv = null;
-  _tap = (line) => {
-    if (line.lastIndexOf('info', 0) !== 0) return;
-    const mpvM = line.match(/ multipv (\d+)/);
-    if (mpvM && mpvM[1] !== '1') return; // 雙重保險：只採最佳分支（multipv 1）
-    const pvM = line.match(/ pv (.+)$/);
-    if (!pvM) return; // 只採有 pv 的搜尋行（最終最深的會留下）
-    const cpM = line.match(/score cp (-?\d+)/);
-    const mateM = line.match(/score mate (-?\d+)/);
-    // 取該行的分數型別；互斥清掉另一個，避免 cp/mate 並存矛盾（淺層 cp、深層 mate）
-    if (cpM) { cp = parseInt(cpM[1], 10); mate = null; }
-    else if (mateM) { mate = parseInt(mateM[1], 10); cp = null; }
-    pv = pvM[1].trim().split(/\s+/);
-  };
-  send('go movetime ' + movetimeMs);
-  const bmLine = await waitFor((l) => l.startsWith('bestmove'), movetimeMs + 15000);
-  _tap = null;
-  const bm = bmLine.split(/\s+/)[1];
-  return { cp, mate, pv, bestmove: (bm && bm !== '(none)') ? bm : null };
+export function analyze({ fen, movetimeMs = 600, variant = 'xiangqi' }) {
+  return enqueue(async () => {
+    await ensureReady();
+    send('setoption name UCI_Variant value ' + variant);
+    send('setoption name UCI_LimitStrength value false'); // 分析用全力
+    send('setoption name MultiPV value 1');               // 復位：bestMove 可能留下 MultiPV>1，否則會吃到次佳變化
+    send('ucinewgame');
+    send('position fen ' + fen);
+    send('isready');
+    await waitFor((l) => l === 'readyok');
+    let cp = null, mate = null, pv = null;
+    _tap = (line) => {
+      if (line.lastIndexOf('info', 0) !== 0) return;
+      const mpvM = line.match(/ multipv (\d+)/);
+      if (mpvM && mpvM[1] !== '1') return; // 雙重保險：只採最佳分支（multipv 1）
+      const pvM = line.match(/ pv (.+)$/);
+      if (!pvM) return; // 只採有 pv 的搜尋行（最終最深的會留下）
+      const cpM = line.match(/score cp (-?\d+)/);
+      const mateM = line.match(/score mate (-?\d+)/);
+      // 取該行的分數型別；互斥清掉另一個，避免 cp/mate 並存矛盾（淺層 cp、深層 mate）
+      if (cpM) { cp = parseInt(cpM[1], 10); mate = null; }
+      else if (mateM) { mate = parseInt(mateM[1], 10); cp = null; }
+      pv = pvM[1].trim().split(/\s+/);
+    };
+    send('go movetime ' + movetimeMs);
+    const bmLine = await waitFor((l) => l.startsWith('bestmove'), movetimeMs + 15000);
+    _tap = null;
+    const bm = bmLine.split(/\s+/)[1];
+    return { cp, mate, pv, bestmove: (bm && bm !== '(none)') ? bm : null };
+  });
+}
+
+/**
+ * 建議走法（供「AI 建議」按鈕；教學用途，固定全力不吃難度削弱）。排入與 bestMove/analyze
+ * 同一條序列化佇列，避免併發互搶引擎輸出。
+ * @param {object} o
+ * @param {string} o.fen      目前局面（FEN）
+ * @param {string} o.variant  棋類變體（預設 xiangqi；將棋傳 shogi、西洋棋傳 chess）
+ * @param {number} o.movetime 思考時間（ms）
+ * @returns {{ promise: Promise<{move:string, from:string|null, to:string, isDrop:boolean}|null>, cancel: () => void }}
+ *   `cancel()` 後 `promise` 一律以 HintCancelledError reject（不論引擎實際求到什麼結果，呼叫方
+ *   都應丟棄）；佇列本身不受取消影響，仍會照跑、後續請求不受阻塞。
+ */
+export function hint({ fen, variant = 'xiangqi', movetime = 1500 } = {}) {
+  let cancelled = false;
+  const raw = enqueue(async () => {
+    await ensureReady();
+    send('setoption name UCI_Variant value ' + variant);
+    send('setoption name UCI_LimitStrength value false'); // 教學用途：全力，不吃 adaptive 難度削弱
+    send('setoption name MultiPV value 1');
+    send('ucinewgame');
+    send('position fen ' + fen);
+    send('isready');
+    await waitFor((l) => l === 'readyok');
+    send('go movetime ' + movetime);
+    const line = await waitFor((l) => l.startsWith('bestmove'), movetime + 20000);
+    const mv = line.split(/\s+/)[1];
+    if (!mv || mv === '(none)') return null;
+    return { move: mv, ...splitHintMove(mv) };
+  });
+  const promise = raw.then(
+    (result) => (cancelled ? Promise.reject(new HintCancelledError()) : result),
+    (err) => { throw cancelled ? new HintCancelledError() : err; }
+  );
+  return { promise, cancel: () => { cancelled = true; } };
 }
 
 /** terminate 引擎並清狀態，讓下次 ensureReady 重建乾淨引擎（出錯後用）。 */
@@ -187,6 +258,7 @@ export function reset() {
   _readyPromise = null;
   _waiters.clear();
   _tap = null;
+  _tail = Promise.resolve(); // 避免 reset 當下卡在 waitFor 的請求（waiter 已被清空、永遠不會 resolve）拖死佇列
 }
 
 export function isReady() { return !!_engine; }

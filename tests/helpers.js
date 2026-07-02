@@ -185,6 +185,18 @@ function sandboxWithOthello() {
   return ctx;
 }
 
+/**
+ * Returns a sandbox with AdaptiveChess + XiangqiEngine loaded（純模組載入，不預設任何
+ * Stockfish mock）。呼叫端測試前需自行設定 `ctx.Stockfish = mockFactory`
+ *（沿用 xiangqi-engine.js 既有的 `window.Stockfish` 注入點，無需改動來源檔案的測試專用 API）。
+ */
+function sandboxWithXiangqiEngine() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './adaptive-chess.js');
+  loadIntoContext(ctx, localRequire, './xiangqi-engine.js');
+  return ctx;
+}
+
 /** 極簡 in-memory localStorage mock（audio-manager 測試用）。 */
 function createMockLocalStorage() {
   let store = {};
@@ -253,4 +265,4 @@ function sandboxWithAudioManager() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello, sandboxWithAudioManager };
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine };
