@@ -58,6 +58,28 @@ const DEFAULT_BACKEND = {
 };
 let backend = { ...DEFAULT_BACKEND };
 
+// ——— 資產版本 query（防 CDN／HTTP 快取黏住舊音檔）———
+// 音檔 URL 若不帶版本，Cloudflare 等邊緣快取在換版後仍會於 max-age 內供舊檔
+// （2026-07-02 實際發生：重製音效後正式站聽到的仍是舊聲音）。比照 main.js 註冊
+// sw.js 的解法：以 version.json 的當前版號當 query——同版內 URL 固定（快取照常
+// 生效），換版 URL 即變、快取立即失效。version.json 本身由 SW bypass、加時戳確
+// 保不吃快取；拿不到（如測試環境 mock fetch 無 .json）就退回無 query，不擋載入。
+let assetVersionPromise = null;
+let assetVersion = '';
+function getAssetVersion() {
+  if (!assetVersionPromise) {
+    assetVersionPromise = Promise.resolve()
+      .then(() => backend.fetch('version.json?t=' + Date.now()))
+      .then((r) => (r && r.ok !== false && typeof r.json === 'function') ? r.json() : null)
+      .then((j) => { assetVersion = (j && j.version) ? String(j.version) : ''; return assetVersion; })
+      .catch(() => { assetVersion = ''; return ''; });
+  }
+  return assetVersionPromise;
+}
+function withAssetVersion(url) {
+  return assetVersion ? `${url}?v=${assetVersion}` : url;
+}
+
 // ——— 模組作用域狀態 ———
 let settingsCache = null;
 let unlocked = false;
@@ -242,6 +264,7 @@ function handlePageHide() {
 export function initAudio() {
   if (initDone) return;
   initDone = true;
+  getAssetVersion(); // 預先解析資產版本，讓 BGM 的同步 URL 組合也能帶上版本 query
   document.addEventListener('pointerdown', handleUnlockGesture, { once: true });
   document.addEventListener('touchstart', handleUnlockGesture, { once: true });
   document.addEventListener('keydown', handleUnlockGesture, { once: true });
@@ -275,10 +298,11 @@ async function doLoadSfxPack(game, files) {
   } catch (_) {
     return; // 無法建立 AudioContext：靜默放棄，之後 playSfx 走 fallback 或靜音；下次呼叫會重試
   }
+  await getAssetVersion(); // 先解析資產版本（測試環境自動退回無 query）
   await Promise.all(files.map(async (name) => {
     if (sfxBuffers.has(name)) return;
     try {
-      const res = await backend.fetch(`/sounds/${name}.mp3`);
+      const res = await backend.fetch(withAssetVersion(`/sounds/${name}.mp3`));
       if (!res || res.ok === false) return;
       const arrayBuffer = await res.arrayBuffer();
       const buffer = await decodeAudio(c, arrayBuffer);
@@ -358,7 +382,7 @@ function clearFadeTimer() {
 function nextTrackUrl() {
   const n = musicQueue[musicQueuePos % musicQueue.length];
   musicQueuePos += 1;
-  return `/music/bgm-${n}.mp3`;
+  return withAssetVersion(`/music/bgm-${n}.mp3`); // 版本於 initAudio 時已預先解析
 }
 
 function safePlay(el) {
@@ -513,6 +537,8 @@ export function _setBackendForTest(overrides) {
   voicePlaying = new Set();
   unlocked = false;
   initDone = false;
+  assetVersionPromise = null;
+  assetVersion = '';
   musicPlayingBeforeInterruption = false;
   interruptionResumePending = false;
 }

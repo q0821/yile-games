@@ -90,6 +90,11 @@ function unlock(ctx, type = 'pointerdown') {
   ctx.document.dispatchEvent({ type });
 }
 
+/** 過濾出音檔（/sounds/）的 fetch 呼叫——版本查詢 version.json 不算音檔載入。 */
+function soundCalls(fetchMock) {
+  return fetchMock.mock.calls.filter((c) => String(c[0]).includes('/sounds/'));
+}
+
 let ctx;
 let mock;
 
@@ -253,6 +258,19 @@ describe('loadSfxPack 與已載入音效優先於 fallback', () => {
     expect(mock.backend.fetch).not.toHaveBeenCalled();
   });
 
+  test('version.json 可取得版本時，音檔 URL 帶 ?v= 版本 query（防 CDN 快取黏舊檔）', async () => {
+    const versionedFetch = jest.fn((url) => {
+      if (String(url).startsWith('version.json')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ version: 'v2026.07.02-test1' }) });
+      }
+      return Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) });
+    });
+    // _setBackendForTest 會複製 backend 物件，事後改 mock.backend.fetch 不會生效，需重新注入
+    ctx._setBackendForTest({ ...mock.backend, fetch: versionedFetch });
+    await ctx.loadSfxPack('gomoku');
+    expect(versionedFetch).toHaveBeenCalledWith('/sounds/stone-place.mp3?v=v2026.07.02-test1');
+  });
+
   test('已成功載入的音效播放時使用真實 buffer，不落入合成 fallback', async () => {
     const spy = jest.spyOn(ctx.GoSound, 'playSound').mockImplementation(() => {});
     unlock(ctx);
@@ -287,10 +305,11 @@ describe('loadSfxPack 與已載入音效優先於 fallback', () => {
     });
 
     await ctx.loadSfxPack('go');
-    expect(mock.backend.fetch).not.toHaveBeenCalled(); // ensureCtx 失敗，根本沒進到 fetch
+    // ensureCtx 失敗，沒進到音檔 fetch（version.json 的版本查詢不算音檔載入）
+    expect(soundCalls(mock.backend.fetch)).toHaveLength(0);
 
     await ctx.loadSfxPack('go'); // 重試：不該因為第一次「已標記為已載入」而被跳過
-    expect(mock.backend.fetch).toHaveBeenCalled();
+    expect(soundCalls(mock.backend.fetch).length).toBeGreaterThan(0);
   });
 
   test('同一 pack 併發呼叫兩次，只跑一輪載入（in-flight 去重，不重複 fetch）', async () => {
@@ -298,7 +317,7 @@ describe('loadSfxPack 與已載入音效優先於 fallback', () => {
     const p2 = ctx.loadSfxPack('go');
     await Promise.all([p1, p2]);
     // go pack 三個檔案，各自只該被 fetch 一次（而非併發呼叫各跑一輪變六次）
-    expect(mock.backend.fetch).toHaveBeenCalledTimes(3);
+    expect(soundCalls(mock.backend.fetch)).toHaveLength(3);
   });
 });
 
