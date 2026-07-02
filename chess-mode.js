@@ -8,6 +8,8 @@ import * as Engine from './chess-engine.js';
 import * as Review from './chess-review.js';
 import * as Adaptive from './adaptive-chess.js';
 import { resizeChessCanvas, drawChess } from './chess-ui.js';
+import { loadSfxPack } from './audio-manager.js';
+import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'chess-settings-v1';
 
@@ -61,6 +63,7 @@ function cacheDom() {
     review: $('chessReview'), rvSlider: $('chessReviewSlider'), rvInfo: $('chessReviewInfo'),
     rvFirst: $('csRvFirst'), rvPrev: $('csRvPrev'), rvNext: $('csRvNext'), rvLast: $('csRvLast'),
     rvAnalyze: $('csRvAnalyze'), rvExit: $('csRvExit'), evalGraph: $('chessEvalGraph'),
+    audioSettings: $('chessAudioSettings'),
   };
   dom.settings = dom.screen?.querySelector('.gomoku-settings');
   dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
@@ -594,8 +597,11 @@ export async function enterChessMode() {
     deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), padding: 8, cellSize: 40 };
     applySettingsToControls();
     wireEvents();
+    renderAudioControls(dom.audioSettings);
     initialized = true;
   }
+  loadSfxPack('chess');
+  loadSfxPack('common');
   if (!boardReady) await newGame();
   else render();
 }

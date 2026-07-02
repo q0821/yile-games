@@ -40,8 +40,23 @@
 
 <!-- Home screen: mode menu -->
 <div class="home-screen" id="homeScreen" style="display:none">
+  <div class="home-header-row">
+    <button class="mode-settings" onclick="openAudioSettings()" aria-label="全域設定">設定</button>
+  </div>
   <p class="home-tagline">選擇練習模式</p>
   <div class="home-menu" id="homeMenu"></div>
+</div>
+
+<!-- 全域音訊設定 modal -->
+<div class="modal-overlay" id="audioSettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>音訊設定</h2>
+    <div class="changelog-body">
+      <p class="control-hint">音效與音樂開關和音量在此設定，各棋種畫面共用同一份設定，變更會即時同步。</p>
+      <div id="homeAudioSettings"></div>
+    </div>
+    <button class="primary" onclick="closeAudioSettings()">關閉</button>
+  </div>
 </div>
 
 <!-- Mode header (shared style with tsumego) -->
@@ -234,6 +249,9 @@
         <span>顯示氣（呼吸點）</span>
         <label class="toggle"><input type="checkbox" id="emotionToggle"><span class="slider"></span></label>
       </div>
+
+      <h3>音效與音樂</h3>
+      <div id="goAudioSettings"></div>
     </div>
     <button class="primary" onclick="closeGoSettings(); newGame()">開始新遊戲</button>
     <button onclick="closeGoSettings()">關閉</button>
@@ -294,6 +312,7 @@
         <option value="3">困難</option>
       </select>
     </div>
+    <div class="audio-settings-embed" id="gomokuAudioSettings"></div>
   </div>
   <div class="board-wrap">
     <canvas id="gomokuBoard" role="img" aria-label="五子棋棋盤"></canvas>
@@ -396,6 +415,10 @@
       <div id="xiangqiAutoLevel" class="ai-level-display">第 3 級</div>
       <button type="button" id="xiangqiAutoReset" class="control-reset">重設等級</button>
     </div>
+
+    <h3>音效與音樂</h3>
+    <div id="xiangqiAudioSettings"></div>
+
     <button class="primary" data-close-settings>關閉</button>
   </div>
 </div>
@@ -429,6 +452,7 @@
         <option value="3">困難</option>
       </select>
     </div>
+    <div class="audio-settings-embed" id="othelloAudioSettings"></div>
   </div>
   <div class="board-wrap">
     <canvas id="othelloBoard" role="img" aria-label="黑白棋棋盤"></canvas>
@@ -582,6 +606,10 @@
       <div id="shogiAutoLevel" class="ai-level-display">第 3 級</div>
       <button type="button" id="shogiAutoReset" class="control-reset">重設等級</button>
     </div>
+
+    <h3>音效與音樂</h3>
+    <div id="shogiAudioSettings"></div>
+
     <button class="primary" data-close-settings>關閉</button>
   </div>
 </div>
@@ -711,6 +739,10 @@
       <div id="chessAutoLevel" class="ai-level-display">第 3 級</div>
       <button type="button" id="chessAutoReset" class="control-reset">重設等級</button>
     </div>
+
+    <h3>音效與音樂</h3>
+    <div id="chessAudioSettings"></div>
+
     <button class="primary" data-close-settings>關閉</button>
   </div>
 </div>

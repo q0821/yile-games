@@ -7,6 +7,8 @@ import { BLACK, WHITE, EMPTY, createBoard, opponent } from './rules.js';
 import { SIZE, canPlace, checkWin, isBoardFull } from './gomoku-rules.js';
 import { resizeGomokuCanvas, drawGomoku } from './gomoku-ui.js';
 import { bestMove } from './gomoku-ai.js';
+import { loadSfxPack } from './audio-manager.js';
+import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'gomoku-settings-v1'; // 只存設定，不與圍棋 SAVE_KEY 相撞
 
@@ -44,6 +46,7 @@ function cacheDom() {
     color: $('gomokuColor'),
     level: $('gomokuLevel'),
     end: $('gomokuEnd'), endTitle: $('gomokuEndTitle'), endSub: $('gomokuEndSub'), endBtn: $('gomokuEndBtn'),
+    audioSettings: $('gomokuAudioSettings'),
   };
 }
 
@@ -268,8 +271,11 @@ export async function enterGomokuMode() {
     deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), padding: 24, cellSize: 30 };
     applySettingsToControls();
     wireEvents();
+    renderAudioControls(dom.audioSettings);
     initialized = true;
   }
+  loadSfxPack('gomoku');
+  loadSfxPack('common');
   if (!board) newGame();
   else render();
 }

@@ -8,6 +8,8 @@ import * as Engine from './shogi-engine.js';
 import * as Review from './shogi-review.js';
 import * as Adaptive from './adaptive-chess.js';
 import { resizeShogiCanvas, drawShogi } from './shogi-ui.js';
+import { loadSfxPack } from './audio-manager.js';
+import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'shogi-settings-v1';
 
@@ -64,6 +66,7 @@ function cacheDom() {
     review: $('shogiReview'), rvSlider: $('shogiReviewSlider'), rvInfo: $('shogiReviewInfo'),
     rvFirst: $('sgRvFirst'), rvPrev: $('sgRvPrev'), rvNext: $('sgRvNext'), rvLast: $('sgRvLast'),
     rvAnalyze: $('sgRvAnalyze'), rvExit: $('sgRvExit'), evalGraph: $('shogiEvalGraph'),
+    audioSettings: $('shogiAudioSettings'),
   };
   dom.settings = dom.screen?.querySelector('.gomoku-settings');
   dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
@@ -671,8 +674,11 @@ export async function enterShogiMode() {
     deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), padding: 12, cellSize: 32 };
     applySettingsToControls();
     wireEvents();
+    renderAudioControls(dom.audioSettings);
     initialized = true;
   }
+  loadSfxPack('shogi');
+  loadSfxPack('common');
   if (!boardReady) await newGame();
   else render();
 }

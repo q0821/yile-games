@@ -21,6 +21,8 @@ import { enterXiangqiPuzzleMode } from './xiangqi-puzzle-mode.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
+import { initAudio, loadSfxPack } from './audio-manager.js';
+import { renderAudioControls } from './audio-settings-ui.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -1060,6 +1062,15 @@ function closeAbout() {
   document.getElementById('aboutModal').classList.remove('show');
 }
 
+// ==================== 全域音訊設定 modal（首頁「設定」鈕）====================
+function openAudioSettings() {
+  document.getElementById('audioSettingsModal').classList.add('show');
+}
+
+function closeAudioSettings() {
+  document.getElementById('audioSettingsModal').classList.remove('show');
+}
+
 // ==================== GLOBAL ERROR HANDLING ====================
 window.addEventListener('error', (e) => {
   if (!e.filename || !e.filename.includes(location.hostname)) return;
@@ -1099,6 +1110,8 @@ Object.assign(window, {
   closeChangelog,
   openAbout,
   closeAbout,
+  openAudioSettings,
+  closeAudioSettings,
   confirmScoring,
   cancelScoring,
   openGoSettings,
@@ -1121,6 +1134,13 @@ Object.defineProperty(window, 'moveHistory', {
 // ==================== INIT ====================
 registerEventHandlers(app);
 updateAiLevelDisplay();
+
+// 全域音訊：掛一次性解鎖手勢＋背景/前景生命週期監聽；設定 UI 容器在頁面載入時就存在
+// （各棋畫面雖隱藏但 DOM 已渲染），可一次性渲染，靠 audio-settings-ui.js 的
+// audio-settings-changed 監聽自動與其他實例同步，不必等使用者進到該棋種畫面才建立。
+initAudio();
+renderAudioControls(document.getElementById('homeAudioSettings'));
+renderAudioControls(document.getElementById('goAudioSettings'));
 
 const _isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 if ('serviceWorker' in navigator && _isLocalDev) {
@@ -1230,6 +1250,8 @@ function showScreen(name) {
 }
 
 function enterPlayMode() {
+  loadSfxPack('go');
+  loadSfxPack('common');
   if (!playInited) {
     playInited = true;
     if (!loadGame()) startNewGame();

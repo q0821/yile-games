@@ -262,6 +262,34 @@ button.danger:hover {
   background: #fff;
 }
 
+/* ===== Audio settings（音效/音樂開關＋音量，見 audio-settings-ui.js） ===== */
+/* 沿用 .toggle-row / .control-group / .review-slider，僅補音量列的標籤與數值排版。
+   多處嵌入共用同一份元件，不額外定義容器邊框以融入各棋設定 modal／內嵌區。 */
+.audio-settings .audio-volume-group { margin-bottom: 12px; }
+.audio-volume-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+.audio-volume-label span:first-child {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+}
+.audio-volume-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold-dim);
+  font-variant-numeric: tabular-nums;
+}
+.audio-settings .review-slider:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ===== Info display ===== */
 .info-row {
   display: flex;
@@ -729,6 +757,11 @@ a.version-link { display: inline-block; }
   padding: 12px 16px 20px;/* 收上緣間距，避免整體太往下 */
   gap: 16px;
 }
+.home-header-row {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
 .home-tagline {
   display: flex;
   align-items: center;
@@ -1024,6 +1057,14 @@ h1.brush-title {
 .gomoku-settings .control-group {
   margin-bottom: 0;
   min-width: 130px;
+}
+/* 五子棋／黑白棋設定內嵌區的音訊控制：獨立整排、與上方對弈設定用細線隔開 */
+.gomoku-settings .audio-settings-embed {
+  flex: 1 1 100%;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  text-align: left;
 }
 .gomoku-status {
   min-height: 22px;

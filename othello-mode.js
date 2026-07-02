@@ -6,6 +6,8 @@ import { BLACK, WHITE, opponent } from './rules.js';
 import { SIZE, newBoard, flips, legalMoves, hasLegalMove, applyMove, score, isGameOver } from './othello-rules.js';
 import { bestMove } from './othello-ai.js';
 import { resizeOthelloCanvas, drawOthello } from './othello-ui.js';
+import { loadSfxPack } from './audio-manager.js';
+import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'othello-settings-v1';
 
@@ -39,6 +41,7 @@ function cacheDom() {
     thinking: $('othelloThinking'), restart: $('othelloRestart'), undo: $('othelloUndo'), home: $('othelloHome'),
     mode: $('othelloMode'), color: $('othelloColor'), level: $('othelloLevel'),
     end: $('othelloEnd'), endTitle: $('othelloEndTitle'), endSub: $('othelloEndSub'), endBtn: $('othelloEndBtn'),
+    audioSettings: $('othelloAudioSettings'),
   };
 }
 
@@ -283,8 +286,11 @@ export async function enterOthelloMode() {
     deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), size, padding: 10, cellSize: 40 };
     applySettingsToControls();
     wireEvents();
+    renderAudioControls(dom.audioSettings);
     initialized = true;
   }
+  loadSfxPack('othello');
+  loadSfxPack('common');
   if (!board) newGame();
   else render();
 }

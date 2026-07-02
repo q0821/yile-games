@@ -8,6 +8,8 @@ import * as Engine from './xiangqi-engine.js';
 import * as Review from './xiangqi-review.js';
 import * as Adaptive from './adaptive-chess.js';
 import { resizeXiangqiCanvas, drawXiangqi } from './xiangqi-ui.js';
+import { loadSfxPack } from './audio-manager.js';
+import { renderAudioControls } from './audio-settings-ui.js';
 
 const SETTINGS_KEY = 'xiangqi-settings-v1';
 
@@ -59,6 +61,7 @@ function cacheDom() {
     review: $('xiangqiReview'), rvSlider: $('xiangqiReviewSlider'), rvInfo: $('xiangqiReviewInfo'),
     rvFirst: $('xqRvFirst'), rvPrev: $('xqRvPrev'), rvNext: $('xqRvNext'), rvLast: $('xqRvLast'),
     rvAnalyze: $('xqRvAnalyze'), rvExit: $('xqRvExit'), evalGraph: $('xiangqiEvalGraph'),
+    audioSettings: $('xiangqiAudioSettings'),
   };
   dom.settings = dom.screen?.querySelector('.gomoku-settings');
   dom.statusrow = dom.screen?.querySelector('.xiangqi-statusrow');
@@ -573,8 +576,11 @@ export async function enterXiangqiMode() {
     deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), padding: 22, cellSize: 32 };
     applySettingsToControls();
     wireEvents();
+    renderAudioControls(dom.audioSettings);
     initialized = true;
   }
+  loadSfxPack('xiangqi');
+  loadSfxPack('common');
   if (!boardReady) await newGame();
   else render();
 }

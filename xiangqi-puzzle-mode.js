@@ -7,6 +7,7 @@ import * as Game from './xiangqi-game.js';
 import * as Engine from './xiangqi-engine.js';
 import * as Progress from './xiangqi-puzzle-progress.js';
 import { resizeXiangqiCanvas, drawXiangqi } from './xiangqi-ui.js';
+import { loadSfxPack } from './audio-manager.js';
 
 const WIN_CP = 150;     // 起始 ≥ 此值視為「求勝」題
 const FAIL_CP = 0;      // 求勝題：玩家走後己方評估掉到 < 此值 → 視為丟失勝勢
@@ -312,6 +313,8 @@ function wireEvents() {
 // ——— 進入 ———
 
 export async function enterXiangqiPuzzleMode() {
+  loadSfxPack('xiangqi'); // 殘局沿用象棋落子/吃子音效包，未另立 pack
+  loadSfxPack('common');
   if (!initialized) {
     cacheDom();
     deps = { canvas: dom.canvas, ctx: dom.canvas.getContext('2d'), padding: 22, cellSize: 32 };

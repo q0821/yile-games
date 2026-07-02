@@ -11,6 +11,7 @@ import { BLACK, WHITE, EMPTY, opponent, cloneBoard, tryPlaceStone } from './rule
 import { parseProblem, buildBoardFromProblem, checkAnswer, computeViewport } from './tsumego.js';
 import { resizeTsumegoCanvas, drawTsumego } from './tsumego-ui.js';
 import { analyzeLocal } from './katago-service.js';
+import { loadSfxPack } from './audio-manager.js';
 import {
   loadProgress, saveProgress, recordResult, setLastIndex, getLastIndex,
   solvedCount, isSolved, firstTryRate, streak, bestStreak, dailyCount,
@@ -605,6 +606,8 @@ function isActive() {
 // ——— 進入（畫面顯隱由 main.js 的路由統一管理）———
 
 export async function enterTsumegoMode() {
+  loadSfxPack('go'); // 死活沿用圍棋落子/提子音效包，未另立 pack
+  loadSfxPack('common');
   try {
     await ensureInit();
   } catch (err) {
