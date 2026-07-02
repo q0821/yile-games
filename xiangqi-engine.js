@@ -88,10 +88,19 @@ export class HintCancelledError extends Error {
   }
 }
 
+/** 打入著法的 square 部分，引擎可能回傳「數字+字母」序（如 5e）；專案座標慣例一律
+ *  「字母+數字」（如 e5，見 shogi-game.js squareToRC() 與檔頭「記法三型」註解）。正規化，
+ *  否則 shogi-mode.js 拿去餵 squareToRC() 會 col=-1／row=NaN，打入高亮顯示不出來。
+ *  已是「字母+數字」序則原樣放行（不誤轉）。 */
+function normalizeDropSquare(sq) {
+  const m = /^(\d+)([A-Za-z])$/.exec(sq);
+  return m ? m[2] + m[1] : sq;
+}
+
 /** 拆解 UCI 著法字串：一般手回座標 from/to；將棋打入（如 'P@5e'）無起點，回 to+isDrop。 */
 function splitHintMove(uci) {
   const drop = /^([A-Za-z])[@*](\S+)$/.exec(uci);
-  if (drop) return { from: null, to: drop[2], isDrop: true };
+  if (drop) return { from: null, to: normalizeDropSquare(drop[2]), isDrop: true };
   return { from: uci.slice(0, 2), to: uci.slice(2, 4), isDrop: false };
 }
 

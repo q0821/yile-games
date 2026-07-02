@@ -254,6 +254,33 @@ describe('loadSfxPack 與已載入音效優先於 fallback', () => {
     mock.backend.fetch = jest.fn(() => Promise.resolve({ ok: false }));
     await expect(ctx.loadSfxPack('go')).resolves.toBeUndefined();
   });
+
+  test('首次因 ensureCtx 失敗（AudioContext 建立失敗）而中止時，不永久標記為已載入，之後呼叫會重試', async () => {
+    let attempt = 0;
+    const realCreateAudioContext = mock.backend.createAudioContext;
+    ctx._setBackendForTest({
+      ...mock.backend,
+      createAudioContext: jest.fn((...args) => {
+        attempt += 1;
+        if (attempt === 1) throw new Error('AudioContext 建立失敗');
+        return realCreateAudioContext(...args);
+      })
+    });
+
+    await ctx.loadSfxPack('go');
+    expect(mock.backend.fetch).not.toHaveBeenCalled(); // ensureCtx 失敗，根本沒進到 fetch
+
+    await ctx.loadSfxPack('go'); // 重試：不該因為第一次「已標記為已載入」而被跳過
+    expect(mock.backend.fetch).toHaveBeenCalled();
+  });
+
+  test('同一 pack 併發呼叫兩次，只跑一輪載入（in-flight 去重，不重複 fetch）', async () => {
+    const p1 = ctx.loadSfxPack('go');
+    const p2 = ctx.loadSfxPack('go');
+    await Promise.all([p1, p2]);
+    // go pack 三個檔案，各自只該被 fetch 一次（而非併發呼叫各跑一輪變六次）
+    expect(mock.backend.fetch).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('playVoice 節流', () => {
@@ -328,6 +355,24 @@ describe('startMusic / stopMusic', () => {
     const el = mock.audios[mock.audios.length - 1];
     ctx.stopMusic();
     expect(el.pause).toHaveBeenCalled();
+  });
+});
+
+describe('pagehide 監聽掛在 window 上', () => {
+  test('window 發射 pagehide 時暫停播放中的音樂（比照分頁隱藏）', () => {
+    unlock(ctx);
+    ctx.AudioSettings.set({ musicOn: true });
+    const el = mock.audios[mock.audios.length - 1];
+    ctx.dispatchEvent({ type: 'pagehide' }); // window mock：pagehide 只在 window 上發射，不是 document
+    expect(el.pause).toHaveBeenCalled();
+  });
+
+  test('document 發射 pagehide 不觸發任何行為（監聽器掛在 window，不是 document）', () => {
+    unlock(ctx);
+    ctx.AudioSettings.set({ musicOn: true });
+    const el = mock.audios[mock.audios.length - 1];
+    ctx.document.dispatchEvent({ type: 'pagehide' });
+    expect(el.pause).not.toHaveBeenCalled();
   });
 });
 

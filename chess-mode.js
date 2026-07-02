@@ -275,6 +275,7 @@ async function requestHint() {
   hintReq = req;
   try {
     const result = await req.promise;
+    if (hintReq !== req) return; // 這期間已被 clearHint() 取消或被新請求取代，共用狀態不再歸這次請求管
     hintReq = null;
     hintBusy = false;
     showThinking(false);
@@ -282,6 +283,7 @@ async function requestHint() {
     if (!isActive() || Game.fen() !== fenAtRequest) return; // 局面已變，丟棄不畫
     if (result) { hintMove = { from: result.from, to: result.to }; draw(); }
   } catch (err) {
+    if (hintReq !== req) return; // 同上：晚到的 settle，共用狀態已不歸這次請求管
     hintReq = null;
     hintBusy = false;
     showThinking(false);

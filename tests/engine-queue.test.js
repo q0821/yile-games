@@ -148,7 +148,7 @@ describe('hint() 著法解析', () => {
     expect(result).toEqual({ move: 'h2e2', from: 'h2', to: 'e2', isDrop: false });
   });
 
-  test('將棋打入（如 P@5e）：isDrop=true、from=null、move 帶原始字串', async () => {
+  test('將棋打入（如 P@5e）：isDrop=true、from=null、move 帶原始字串，to 正規化為專案座標慣例（字母+數字）', async () => {
     const ctx = sandboxWithXiangqiEngine();
     const mock = createMockStockfish();
     ctx.Stockfish = mock.factory;
@@ -157,6 +157,21 @@ describe('hint() 著法解析', () => {
     await tick();
     mock.emit('bestmove P@5e');
     const result = await promise;
-    expect(result).toEqual({ move: 'P@5e', from: null, to: '5e', isDrop: true });
+    // 引擎回傳的打入著法是「數字+字母」序（5e），但 shogi-game.js 的 squareToRC() 期望
+    // 專案唯一座標慣例「字母+數字」（e5，見 shogi-game.js 開頭「記法三型」註解）；
+    // splitHintMove 需正規化，否則 hint 高亮會因 col=-1/row=NaN 而顯示不出來。
+    expect(result).toEqual({ move: 'P@5e', from: null, to: 'e5', isDrop: true });
+  });
+
+  test('將棋打入若引擎已用「字母+數字」序（如 P@e5）回傳，維持原樣不誤轉', async () => {
+    const ctx = sandboxWithXiangqiEngine();
+    const mock = createMockStockfish();
+    ctx.Stockfish = mock.factory;
+
+    const { promise } = ctx.hint({ fen: 'FEN_H', variant: 'shogi', movetime: 100 });
+    await tick();
+    mock.emit('bestmove P@e5');
+    const result = await promise;
+    expect(result).toEqual({ move: 'P@e5', from: null, to: 'e5', isDrop: true });
   });
 });

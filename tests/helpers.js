@@ -208,14 +208,12 @@ function createMockLocalStorage() {
   };
 }
 
-/** 極簡 document mock：支援 addEventListener/removeEventListener/dispatchEvent（audio-manager 需要監聽解鎖手勢與 visibilitychange）。 */
-function createMockDocumentForAudio() {
+/** 極簡 event-target mock：addEventListener/removeEventListener/dispatchEvent，document／window 共用邏輯
+ *  （各自獨立的 listeners registry，互不影響——比照真實瀏覽器 document 與 window 是不同物件）。 */
+function createMockEventTarget(extra = {}) {
   const listeners = {};
   return {
-    getElementById: () => null,
-    createElement: () => ({ style: {} }),
-    querySelector: () => null,
-    visibilityState: 'visible',
+    ...extra,
     addEventListener(type, fn, opts) {
       const entry = { fn, once: !!(opts && opts.once) };
       (listeners[type] = listeners[type] || []).push(entry);
@@ -237,6 +235,16 @@ function createMockDocumentForAudio() {
   };
 }
 
+/** 極簡 document mock（audio-manager 需要監聽解鎖手勢與 visibilitychange，皆掛在 document 上）。 */
+function createMockDocumentForAudio() {
+  return createMockEventTarget({
+    getElementById: () => null,
+    createElement: () => ({ style: {} }),
+    querySelector: () => null,
+    visibilityState: 'visible'
+  });
+}
+
 /** 極簡 CustomEvent polyfill（vm context 沒有瀏覽器內建的 CustomEvent）。 */
 class MockCustomEvent {
   constructor(type, opts = {}) {
@@ -253,11 +261,19 @@ class MockCustomEvent {
 function sandboxWithAudioManager() {
   const localStorage = createMockLocalStorage();
   const document = createMockDocumentForAudio();
+  // window 是獨立於 document 的另一個 event target（pagehide 只在 window 上發射，見 audio-manager.js
+  // handlePageHide 的掛法）；createSandbox 內部把 ctx.window 設回 ctx 自身，故這裡把
+  // addEventListener/removeEventListener/dispatchEvent 直接放在 extraGlobals（= ctx 的頂層屬性），
+  // 讓 `window.addEventListener(...)` 能解析到這組獨立於 document 的 listeners。
+  const windowTarget = createMockEventTarget();
   const { ctx, localRequire } = createSandbox({
     localStorage,
     document,
     CustomEvent: MockCustomEvent,
-    navigator: {}
+    navigator: {},
+    addEventListener: windowTarget.addEventListener,
+    removeEventListener: windowTarget.removeEventListener,
+    dispatchEvent: windowTarget.dispatchEvent
   });
   loadIntoContext(ctx, localRequire, './sound.js'); // 先曝露 GoSound，方便測試 spy fallback 呼叫
   loadIntoContext(ctx, localRequire, './audio-manager.js');

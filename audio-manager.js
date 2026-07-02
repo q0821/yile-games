@@ -66,7 +66,8 @@ let initDone = false;
 let ctx = null;              // AudioContext（lazy 建立）
 let masterGain = null;       // SFX／語音共用的 GainNode
 let sfxBuffers = new Map();  // name -> AudioBuffer
-let loadedPacks = new Set(); // 已載入的 game pack
+let loadedPacks = new Set(); // 已「成功」載入的 game pack（只在整包跑完才標記，失敗允許下次重試）
+let loadingPacks = new Map(); // game -> 進行中的載入 promise（併發呼叫去重，不代表已成功）
 let voicePlaying = new Set(); // 節流：正在播放中的語音 name
 
 let musicEls = [null, null]; // 雙軌交替播放（crossfade 用）
@@ -200,7 +201,7 @@ export function initAudio() {
   document.addEventListener('touchstart', handleUnlockGesture, { once: true });
   document.addEventListener('keydown', handleUnlockGesture, { once: true });
   document.addEventListener('visibilitychange', handleVisibilityChange);
-  document.addEventListener('pagehide', handlePageHide);
+  window.addEventListener('pagehide', handlePageHide); // pagehide 只在 window 上發射，掛在 document 上永遠不會觸發
 }
 
 // ============================================================
@@ -220,15 +221,14 @@ function decodeAudio(c, arrayBuffer) {
   });
 }
 
-export async function loadSfxPack(game) {
-  const files = GAME_SFX_FILES[game];
-  if (!files || loadedPacks.has(game)) return;
-  loadedPacks.add(game);
+/** 實際載入邏輯：只在整包成功跑完才標記 loadedPacks，讓 ensureCtx 失敗（如首次手勢前
+ *  AudioContext 建立失敗）等情境不會被永久記成「已載入」而擋掉之後的重試。 */
+async function doLoadSfxPack(game, files) {
   let c;
   try {
     c = ensureCtx();
   } catch (_) {
-    return; // 無法建立 AudioContext：靜默放棄，之後 playSfx 走 fallback 或靜音
+    return; // 無法建立 AudioContext：靜默放棄，之後 playSfx 走 fallback 或靜音；下次呼叫會重試
   }
   await Promise.all(files.map(async (name) => {
     if (sfxBuffers.has(name)) return;
@@ -240,6 +240,17 @@ export async function loadSfxPack(game) {
       sfxBuffers.set(name, buffer);
     } catch (_) { /* fail-soft：單檔失敗不影響其他檔 */ }
   }));
+  loadedPacks.add(game);
+}
+
+export async function loadSfxPack(game) {
+  const files = GAME_SFX_FILES[game];
+  if (!files || loadedPacks.has(game)) return;
+  const inflight = loadingPacks.get(game);
+  if (inflight) return inflight; // 併發呼叫去重：等同一輪載入，不重複 fetch
+  const p = doLoadSfxPack(game, files).finally(() => loadingPacks.delete(game));
+  loadingPacks.set(game, p);
+  return p;
 }
 
 function playBuffer(buffer) {
@@ -417,6 +428,7 @@ export function _setBackendForTest(overrides) {
   masterGain = null;
   sfxBuffers = new Map();
   loadedPacks = new Set();
+  loadingPacks = new Map();
   voicePlaying = new Set();
   unlocked = false;
   initDone = false;
