@@ -35,6 +35,11 @@
   /* 亮色水墨背景圖（gpt-image 生成）。絕對路徑：bundled CSS 會被搬到 /assets/，
      用相對 'img/...' 會解析成 /assets/img/... 而 404（圖片實際在 /img/）。 */
   --bg-app-image: url('/img/bg-light.webp');
+  /* iOS safe-area（動態島/瀏海/home indicator）。桌面瀏覽器 env() 未支援時 fallback 0px，視覺無變化。 */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
 }
 
 /* ===== Reset & Base ===== */
@@ -55,6 +60,10 @@ body {
   flex-direction: column;
   align-items: center;
   -webkit-font-smoothing: antialiased;
+  /* 橫向持機（瀏海在左右）與 home indicator（底部）留白；上方由各 header 自行處理 */
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
 }
 
 h1 {
@@ -84,6 +93,8 @@ h1::after {
    下面 font-size 僅作為圖未套用時（極端 fallback）的純文字尺寸。 */
 h1.brush-title {
   font-size: clamp(30px, 8vw, 44px);
+  /* 首頁標題為 body 首個子元素，直接扛動態島/瀏海遮擋；後面的覆蓋規則不動 padding-top，此屬性會持續生效 */
+  padding-top: var(--safe-top);
 }
 
 /* ===== Layout ===== */
@@ -879,6 +890,7 @@ a.version-link { display: inline-block; }
   max-width: 720px;
   margin: 0 auto 6px;
   padding: 0 16px;
+  padding-top: var(--safe-top);
   box-sizing: border-box;
 }
 .mode-title {
