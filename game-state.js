@@ -308,6 +308,9 @@ export function cancelScoring() {
   const current = ensureState();
   current.isScoring = false;
   current.deadStones = new Set();
+  // 修正：取消數目回到對局若不歸零，雙虛手已累積的 passCount 會殘留，
+  // 之後只要再虛手「一次」（passCount 2→3）就被判為終局——已在瀏覽器實測重現。
+  current.passCount = 0;
   return { ok: true, isScoring: current.isScoring };
 }
 

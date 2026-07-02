@@ -376,6 +376,11 @@ function doPass() {
     showToast('電腦虛手（Pass）');   // 醒目提示，避免誤以為電腦還沒下
   } else {
     syncStatus();
+    // 虛手預警：這手是「單次虛手」（非雙虛手終局，上面已提早 return），提醒再一次就進數目。
+    // AI 虛手已在上面分支顯示過提示，這裡只在非 AI 虛手時顯示，避免同一時刻兩個 toast。
+    if (!result.endedByDoublePass && passCount === 1) {
+      showToast('再虛手一次將進入數目');
+    }
   }
   isAIThinking = previousIsAIThinking;
   drawBoard();

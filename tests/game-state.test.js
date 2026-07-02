@@ -278,6 +278,19 @@ describe('scoring lifecycle', () => {
     expect(GameState.getState().isScoring).toBe(true);
   });
 
+  test('cancelScoring resets passCount to 0（取消數目後單次虛手不應立刻終局）', () => {
+    GameState.applyMove(4, 4); // B
+    GameState.applyMove(2, 2); // W
+    GameState.applyPass();     // B pass, passCount=1
+    GameState.applyPass();     // W pass, passCount=2 → beginScoring 情境（雙虛手）
+    GameState.beginScoring();
+    GameState.cancelScoring();
+    expect(GameState.getState().passCount).toBe(0);
+
+    const result = GameState.applyPass(); // 取消數目後只虛手一次
+    expect(result.endedByDoublePass).toBe(false);
+  });
+
   test('cancelScoring clears isScoring and deadStones', () => {
     GameState.beginScoring();
     GameState.cancelScoring();
