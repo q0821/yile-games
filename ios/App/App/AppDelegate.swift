@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import GCDWebServer
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,43 +8,100 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // 先啟動本地 HTTP server，之後 WKWebView 才會載入 http://localhost:PORT。
+        // GCDWebServer.start 為同步（回傳前已綁好 port），故 webview 載入時必定就緒。
+        LocalServer.shared.start()
         return true
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
-        // Use this method to pause ongoing tasks, disable timers, and invalidate graphics rendering callbacks. Games should use this method to pause the game.
-    }
-
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
-        // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
-    }
-
-    func applicationWillEnterForeground(_ application: UIApplication) {
-        // Called as part of the transition from the background to the active state; here you can undo many of the changes made on entering the background.
-    }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
-    }
-
-    func applicationWillTerminate(_ application: UIApplication) {
-        // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
-    }
+    func applicationWillResignActive(_ application: UIApplication) {}
+    func applicationDidEnterBackground(_ application: UIApplication) {}
+    func applicationWillEnterForeground(_ application: UIApplication) {}
+    func applicationDidBecomeActive(_ application: UIApplication) {}
+    func applicationWillTerminate(_ application: UIApplication) {}
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url. Feel free to add additional processing here,
-        // but if you want the App API to support tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        // Called when the app was launched with an activity, including Universal Links.
-        // Feel free to add additional processing here, but if you want the App API to support
-        // tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
+}
 
+/// 內嵌 HTTP server：以 http://localhost:PORT 服務 app bundle 內的網頁資產（public/），
+/// 並為每個回應蓋上 COOP/COEP/CORP 標頭，使 WKWebView 頁面進入 cross-origin isolated
+/// → SharedArrayBuffer 可用 → 多執行緒 fairy-stockfish（象棋/將棋/西洋棋）在 iOS 實機滿血運行。
+///
+/// 為何不用 Capacitor 預設的 capacitor:// custom scheme：WebKit 對非 http(s) 來源會忽略
+/// COOP 標頭，頁面永遠進不了 cross-origin isolated；而 http://localhost 屬 secure context，
+/// WebKit 會正確套用 COOP/COEP。見 capacitor.config.json 的 server.url。
+final class LocalServer {
+    static let shared = LocalServer()
+    static let port: UInt = 3333
+
+    private var server: GCDWebServer?
+
+    func start() {
+        guard server == nil else { return }
+        guard let root = Bundle.main.path(forResource: "public", ofType: nil) else {
+            NSLog("[LocalServer] 找不到 bundle 內 public 資產目錄")
+            return
+        }
+        let webServer = GCDWebServer()
+        webServer.addHandler(forMethod: "GET", pathRegex: ".*", request: GCDWebServerRequest.self) { request -> GCDWebServerResponse? in
+            LocalServer.serve(root: root, request: request)
+        }
+        do {
+            try webServer.start(options: [
+                GCDWebServerOption_Port: LocalServer.port,
+                GCDWebServerOption_BindToLocalhost: true,
+                GCDWebServerOption_AutomaticallySuspendInBackground: false
+            ])
+            server = webServer
+            NSLog("[LocalServer] 啟動於 http://localhost:\(LocalServer.port)")
+        } catch {
+            NSLog("[LocalServer] 啟動失敗：\(error)")
+        }
+    }
+
+    private static func serve(root: String, request: GCDWebServerRequest) -> GCDWebServerResponse {
+        let rootURL = URL(fileURLWithPath: root).standardizedFileURL
+        var rel = request.path
+        if rel == "/" || rel.isEmpty { rel = "/index.html" }
+        let target = rootURL.appendingPathComponent(rel).standardizedFileURL
+
+        // 防目錄穿越：解析後路徑必須仍在 root 底下
+        guard target.path == rootURL.path || target.path.hasPrefix(rootURL.path + "/") else {
+            return GCDWebServerResponse(statusCode: 403)
+        }
+
+        var filePath = target.path
+        var isDir: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: filePath, isDirectory: &isDir)
+        if !exists || isDir.boolValue {
+            // SPA fallback：路由路徑（非實體檔）回 index.html，交給前端 client-side routing
+            filePath = rootURL.appendingPathComponent("index.html").path
+            guard FileManager.default.fileExists(atPath: filePath) else {
+                return GCDWebServerResponse(statusCode: 404)
+            }
+        }
+
+        let response: GCDWebServerResponse
+        if request.hasByteRange() {
+            response = GCDWebServerFileResponse(file: filePath, byteRange: request.byteRange) ?? GCDWebServerResponse(statusCode: 404)
+        } else {
+            response = GCDWebServerFileResponse(file: filePath) ?? GCDWebServerResponse(statusCode: 404)
+        }
+
+        // 讓頁面 cross-origin isolated（同源子資源在 require-corp 下自動放行）
+        response.setValue("same-origin", forAdditionalHeader: "Cross-Origin-Opener-Policy")
+        response.setValue("require-corp", forAdditionalHeader: "Cross-Origin-Embedder-Policy")
+        response.setValue("same-origin", forAdditionalHeader: "Cross-Origin-Resource-Policy")
+        response.cacheControlMaxAge = 0
+        // GCDWebServer 未必認得的副檔名，補正 MIME
+        if filePath.hasSuffix(".wasm") { response.contentType = "application/wasm" }
+        else if filePath.hasSuffix(".js") { response.contentType = "text/javascript" }
+        return response
+    }
 }

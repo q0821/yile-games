@@ -1,5 +1,9 @@
 {
   "appId": "com.yilegames.app",
   "appName": "yile-games",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "url": "http://localhost:3333",
+    "cleartext": true
+  }
 }

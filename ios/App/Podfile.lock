@@ -2,10 +2,18 @@ PODS:
   - Capacitor (7.6.7):
     - CapacitorCordova
   - CapacitorCordova (7.6.7)
+  - GCDWebServer (3.5.4):
+    - GCDWebServer/Core (= 3.5.4)
+  - GCDWebServer/Core (3.5.4)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - GCDWebServer (~> 3.0)
+
+SPEC REPOS:
+  trunk:
+    - GCDWebServer
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -16,7 +24,8 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Capacitor: ee608ffbcf73b0030813d77ce8b10142f26cad4a
   CapacitorCordova: 139e2ed3d91c54b5aeae7941135c9f9aefc6da1d
+  GCDWebServer: 2c156a56c8226e2d5c0c3f208a3621ccffbe3ce4
 
-PODFILE CHECKSUM: e5aad413742a07f9e736126612b43b6c058babcd
+PODFILE CHECKSUM: 9c270cfa5089fd355df9a3cec47b74de5849b6aa
 
 COCOAPODS: 1.16.2

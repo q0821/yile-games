@@ -16,7 +16,9 @@ end
 
 target 'App' do
   capacitor_pods
-  # Add your Pods here
+  # 內嵌 HTTP server：以 http://localhost 服務網頁，設 COOP/COEP 讓頁面
+  # cross-origin isolated（SharedArrayBuffer 可用），多執行緒引擎才能在 iOS 跑。
+  pod 'GCDWebServer', '~> 3.0'
 end
 
 post_install do |installer|

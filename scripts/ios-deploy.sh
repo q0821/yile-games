@@ -108,24 +108,10 @@ else
   echo "▶ [1/4] 跳過網頁 build"
 fi
 
-# --- 1.5 確保 Capacitor iOS 補丁已套用（COOP/COEP 標頭）---
-# 象棋/將棋/西洋棋用多執行緒 fairy-stockfish，需頁面 cross-origin isolated
-# （SharedArrayBuffer）。這靠 patches/@capacitor+ios+*.patch 幫 WebViewAssetHandler.swift
-# 蓋上 COOP/COEP 標頭。但 patch-package 只在 `npm install` 時跑，本腳本不裝依賴，
-# 故這裡主動補跑一次（冪等），並驗證補丁真的在 node_modules 裡，否則實機會出現
-# 「需 cross-origin isolated…」而 AI 起不來。
-echo "▶ 確認 Capacitor COOP/COEP 補丁已套用…"
-npx patch-package >/dev/null 2>&1 || true
-SWIFT="node_modules/@capacitor/ios/Capacitor/Capacitor/WebViewAssetHandler.swift"
-if grep -q "Cross-Origin-Embedder-Policy" "$SWIFT" 2>/dev/null; then
-  echo "  ✔ 補丁在（WebViewAssetHandler.swift 已含 COOP/COEP 標頭）"
-else
-  echo "  ✖ 補丁未套用：象棋/將棋/西洋棋的多執行緒引擎會起不來。"
-  echo "    請先跑一次： npm install    （會觸發 patch-package 套用補丁），再重跑本腳本。"
-  exit 1
-fi
-
 # --- 2. xcodebuild 編譯 + 自簽 ---
+# 註：cross-origin isolation（SharedArrayBuffer，多執行緒引擎需要）改由 app 內嵌
+# HTTP server 以 http://localhost 服務 + COOP/COEP 標頭達成（見 AppDelegate 的 LocalServer
+# 與 capacitor.config.json 的 server.url），不再依賴 WebViewAssetHandler 補丁。
 echo "▶ [2/4] xcodebuild 編譯並簽署…"
 xcodebuild \
   -workspace "$WORKSPACE" \
