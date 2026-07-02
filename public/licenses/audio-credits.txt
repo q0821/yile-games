@@ -3,7 +3,7 @@
 
 生成方式：ElevenLabs（AI 生成內容，依 ElevenLabs 方案授權條款可商用）
 生成日期：2026-07-02（wood-place.mp3／shogi-place.mp3／shogi-capture.mp3／voice-xiangqi-mate.mp3 已於同日重製）
-生成日期：2026-07-03（bgm-1.mp3／bgm-2.mp3 第三次重製）
+生成日期：2026-07-03（bgm-1.mp3 第四次重製，改為單曲循環；bgm-2.mp3 已移除）
 
 一、音效（public/sounds/，ElevenLabs Sound Effects）
 ----------------------------------------------------
@@ -33,7 +33,12 @@ voice-chess-mate.mp3     "Checkmate!"（英文，西洋棋將死提示）
 
 三、背景音樂（public/music/，ElevenLabs Music）
 ----------------------------------------------------
-bgm-1.mp3  純器樂古琴禪意曲風：古琴獨奏疏落撥音，句與句間留白、餘韻自然衰減，僅偶爾點綴極遠景、極輕的水滴聲（非持續水流），約 2 分 30 秒，128kbps（約 2.4MB），全棋種共用背景音樂
-           （第三版重製：改以古琴獨奏為主體，去除近距離持續水流聲＝水龍頭感；全曲嚴禁人聲／哼唱／唸誦／合唱）
-bgm-2.mp3  箏與竹笛禪意曲風：箏疏落撥音＋竹笛（尺八風格）偶爾點綴，句與句間留白、餘韻自然衰減，本版不使用水聲，約 2 分 45 秒，128kbps（約 2.6MB），全棋種共用背景音樂
-           （第三版重製：修正上一版混入人聲／吟唱問題，全曲嚴禁人聲／哼唱／唸誦／合唱）
+bgm-1.mp3  純器樂輕鬆益智曲風：鋼琴、木吉他、馬林巴木琴、暖色弦樂、竹笛與細緻氛圍音色交織，約 88 BPM 中慢板，旋律流暢不重複、不搶戲，打擊樂極簡，
+           設計為長時間對弈時可無縫循環的背景音樂；約 2 分 45 秒，128kbps（約 2.6MB），全棋種共用背景音樂（單曲循環，第四版重製，MUSIC_TRACK_COUNT=1，bgm-2.mp3 已移除）
+           （生成提示詞為使用者提供原文：）
+           "Gentle, cheerful instrumental background music for classic strategy board games. Soft piano, acoustic
+           guitar, marimba, warm strings, bamboo flute, and subtle ambient textures. Calm, elegant, intelligent,
+           optimistic, and relaxing. Medium-slow tempo around 88 BPM. Smooth flowing melody that never becomes
+           repetitive or distracting. Minimal percussion. Designed specifically as seamless looping background
+           music for long gameplay sessions. No vocals, no choir, no sound effects, no cinematic build-up, no
+           battle atmosphere, no dramatic ending."
