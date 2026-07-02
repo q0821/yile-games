@@ -2,17 +2,17 @@
 =================================
 
 生成方式：ElevenLabs（AI 生成內容，依 ElevenLabs 方案授權條款可商用）
-生成日期：2026-07-02
+生成日期：2026-07-02（wood-place.mp3／shogi-place.mp3／shogi-capture.mp3／voice-xiangqi-mate.mp3 已於同日重製）
 
 一、音效（public/sounds/，ElevenLabs Sound Effects）
 ----------------------------------------------------
 stone-place.mp3     圍棋／五子棋／死活題落子聲
 stone-capture.mp3   圍棋提子聲
 othello-flip.mp3    黑白棋落子＋翻子聲
-wood-place.mp3      象棋／殘局落子聲
+wood-place.mp3      象棋／殘局落子聲（重製：厚實木質悶響，去除玻璃／金屬鈴聲感）
 wood-capture.mp3    象棋吃子聲
-shogi-place.mp3     將棋駒音（落子）
-shogi-capture.mp3   將棋吃子入駒台聲
+shogi-place.mp3     將棋駒音（落子，重製：厚實木質悶響，去除玻璃／金屬鈴聲感）
+shogi-capture.mp3   將棋吃子入駒台聲（重製：雙聲木質悶響，去除玻璃／金屬鈴聲感）
 chess-place.mp3     西洋棋落子聲
 chess-capture.mp3   西洋棋吃子聲
 pass.mp3            虛手提示音
@@ -24,7 +24,7 @@ invalid-move.mp3    無效落子／禁著點提示音
 二、語音（public/sounds/，ElevenLabs Text-to-Speech）
 ----------------------------------------------------
 voice-xiangqi-check.mp3  「將軍！」（中文，象棋將軍提示）
-voice-xiangqi-mate.mp3   「絕殺！」（中文，象棋將死提示）
+voice-xiangqi-mate.mp3   「死棋！」（中文，象棋將死提示）
 voice-shogi-check.mp3    「王手！」（日文，將棋王手提示）
 voice-shogi-mate.mp3     「詰み！」（日文，將棋詰み提示）
 voice-chess-check.mp3    "Check!"（英文，西洋棋將軍提示）
