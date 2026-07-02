@@ -14,8 +14,6 @@ const LIGHT = '#f0dcab';    // 淺格（宣紙暖白）
 const DARK = '#c79a59';     // 深格（暖棕）
 const MARGIN = '#efe1c0';   // 細框底
 const FRAMELINE = '#7a5a31';
-const INK = '#2c2417';      // 黑方
-const IVORY = '#f3ead4';    // 白方面
 const EDGE = '#5b4222';     // 白方描邊
 const SEL = '#c0392b';
 const HINT = 'rgba(43,90,40,0.55)';
@@ -48,23 +46,98 @@ function gy(deps, row) { return deps.padding + row * deps.cellSize; }
 function cx(deps, col) { return gx(deps, col) + deps.cellSize / 2; }
 function cy(deps, row) { return gy(deps, row) + deps.cellSize / 2; }
 
-/** 一顆水墨剪影駒。size = 格邊長。piece = { glyph, white }。 */
+// ——— 玻璃質感 glyph offscreen 合成 layer（依 size 建立、重繪重用，避免每 frame 重新配置 canvas） ———
+let _pieceLayer = null;
+let _pieceLayerSize = 0;
+function getPieceLayer(size) {
+  const s = Math.ceil(size * 1.6);
+  if (!_pieceLayer || _pieceLayerSize !== s) {
+    _pieceLayer = document.createElement('canvas');
+    _pieceLayer.width = s; _pieceLayer.height = s;
+    _pieceLayerSize = s;
+  }
+  return _pieceLayer;
+}
+
+/** 一顆玻璃半透明剪影駒（漸層透明填色＋斜向高光＋柔和橢圓投影）。size = 格邊長。piece = { glyph, white }。 */
 function drawPiece(ctx, x, y, size, piece) {
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(size) || size <= 0) return;
   const g = piece.glyph;
+
+  // 1) 柔和橢圓投影（落地感；offset 小、blur 適中，與字形本身分開處理）
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(x, y + size * 0.34, size * 0.30, size * 0.11, 0, 0, Math.PI * 2);
+  const footGrad = ctx.createRadialGradient(x, y + size * 0.34, 0, x, y + size * 0.34, size * 0.30);
+  footGrad.addColorStop(0, 'rgba(35,24,10,0.34)');
+  footGrad.addColorStop(1, 'rgba(35,24,10,0)');
+  ctx.fillStyle = footGrad;
+  ctx.fill();
+  ctx.restore();
+
+  // 2) glyph 本體：offscreen 合成，先畫實心剪影當遮罩，再用 source-in／source-atop 疊漸層與高光
+  //    （疊到主畫布時會與底下棋格顏色混合，呈現半透明玻璃感）
+  const layer = getPieceLayer(size);
+  const lctx = layer.getContext('2d');
+  const ls = layer.width;
+  const lcx = ls / 2, lcy = ls / 2;
+  lctx.clearRect(0, 0, ls, ls);
+  lctx.font = `${Math.round(size * 0.82)}px ${PIECEFONT}`;
+  lctx.textAlign = 'center';
+  lctx.textBaseline = 'middle';
+  lctx.fillStyle = '#000';
+  lctx.fillText(g, lcx, lcy + size * 0.02);
+  if (piece.white) {
+    lctx.lineWidth = Math.max(1.4, size * 0.035);
+    lctx.strokeStyle = '#000';
+    lctx.strokeText(g, lcx, lcy + size * 0.02);
+  }
+  lctx.globalCompositeOperation = 'source-in';
+  const grad = lctx.createLinearGradient(0, lcy - size * 0.42, 0, lcy + size * 0.42);
+  if (piece.white) {
+    grad.addColorStop(0, 'rgba(255,253,246,0.60)');
+    grad.addColorStop(0.5, 'rgba(243,234,212,0.82)');
+    grad.addColorStop(1, 'rgba(214,197,159,0.88)');
+  } else {
+    grad.addColorStop(0, 'rgba(80,68,52,0.74)');
+    grad.addColorStop(0.5, 'rgba(44,36,23,0.88)');
+    grad.addColorStop(1, 'rgba(18,14,8,0.93)');
+  }
+  lctx.fillStyle = grad;
+  lctx.fillRect(0, 0, ls, ls);
+  // 斜向玻璃高光窄帶（clip 於字形剪影內，模擬反光）
+  lctx.globalCompositeOperation = 'source-atop';
+  lctx.save();
+  lctx.translate(lcx, lcy);
+  lctx.rotate(-0.55);
+  const hl = lctx.createLinearGradient(-size * 0.55, 0, size * 0.55, 0);
+  hl.addColorStop(0.40, 'rgba(255,255,255,0)');
+  hl.addColorStop(0.50, piece.white ? 'rgba(255,255,255,0.65)' : 'rgba(255,255,255,0.30)');
+  hl.addColorStop(0.60, 'rgba(255,255,255,0)');
+  lctx.fillStyle = hl;
+  lctx.fillRect(-ls, -ls, ls * 2, ls * 2);
+  lctx.restore();
+  lctx.globalCompositeOperation = 'source-over';
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(30,20,8,0.30)';
+  ctx.shadowBlur = size * 0.08;
+  ctx.shadowOffsetY = size * 0.04;
+  ctx.drawImage(layer, x - lcx, y - lcy);
+  ctx.restore();
+
+  // 3) 描邊維持辨識度：白子沿用原本暖褐描邊；黑子加極細亮邊避免在深格上糊成一片
   ctx.save();
   ctx.font = `${Math.round(size * 0.82)}px ${PIECEFONT}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(40,28,12,0.5)';
-  ctx.shadowBlur = size * 0.13;
-  ctx.shadowOffsetY = size * 0.07;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   if (piece.white) {
-    ctx.fillStyle = IVORY; ctx.fillText(g, x, y + size * 0.02);
-    ctx.shadowColor = 'transparent';
-    ctx.lineWidth = Math.max(1.4, size * 0.035); ctx.strokeStyle = EDGE; ctx.strokeText(g, x, y + size * 0.02);
+    ctx.lineWidth = Math.max(1.4, size * 0.035);
+    ctx.strokeStyle = EDGE;
+    ctx.strokeText(g, x, y + size * 0.02);
   } else {
-    ctx.fillStyle = INK; ctx.fillText(g, x, y + size * 0.02);
+    ctx.lineWidth = Math.max(1, size * 0.02);
+    ctx.strokeStyle = 'rgba(255,250,235,0.18)';
+    ctx.strokeText(g, x, y + size * 0.02);
   }
   ctx.restore();
 }

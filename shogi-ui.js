@@ -67,6 +67,7 @@ function komaPath(ctx, w, h) {
 /** 畫一顆楔形漢字駒。sente=false 時整顆（含字）180° 倒置。lifted 加重陰影。 */
 function drawPiece(ctx, x, y, size, piece, lifted) {
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(size) || size <= 0) return;
+  size *= 0.88; // 縮到格子約 88%，讓格與駒之間留出呼吸空隙（原尺寸太滿）
   const w = size * 0.42, h = size * 0.46;
   ctx.save();
   ctx.translate(x, y);
