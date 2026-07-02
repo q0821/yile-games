@@ -545,7 +545,7 @@ async function doMove(uci) {
   moving = false;
   if (!ok) { render(); return false; }
   lastMove = [parts.from, parts.to];
-  playSfx(captured ? 'wood-capture' : 'wood-place');
+  playSfx(captured ? 'shogi-capture' : 'shogi-place');
   gameOver = Game.isGameOver();
   updateCheck();
   setStatus();

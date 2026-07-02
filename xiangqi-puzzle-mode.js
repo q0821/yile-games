@@ -209,7 +209,7 @@ function playMoveSound(uci) {
   const toRC = Game.squareToRC(to);
   const grid = Game.gridFromFen(board.fen());
   const captured = !!(grid[toRC.row] && grid[toRC.row][toRC.col]);
-  playSfx(captured ? 'wood-capture' : 'wood-place');
+  playSfx(captured ? 'shogi-capture' : 'shogi-place');
 }
 
 async function playerMove(uci) {

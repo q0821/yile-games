@@ -12,14 +12,14 @@ import { GoSound } from './sound.js';
 // ——— 設定 ———
 const SETTINGS_KEY = 'audio-settings-v1';
 const SETTINGS_EVENT = 'audio-settings-changed';
-const DEFAULT_SETTINGS = { sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.5 };
+const DEFAULT_SETTINGS = { sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.3 };
 
 // ——— 各棋種音效包（進入畫面時 lazy load，見 GAME_SFX_FILES）———
 const GAME_SFX_FILES = {
   go: ['stone-place', 'stone-capture', 'pass'],
   gomoku: ['stone-place'],
   othello: ['stone-place', 'stone-capture'], // 使用者偏好：黑白棋沿用圍棋音（othello-flip 棄用）
-  xiangqi: ['wood-place', 'wood-capture', 'voice-xiangqi-check', 'voice-xiangqi-mate'],
+  xiangqi: ['shogi-place', 'shogi-capture', 'voice-xiangqi-check', 'voice-xiangqi-mate'],
   shogi: ['shogi-place', 'shogi-capture', 'voice-shogi-check', 'voice-shogi-mate'],
   chess: ['chess-place', 'chess-capture', 'voice-chess-check', 'voice-chess-mate'],
   common: ['pass', 'game-win', 'game-lose', 'game-draw', 'invalid-move']
