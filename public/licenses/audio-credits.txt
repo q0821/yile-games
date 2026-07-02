@@ -29,3 +29,8 @@ voice-shogi-check.mp3    「王手！」（日文，將棋王手提示）
 voice-shogi-mate.mp3     「詰み！」（日文，將棋詰み提示）
 voice-chess-check.mp3    "Check!"（英文，西洋棋將軍提示）
 voice-chess-mate.mp3     "Checkmate!"（英文，西洋棋將死提示）
+
+三、背景音樂（public/music/，ElevenLabs Music）
+----------------------------------------------------
+bgm-1.mp3  古琴與環境氛圍器樂，約 2 分 30 秒，128kbps（約 2.4MB），全棋種共用背景音樂
+bgm-2.mp3  環境氛圍與古琴、竹笛點綴器樂，約 2 分 40 秒，128kbps（約 2.6MB），全棋種共用背景音樂
