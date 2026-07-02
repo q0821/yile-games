@@ -1,0 +1,60 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "com.yilegames.app"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.yilegames.app"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            // LocalServer（內嵌 HTTP server，見 app/src/main/java/.../LocalServer.java）用
+            // AssetManager#openFd 取得精確長度與 byte-range 讀取能力；該 API 只對「未壓縮」的
+            // assets 有效，故這裡明確排除壓縮，確保 .wasm/.js/.mp3 等資產可被正確 range 讀取。
+            // 註：public/models/katago-small.bin.gz 進 APK 後會被 AAPT 自動解壓並去掉 .gz
+            // （見 LocalServer#openContent 的說明），封裝後副檔名變成 .bin，故一併列入。
+            noCompress "wasm", "js", "mjs", "json", "html", "css", "mp3", "wav", "gz", "bin"
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
