@@ -15,6 +15,8 @@
 6. AI 建議功能補齊到象棋/將棋/西洋棋（覆盤四棋已有）
 7. 六棋版面一致化（向圍棋的「資訊列＋常駐功能列」看齊）
 8. 畫面質感精修（維持宣紙水墨風）
+9. iOS safe-area 修正（動態島/瀏海壓住標題）
+10. 圍棋禁著點回饋（點了沒反應像當機）
 
 ## 2. 範圍界定
 
@@ -78,6 +80,7 @@ getAudioSettings() / setAudioSettings(patch)   // 變更即時生效並廣播
 | chess-capture | 吃子 | 西洋棋 |
 | pass | 虛手（輕柔提示） | 圍棋 |
 | game-win / game-lose / game-draw | 終局（含五子棋/黑白棋/解題） | 全部 |
+| invalid-move | 短促錯誤提示（禁著點/無效點擊） | 全部 |
 
 格式：mp3、44.1kHz mono，每檔目標 ≤50KB，放 `public/sounds/`。
 
@@ -155,6 +158,15 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 - **五子棋/黑白棋**：套統一資訊列＋功能列樣式；功能只有「悔棋、重新開始」（無 AI 建議/覆盤/認輸），設定從內嵌精簡列改為與其他棋一致的設定 modal
 - 按鈕命名、順序、圖示風格、間距全站統一；`docs/ADD-NEW-GAME.md` 的版面規範章節同步更新
 
+### 7.1 iOS safe-area（動態島/瀏海遮擋修正）
+
+現況：viewport meta 無 `viewport-fit=cover`、全站 CSS 無任何 `env(safe-area-inset-*)`，實機上動態島直接壓住 `mode-header` 標題。修正：
+
+- `index.html` viewport 加 `viewport-fit=cover`
+- 全站頂層容器（首頁 header 與各棋 `mode-header`）套 `padding-top: env(safe-area-inset-top)`；左右與底部也一併處理（橫向持機與 home indicator）：`env(safe-area-inset-left/right/bottom)`
+- 統一以 CSS 變數收斂（如 `--safe-top: env(safe-area-inset-top, 0px)`），避免六個畫面各寫各的
+- 驗收：動態島機型（iPhone 15/16 系列）與瀏海機型實機/模擬器逐畫面檢查，直向＋橫向
+
 ## 8. 質感精修（維持宣紙水墨風）
 
 - **棋盤**：木紋/紙紋質感（canvas 繪製或 webp 疊圖）、畫出棋盤側面厚度＋桌面投影（營造實木棋盤感）、周圍 vignette
@@ -163,6 +175,15 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 - **UI**：按鈕/modal/狀態列層次、間距、按壓回饋統一打磨（與第 7 節一起做）
 - **過場**：畫面切換、面板開合細膩動效；全部尊重 `prefers-reduced-motion`
 - Canvas 動畫僅在事件觸發時 requestAnimationFrame，平時維持靜態繪製（省電）
+
+### 8.1 圍棋禁著點回饋（點了沒反應像當機）
+
+現況：落子失敗時 `placeStone` 只 `return false`（main.js:295），且 `GameState.applyMove` 連失敗原因都不回傳（game-state.js:216 `{ ok: false }`）——點到禁著點畫面零回饋，使用者以為 app 卡住。修正：
+
+- `applyMove` 失敗時回傳原因：`occupied`（已有子）、`suicide`（自殺手）、`ko`（打劫禁著）
+- 落子失敗的即時回饋三件套：該交叉點**閃現紅色 X 標記**（約 600ms）＋ 既有 `showToast` 顯示原因文字（「此處為打劫禁著點」等）＋ 短促錯誤提示音（併入音效系統，跟隨 sfxOn）
+- 劫爭進行中：劫的禁著點**常駐畫小標記**（下一手解消），不做全盤禁著點掃描標示（視覺太吵）
+- 其他棋種順手檢查：象棋/將棋/西洋棋點不合法目標時已有「取消選取」回饋，維持現狀；五子棋/黑白棋點無效格若也是無聲失敗，套同樣 toast＋提示音模式（黑白棋「無合法手需 pass」情境既有處理保留）
 
 ## 9. 測試與驗證
 
@@ -178,7 +199,7 @@ board-wrap（canvas＋overlay＋board-end 結束卡片）
 |---|---|---|
 | P1 | audio-manager＋素材生成（音效/語音/BGM）＋六棋接線＋全域設定 UI | 素材生成與接線交 subagent（Sonnet），Fable 5 整合把關 |
 | P2 | APP icon 生成與全平台替換 | subagent（Sonnet） |
-| P3 | AI 建議（三棋）＋版面一致化 | subagent（Sonnet） |
+| P3 | AI 建議（三棋）＋版面一致化＋iOS safe-area＋圍棋禁著點回饋 | subagent（Sonnet） |
 | P4 | 質感精修 | subagent（Sonnet）＋視覺 review |
 | 後續 | 深色模式（另立 PRD） | — |
 
