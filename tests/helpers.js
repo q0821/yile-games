@@ -63,7 +63,7 @@ function makeRequire(ctx, cache) {
   return localRequire;
 }
 
-function createSandbox() {
+function createSandbox(extraGlobals = {}) {
   const cache = {};
   const ctx = vm.createContext({
     // Minimal browser-like globals
@@ -79,7 +79,8 @@ function createSandbox() {
     requestAnimationFrame: (fn) => { fn(0); return 0; },
     // Stubs for missing properties
     localRequire: null,
-    localModule: null
+    localModule: null,
+    ...extraGlobals
   });
   ctx.window = ctx;
   ctx.localRequire = makeRequire(ctx, cache);
@@ -184,4 +185,72 @@ function sandboxWithOthello() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello };
+/** 極簡 in-memory localStorage mock（audio-manager 測試用）。 */
+function createMockLocalStorage() {
+  let store = {};
+  return {
+    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+    clear: () => { store = {}; }
+  };
+}
+
+/** 極簡 document mock：支援 addEventListener/removeEventListener/dispatchEvent（audio-manager 需要監聽解鎖手勢與 visibilitychange）。 */
+function createMockDocumentForAudio() {
+  const listeners = {};
+  return {
+    getElementById: () => null,
+    createElement: () => ({ style: {} }),
+    querySelector: () => null,
+    visibilityState: 'visible',
+    addEventListener(type, fn, opts) {
+      const entry = { fn, once: !!(opts && opts.once) };
+      (listeners[type] = listeners[type] || []).push(entry);
+    },
+    removeEventListener(type, fn) {
+      if (!listeners[type]) return;
+      listeners[type] = listeners[type].filter((entry) => entry.fn !== fn);
+    },
+    dispatchEvent(evt) {
+      const entries = (listeners[evt.type] || []).slice();
+      for (const entry of entries) {
+        entry.fn(evt);
+        if (entry.once) {
+          listeners[evt.type] = (listeners[evt.type] || []).filter((e) => e !== entry);
+        }
+      }
+      return true;
+    }
+  };
+}
+
+/** 極簡 CustomEvent polyfill（vm context 沒有瀏覽器內建的 CustomEvent）。 */
+class MockCustomEvent {
+  constructor(type, opts = {}) {
+    this.type = type;
+    this.detail = opts ? opts.detail : undefined;
+  }
+}
+
+/**
+ * Returns a sandbox with AudioManager loaded, plus mock localStorage/document/CustomEvent
+ * so audio-manager.js's設定持久化與事件廣播邏輯可在 node（無 jsdom）下測試。
+ * 呼叫端可用回傳的 ctx.localStorage / ctx.document 直接檢查/操作 mock 狀態。
+ */
+function sandboxWithAudioManager() {
+  const localStorage = createMockLocalStorage();
+  const document = createMockDocumentForAudio();
+  const { ctx, localRequire } = createSandbox({
+    localStorage,
+    document,
+    CustomEvent: MockCustomEvent,
+    navigator: {}
+  });
+  loadIntoContext(ctx, localRequire, './sound.js'); // 先曝露 GoSound，方便測試 spy fallback 呼叫
+  loadIntoContext(ctx, localRequire, './audio-manager.js');
+  ctx.localStorage = localStorage;
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello, sandboxWithAudioManager };
