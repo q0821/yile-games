@@ -2,7 +2,7 @@
 =================================
 
 生成方式：ElevenLabs（AI 生成內容，依 ElevenLabs 方案授權條款可商用）
-生成日期：2026-07-02（wood-place.mp3／shogi-place.mp3／shogi-capture.mp3／voice-xiangqi-mate.mp3 已於同日重製）
+生成日期：2026-07-02（wood-place.mp3／shogi-place.mp3／shogi-capture.mp3／voice-xiangqi-mate.mp3／bgm-1.mp3／bgm-2.mp3 已於同日重製）
 
 一、音效（public/sounds/，ElevenLabs Sound Effects）
 ----------------------------------------------------
@@ -32,5 +32,5 @@ voice-chess-mate.mp3     "Checkmate!"（英文，西洋棋將死提示）
 
 三、背景音樂（public/music/，ElevenLabs Music）
 ----------------------------------------------------
-bgm-1.mp3  古琴與環境氛圍器樂，約 2 分 30 秒，128kbps（約 2.4MB），全棋種共用背景音樂
-bgm-2.mp3  環境氛圍與古琴、竹笛點綴器樂，約 2 分 40 秒，128kbps（約 2.6MB），全棋種共用背景音樂
+bgm-1.mp3  庭院流水禪意曲風：古琴疏落撥音＋潺潺流水＋添水（鹿威し）竹擊聲，句與句間留白，約 2 分 30 秒，128kbps（約 2.4MB），全棋種共用背景音樂（重製：去除持續嗡鳴 drone／pad 質感）
+bgm-2.mp3  庭院流水禪意曲風：箏與竹笛疏落點綴＋潺潺流水＋添水（鹿威し）竹擊聲，句與句間留白，約 2 分 45 秒，128kbps（約 2.6MB），全棋種共用背景音樂（重製：去除持續嗡鳴 drone／pad 質感）
