@@ -97,10 +97,15 @@ function normalizeDropSquare(sq) {
   return m ? m[2] + m[1] : sq;
 }
 
-/** 拆解 UCI 著法字串：一般手回座標 from/to；將棋打入（如 'P@5e'）無起點，回 to+isDrop。 */
+/** 拆解 UCI 著法字串：一般手回座標 from/to；將棋打入（如 'P@5e'）無起點，回 to+isDrop。
+ *  ⚠️ 象棋 rank 10 使 square 變 3 字元（如 'b3b10'、'b10c8'），不能固定 slice(0,2)/slice(2,4)
+ *  ——鏡射 xiangqi-game.js splitMove 的 regex；西洋棋升變尾碼（e7e8q）一併容忍。
+ *  將棋 USI（數字+字母，如 7g7f）不符 regex，落回原 slice，行為不受影響。 */
 function splitHintMove(uci) {
   const drop = /^([A-Za-z])[@*](\S+)$/.exec(uci);
   if (drop) return { from: null, to: normalizeDropSquare(drop[2]), isDrop: true };
+  const m = /^([a-z]\d{1,2})([a-z]\d{1,2})[a-z+]?$/.exec(uci);
+  if (m) return { from: m[1], to: m[2], isDrop: false };
   return { from: uci.slice(0, 2), to: uci.slice(2, 4), isDrop: false };
 }
 

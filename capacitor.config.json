@@ -1,6 +1,6 @@
 {
   "appId": "com.yilegames.app",
-  "appName": "yile-games",
+  "appName": "弈樂",
   "webDir": "dist",
   "server": {
     "url": "http://localhost:3333",

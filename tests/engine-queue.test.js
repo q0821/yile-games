@@ -148,6 +148,33 @@ describe('hint() 著法解析', () => {
     expect(result).toEqual({ move: 'h2e2', from: 'h2', to: 'e2', isDrop: false });
   });
 
+  test('象棋 rank 10 三字元 square：b3b10 與 b10c8 不可用固定 slice 拆解', async () => {
+    const ctx = sandboxWithXiangqiEngine();
+    const mock = createMockStockfish();
+    ctx.Stockfish = mock.factory;
+
+    const { promise: p1 } = ctx.hint({ fen: 'FEN_R10A', variant: 'xiangqi', movetime: 100 });
+    await tick();
+    mock.emit('bestmove b3b10'); // 炮打馬：目的格在 rank 10（3 字元 square）
+    expect(await p1).toEqual({ move: 'b3b10', from: 'b3', to: 'b10', isDrop: false });
+
+    const { promise: p2 } = ctx.hint({ fen: 'FEN_R10B', variant: 'xiangqi', movetime: 100 });
+    await tick();
+    mock.emit('bestmove b10c8'); // 起點在 rank 10（整串 5 字元）
+    expect(await p2).toEqual({ move: 'b10c8', from: 'b10', to: 'c8', isDrop: false });
+  });
+
+  test('西洋棋升變（e7e8q）：尾碼不影響 from/to 拆解', async () => {
+    const ctx = sandboxWithXiangqiEngine();
+    const mock = createMockStockfish();
+    ctx.Stockfish = mock.factory;
+
+    const { promise } = ctx.hint({ fen: 'FEN_PROMO', variant: 'chess', movetime: 100 });
+    await tick();
+    mock.emit('bestmove e7e8q');
+    expect(await promise).toEqual({ move: 'e7e8q', from: 'e7', to: 'e8', isDrop: false });
+  });
+
   test('將棋打入（如 P@5e）：isDrop=true、from=null、move 帶原始字串，to 正規化為專案座標慣例（字母+數字）', async () => {
     const ctx = sandboxWithXiangqiEngine();
     const mock = createMockStockfish();
