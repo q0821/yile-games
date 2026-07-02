@@ -1189,6 +1189,20 @@ renderAudioControls(document.getElementById('goAudioSettings'));
 // 各棋畫面雖隱藏但按鈕 DOM 已存在，不必等進入該畫面才掛 listener。
 initAudioMuteButtons();
 
+// App 版（iOS/Android 內嵌 server，port 3333）不顯示 GitHub 連結（使用者要求）：
+// 自家「原始碼」行整行移除、作者改純文字；第三方授權標註保留文字但去連結化（GPL/MIT 署名合規）。
+if (location.port === '3333') {
+  const src = document.getElementById('aboutSourceLine');
+  if (src) src.remove();
+  const author = document.getElementById('aboutAuthorLine');
+  if (author) author.textContent = '作者：Jackie Yeh';
+  document.querySelectorAll('#aboutModal a[href*="github.com"]').forEach((a) => {
+    const span = document.createElement('span');
+    span.textContent = a.textContent;
+    a.replaceWith(span);
+  });
+}
+
 const _isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 if ('serviceWorker' in navigator && _isLocalDev) {
   // 開發環境不註冊 SW，並清掉既有註冊與快取，避免一直吃到舊資源
