@@ -12,7 +12,7 @@ import { GoSound } from './sound.js';
 // ——— 設定 ———
 const SETTINGS_KEY = 'audio-settings-v1';
 const SETTINGS_EVENT = 'audio-settings-changed';
-const DEFAULT_SETTINGS = { sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.3 };
+const DEFAULT_SETTINGS = { sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.2 };
 
 // ——— 各棋種音效包（進入畫面時 lazy load，見 GAME_SFX_FILES）———
 const GAME_SFX_FILES = {
@@ -36,7 +36,8 @@ const GO_SOUND_FALLBACK = {
   'game-draw': 'gameend'
 };
 
-const MUSIC_TRACK_COUNT = 2; // bgm-1.mp3、bgm-2.mp3
+const MUSIC_TRACK_COUNT = 1; // bgm-1.mp3（單曲循環，曲尾 crossfade 回同曲開頭）
+const MUSIC_ERROR_LIMIT = Math.max(2, MUSIC_TRACK_COUNT); // 連續失敗停止門檻：單曲時仍保留一次重試（暫時性網路錯誤不該直接靜音）
 const CROSSFADE_MS = 2500;
 const CROSSFADE_STEP_MS = 100;
 
@@ -498,7 +499,7 @@ function handleTrackError(idx) {
   musicEls[idx] = null;
   if (!musicPlaying) return;
   musicConsecutiveErrors += 1;
-  if (musicConsecutiveErrors >= MUSIC_TRACK_COUNT) {
+  if (musicConsecutiveErrors >= MUSIC_ERROR_LIMIT) {
     stopMusic(); // 兩首皆壞：停止並靜默，不再嘗試
     return;
   }

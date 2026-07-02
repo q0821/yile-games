@@ -111,21 +111,21 @@ beforeEach(() => {
 describe('AudioSettings.get 預設值', () => {
   test('沒有 localStorage 資料時回傳預設值', () => {
     expect(ctx.AudioSettings.get()).toEqual({
-      sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.3
+      sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.2
     });
   });
 
   test('localStorage 損壞（非 JSON）時回預設值', () => {
     ctx.localStorage.setItem('audio-settings-v1', '{not valid json');
     expect(ctx.AudioSettings.get()).toEqual({
-      sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.3
+      sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.2
     });
   });
 
   test('localStorage 是合法 JSON 但型別不對時回預設值', () => {
     ctx.localStorage.setItem('audio-settings-v1', '"just a string"');
     expect(ctx.AudioSettings.get()).toEqual({
-      sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.3
+      sfxOn: true, sfxVolume: 0.8, musicOn: false, musicVolume: 0.2
     });
   });
 
@@ -145,10 +145,10 @@ describe('AudioSettings.get 預設值', () => {
     ['null', null]
   ])('sfxVolume 不合法（%s: %p）時該欄位回預設值 0.8，其他欄位維持', (_label, bad) => {
     ctx.localStorage.setItem('audio-settings-v1', JSON.stringify({
-      sfxOn: false, sfxVolume: bad, musicOn: true, musicVolume: 0.3
+      sfxOn: false, sfxVolume: bad, musicOn: true, musicVolume: 0.2
     }));
     expect(ctx.AudioSettings.get()).toEqual({
-      sfxOn: false, sfxVolume: 0.8, musicOn: true, musicVolume: 0.3
+      sfxOn: false, sfxVolume: 0.8, musicOn: true, musicVolume: 0.2
     });
   });
 
@@ -157,12 +157,12 @@ describe('AudioSettings.get 預設值', () => {
     ['超出上限', 2.5],
     ['超出下限', -1],
     ['null', null]
-  ])('musicVolume 不合法（%s: %p）時該欄位回預設值 0.3，其他欄位維持', (_label, bad) => {
+  ])('musicVolume 不合法（%s: %p）時該欄位回預設值 0.2，其他欄位維持', (_label, bad) => {
     ctx.localStorage.setItem('audio-settings-v1', JSON.stringify({
       sfxOn: false, sfxVolume: 0.3, musicOn: true, musicVolume: bad
     }));
     expect(ctx.AudioSettings.get()).toEqual({
-      sfxOn: false, sfxVolume: 0.3, musicOn: true, musicVolume: 0.3
+      sfxOn: false, sfxVolume: 0.3, musicOn: true, musicVolume: 0.2
     });
   });
 
@@ -180,7 +180,7 @@ describe('AudioSettings.set 合併與持久化', () => {
   test('淺合併：只改 sfxVolume 不動其他欄位', () => {
     ctx.AudioSettings.set({ sfxVolume: 0.3 });
     expect(ctx.AudioSettings.get()).toEqual({
-      sfxOn: true, sfxVolume: 0.3, musicOn: false, musicVolume: 0.3
+      sfxOn: true, sfxVolume: 0.3, musicOn: false, musicVolume: 0.2
     });
   });
 
@@ -200,7 +200,7 @@ describe('AudioSettings.set 廣播事件', () => {
     ctx.AudioSettings.set({ sfxOn: false });
     expect(spy).toHaveBeenCalledTimes(1);
     expect(spy.mock.calls[0][0].detail).toEqual({
-      sfxOn: false, sfxVolume: 0.8, musicOn: false, musicVolume: 0.3
+      sfxOn: false, sfxVolume: 0.8, musicOn: false, musicVolume: 0.2
     });
   });
 });
@@ -361,8 +361,8 @@ describe('音量套用到後端物件', () => {
     delete c.createMediaElementSource; // 模擬不支援 MediaElementSource：走舊的 el.volume 邏輯
     ctx.AudioSettings.set({ musicOn: true }); // 觸發 startMusic 建立 <audio>
     const el = mock.audios[mock.audios.length - 1];
-    ctx.AudioSettings.set({ musicVolume: 0.3 });
-    expect(el.volume).toBe(0.3);
+    ctx.AudioSettings.set({ musicVolume: 0.55 });
+    expect(el.volume).toBe(0.55);
   });
 });
 
@@ -609,7 +609,7 @@ describe('BGM 錯誤處理（<audio> error 事件）', () => {
     return call && call[1];
   }
 
-  test('播放中的曲目觸發 error 時跳下一首，不重試同一首', () => {
+  test('播放中的曲目觸發 error 時換一個新元素重試（單曲庫：同曲重載一次）', () => {
     ctx.AudioSettings.set({ musicOn: true });
     ctx.startMusic();
     const firstEl = mock.audios[mock.audios.length - 1];
@@ -621,11 +621,11 @@ describe('BGM 錯誤處理（<audio> error 事件）', () => {
     expect(mock.backend.createAudio).toHaveBeenCalledTimes(1);
     const nextEl = mock.audios[mock.audios.length - 1];
     expect(nextEl).not.toBe(firstEl);
-    expect(nextEl.src).not.toBe(firstEl.src);
+    expect(nextEl.src).toBe(firstEl.src); // 單曲庫：重試載入同一首（暫時性網路錯誤的補救）
     expect(nextEl.play).toHaveBeenCalled();
   });
 
-  test('連續兩首都錯誤時停止播放並靜默，不再嘗試第三次', () => {
+  test('連續兩次錯誤（達 MUSIC_ERROR_LIMIT）時停止播放並靜默，不再嘗試第三次', () => {
     ctx.AudioSettings.set({ musicOn: true });
     ctx.startMusic();
 
