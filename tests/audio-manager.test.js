@@ -19,6 +19,7 @@ function createMockBackend() {
   }
 
   function makeAudioContext() {
+    const listeners = {};
     const c = {
       state: 'running',
       currentTime: 0,
@@ -28,20 +29,38 @@ function createMockBackend() {
       createBufferSource: jest.fn(() => makeBufferSource()),
       decodeAudioData: jest.fn((arrayBuffer, resolve) => {
         resolve({ __decoded: true });
-      })
+      }),
+      addEventListener: jest.fn((type, fn) => {
+        (listeners[type] = listeners[type] || []).push(fn);
+      }),
+      removeEventListener: jest.fn((type, fn) => {
+        if (!listeners[type]) return;
+        listeners[type] = listeners[type].filter((f) => f !== fn);
+      }),
+      // 測試用：模擬瀏覽器真的把 state 轉成 interrupted／suspended／running 並 fire statechange。
+      _setState(newState) {
+        c.state = newState;
+        (listeners.statechange || []).slice().forEach((fn) => fn());
+      }
     };
     audioContexts.push(c);
     return c;
   }
 
   function makeAudio() {
+    const listeners = {};
     const el = {
       src: '',
       volume: 1,
       play: jest.fn(() => Promise.resolve()),
       pause: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
+      addEventListener: jest.fn((type, fn) => {
+        (listeners[type] = listeners[type] || []).push(fn);
+      }),
+      removeEventListener: jest.fn((type, fn) => {
+        if (!listeners[type]) return;
+        listeners[type] = listeners[type].filter((f) => f !== fn);
+      }),
       duration: NaN,
       currentTime: 0
     };
@@ -405,5 +424,137 @@ describe('initAudio 解鎖流程', () => {
     const c1 = mock.audioContexts.length;
     unlock(ctx, 'keydown'); // 第二個解鎖手勢不該再觸發一次 ensureCtx 副作用
     expect(mock.audioContexts.length).toBe(c1);
+  });
+});
+
+describe('AudioContext 中斷恢復（來電／Siri 搶走音訊焦點）', () => {
+  test('已解鎖後 ctx state 轉為非 running，不會立刻呼叫 resume()——要等下一次使用者手勢', () => {
+    unlock(ctx);
+    const c = mock.audioContexts[0];
+    c.resume.mockClear();
+    c._setState('interrupted');
+    c._setState('suspended');
+    expect(c.resume).not.toHaveBeenCalled();
+  });
+
+  test('中斷後下一次手勢（touchstart）觸發 resume()', () => {
+    unlock(ctx);
+    const c = mock.audioContexts[0];
+    c._setState('suspended');
+    c.resume.mockClear();
+    unlock(ctx, 'touchstart');
+    expect(c.resume).toHaveBeenCalledTimes(1);
+  });
+
+  test('中斷後下一次手勢（keydown）也能觸發 resume()（三種手勢皆有效）', () => {
+    unlock(ctx);
+    const c = mock.audioContexts[0];
+    c._setState('interrupted');
+    c.resume.mockClear();
+    unlock(ctx, 'keydown');
+    expect(c.resume).toHaveBeenCalledTimes(1);
+  });
+
+  test('中斷前 BGM 在播，resume 手勢後 BGM 也一併恢復播放', async () => {
+    unlock(ctx);
+    ctx.AudioSettings.set({ musicOn: true }); // 已解鎖，觸發 startMusic 建立 <audio>
+    const musicEl = mock.audios[mock.audios.length - 1];
+    musicEl.play.mockClear();
+    const c = mock.audioContexts[0];
+    c._setState('interrupted');
+    unlock(ctx, 'keydown');
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(musicEl.play).toHaveBeenCalled();
+  });
+
+  test('中斷前 BGM 沒在播，resume 手勢後不會意外開始播放 BGM', async () => {
+    unlock(ctx); // musicOn 預設 false，未播放
+    const c = mock.audioContexts[0];
+    mock.backend.createAudio.mockClear();
+    c._setState('interrupted');
+    unlock(ctx, 'touchstart');
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mock.backend.createAudio).not.toHaveBeenCalled();
+  });
+
+  test('尚未解鎖時 ctx state 變化不觸發中斷恢復流程（避免跟首次解鎖前的正常 suspended 狀態混淆）', () => {
+    return ctx.loadSfxPack('go').then(() => {
+      const c = mock.audioContexts[0];
+      c._setState('suspended'); // 尚未解鎖，理應被忽略
+      unlock(ctx); // 正常解鎖手勢：只有 handleUnlockGesture 自己的一次 resume() 呼叫
+      expect(c.resume).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('BGM 錯誤處理（<audio> error 事件）', () => {
+  function firstListener(el, type) {
+    const call = el.addEventListener.mock.calls.find(([t]) => t === type);
+    return call && call[1];
+  }
+
+  test('播放中的曲目觸發 error 時跳下一首，不重試同一首', () => {
+    ctx.AudioSettings.set({ musicOn: true });
+    ctx.startMusic();
+    const firstEl = mock.audios[mock.audios.length - 1];
+    mock.backend.createAudio.mockClear();
+
+    const onError = firstListener(firstEl, 'error');
+    onError();
+
+    expect(mock.backend.createAudio).toHaveBeenCalledTimes(1);
+    const nextEl = mock.audios[mock.audios.length - 1];
+    expect(nextEl).not.toBe(firstEl);
+    expect(nextEl.src).not.toBe(firstEl.src);
+    expect(nextEl.play).toHaveBeenCalled();
+  });
+
+  test('連續兩首都錯誤時停止播放並靜默，不再嘗試第三次', () => {
+    ctx.AudioSettings.set({ musicOn: true });
+    ctx.startMusic();
+
+    let el = mock.audios[mock.audios.length - 1];
+    firstListener(el, 'error')();
+
+    el = mock.audios[mock.audios.length - 1];
+    mock.backend.createAudio.mockClear();
+    firstListener(el, 'error')();
+
+    expect(mock.backend.createAudio).not.toHaveBeenCalled(); // 沒有嘗試第三首
+    expect(el.pause).toHaveBeenCalled();
+
+    // 確認真的整個停止了（musicPlaying 重置），之後才能重新 start
+    mock.backend.createAudio.mockClear();
+    ctx.startMusic();
+    expect(mock.backend.createAudio).toHaveBeenCalledTimes(1);
+  });
+
+  test('成功播放過（playing 事件）會歸零錯誤計數，之後單次錯誤不會被誤判成兩首都壞', () => {
+    ctx.AudioSettings.set({ musicOn: true });
+    ctx.startMusic();
+
+    let el = mock.audios[mock.audios.length - 1];
+    firstListener(el, 'error')(); // 第一次錯誤
+
+    el = mock.audios[mock.audios.length - 1];
+    firstListener(el, 'playing')(); // 這首成功播放，錯誤計數歸零
+
+    mock.backend.createAudio.mockClear();
+    firstListener(el, 'error')(); // 再錯一次，計數應為 1，還沒到門檻
+    expect(mock.backend.createAudio).toHaveBeenCalledTimes(1); // 仍跳下一首而非直接停止
+  });
+
+  test('musicPlaying 為 false（已 stopMusic）時觸發殘留的 error 監聽不會有任何動作', () => {
+    ctx.AudioSettings.set({ musicOn: true });
+    ctx.startMusic();
+    const el = mock.audios[mock.audios.length - 1];
+    ctx.stopMusic();
+    mock.backend.createAudio.mockClear();
+    expect(() => firstListener(el, 'error')()).not.toThrow();
+    expect(mock.backend.createAudio).not.toHaveBeenCalled();
   });
 });

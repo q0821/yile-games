@@ -77,6 +77,10 @@ let musicQueuePos = 0;
 let musicPlaying = false;
 let musicWasPlayingBeforeHide = false;
 let fadeTimer = null;
+let musicConsecutiveErrors = 0; // 連續載入/播放失敗次數；達 MUSIC_TRACK_COUNT（兩首皆壞）就停止，避免無限重試
+
+let musicPlayingBeforeInterruption = false; // 來電／Siri 等搶走音訊焦點時，記錄中斷前 BGM 是否在播
+let interruptionResumePending = false;      // 是否已排入「等下一次手勢再 resume()」，避免重複掛監聽
 
 // ============================================================
 // AudioSettings：讀寫 localStorage、即時套用到後端、廣播變更
@@ -153,8 +157,49 @@ function ensureCtx() {
     masterGain = ctx.createGain();
     masterGain.gain.value = getSettings().sfxVolume;
     masterGain.connect(ctx.destination);
+    if (typeof ctx.addEventListener === 'function') {
+      ctx.addEventListener('statechange', handleCtxStateChange);
+    }
   }
   return ctx;
+}
+
+/** iOS 來電／Siri 等搶走音訊焦點時，AudioContext 會被系統轉成 interrupted／suspended，
+ *  且不會自動恢復。已解鎖過的情況下才處理（避免跟首次解鎖前的正常 suspended 狀態混淆）；
+ *  record 中斷發生當下 BGM 是否在播，實際 resume() 留給下一次使用者手勢（瀏覽器政策要求）。 */
+function handleCtxStateChange() {
+  if (!ctx || !unlocked) return;
+  if (ctx.state === 'running') return;
+  if (interruptionResumePending) return; // 已排入等待手勢，避免重複記錄／重複掛監聽
+  musicPlayingBeforeInterruption = musicPlaying;
+  scheduleResumeOnNextGesture();
+}
+
+function scheduleResumeOnNextGesture() {
+  interruptionResumePending = true;
+  const onGesture = () => {
+    interruptionResumePending = false;
+    document.removeEventListener('pointerdown', onGesture);
+    document.removeEventListener('touchstart', onGesture);
+    document.removeEventListener('keydown', onGesture);
+    resumeAfterInterruption();
+  };
+  document.addEventListener('pointerdown', onGesture, { once: true });
+  document.addEventListener('touchstart', onGesture, { once: true });
+  document.addEventListener('keydown', onGesture, { once: true });
+}
+
+function resumeAfterInterruption() {
+  if (!ctx) return;
+  const shouldResumeMusic = getSettings().musicOn && musicPlayingBeforeInterruption;
+  musicPlayingBeforeInterruption = false;
+  if (ctx.state !== 'running' && typeof ctx.resume === 'function') {
+    Promise.resolve(ctx.resume())
+      .then(() => { if (shouldResumeMusic) resumeMusicPlayback(); })
+      .catch(() => { /* fail-soft：這次手勢沒能恢復，下次 statechange 仍會再排一輪 */ });
+  } else if (shouldResumeMusic) {
+    resumeMusicPlayback();
+  }
 }
 
 function handleUnlockGesture() {
@@ -323,30 +368,64 @@ function safePlay(el) {
   } catch (_) { /* ignore */ }
 }
 
-/** 掛上換曲監聽：優先用 timeupdate 抓「剩餘時間 <= crossfade 長度」提前換曲；ended 當保底（duration 拿不到時）。 */
+/** 掛上換曲監聽：優先用 timeupdate 抓「剩餘時間 <= crossfade 長度」提前換曲；ended 當保底（duration 拿不到時）；
+ *  error 為載入／播放失敗時的補救（跳下一首，見 handleTrackError）。三者互斥，只會走其中一條路徑。 */
 function attachTrackWatchers(el, idx) {
   if (typeof el.addEventListener !== 'function') return;
-  let crossfaded = false;
+  let handled = false;
+  const cleanup = () => {
+    if (typeof el.removeEventListener !== 'function') return;
+    el.removeEventListener('timeupdate', onTimeUpdate);
+    el.removeEventListener('ended', onEnded);
+    el.removeEventListener('error', onError);
+  };
   const onTimeUpdate = () => {
-    if (!musicPlaying || crossfaded) return;
+    if (!musicPlaying || handled) return;
     const duration = el.duration;
     const currentTime = el.currentTime;
     if (typeof duration === 'number' && Number.isFinite(duration) && duration > 0 && typeof currentTime === 'number') {
       const remainingMs = (duration - currentTime) * 1000;
       if (remainingMs <= CROSSFADE_MS) {
-        crossfaded = true;
-        if (typeof el.removeEventListener === 'function') el.removeEventListener('timeupdate', onTimeUpdate);
+        handled = true;
+        cleanup();
         crossfadeToNext(idx);
       }
     }
   };
   const onEnded = () => {
-    if (!musicPlaying || crossfaded) return;
-    crossfaded = true; // 沒能提前 crossfade（例如 duration 抓不到），保底直接接下一首
+    if (!musicPlaying || handled) return;
+    handled = true; // 沒能提前 crossfade（例如 duration 拿不到），保底直接接下一首
+    cleanup();
     playNextTrack();
   };
+  const onError = () => {
+    if (!musicPlaying || handled) return;
+    handled = true;
+    cleanup();
+    handleTrackError(idx);
+  };
+  const onPlaying = () => { musicConsecutiveErrors = 0; }; // 真的播起來了：清空連續失敗計數
   el.addEventListener('timeupdate', onTimeUpdate);
   el.addEventListener('ended', onEnded);
+  el.addEventListener('error', onError);
+  el.addEventListener('playing', onPlaying);
+}
+
+/** BGM 載入／播放失敗（<audio> error 事件）時的補救：跳下一首，不重試同一首壞檔；
+ *  連續失敗達 MUSIC_TRACK_COUNT（兩首皆壞）就整個停止並靜默，避免無限循環嘗試。 */
+function handleTrackError(idx) {
+  const el = musicEls[idx];
+  if (el) { try { el.pause(); } catch (_) { /* ignore */ } }
+  musicEls[idx] = null;
+  if (!musicPlaying) return;
+  musicConsecutiveErrors += 1;
+  if (musicConsecutiveErrors >= MUSIC_TRACK_COUNT) {
+    stopMusic(); // 兩首皆壞：停止並靜默，不再嘗試
+    return;
+  }
+  clearFadeTimer(); // 若正值 crossfade 淡出中途出錯，取消計時器避免之後操作到已清空的 el
+  musicActiveIndex = idx;
+  playNextTrack();
 }
 
 function playNextTrack() {
@@ -399,6 +478,7 @@ export function startMusic() {
   if (!getSettings().musicOn) return;
   if (musicPlaying) return;
   musicPlaying = true;
+  musicConsecutiveErrors = 0;
   musicQueue = shuffledTrackOrder();
   musicQueuePos = 0;
   musicActiveIndex = 0;
@@ -408,6 +488,7 @@ export function startMusic() {
 export function stopMusic() {
   musicPlaying = false;
   musicWasPlayingBeforeHide = false;
+  musicConsecutiveErrors = 0;
   clearFadeTimer();
   musicEls.forEach((el, i) => {
     if (el) { try { el.pause(); } catch (_) { /* ignore */ } }
@@ -432,4 +513,6 @@ export function _setBackendForTest(overrides) {
   voicePlaying = new Set();
   unlocked = false;
   initDone = false;
+  musicPlayingBeforeInterruption = false;
+  interruptionResumePending = false;
 }

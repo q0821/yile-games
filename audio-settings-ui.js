@@ -26,7 +26,9 @@ function toPercent(v) {
   return Math.round((typeof v === 'number' && Number.isFinite(v) ? v : 0) * 100);
 }
 
-function buildToggleRow(labelText) {
+/** 可見文字 `<span>` 是 `<label class="toggle">` 的 sibling（不在其內），checkbox 本身沒有可自動
+ *  關聯到的可見文字，故補 aria-label 給獨立的 accessible name（而非依賴 label 關聯）。 */
+function buildToggleRow(labelText, ariaLabel) {
   const row = document.createElement('div');
   row.className = 'toggle-row';
   const label = document.createElement('span');
@@ -35,6 +37,7 @@ function buildToggleRow(labelText) {
   toggle.className = 'toggle';
   const input = document.createElement('input');
   input.type = 'checkbox';
+  input.setAttribute('aria-label', ariaLabel);
   const slider = document.createElement('span');
   slider.className = 'slider';
   toggle.appendChild(input);
@@ -78,9 +81,9 @@ export function renderAudioControls(container) {
   container.innerHTML = '';
   container.classList.add('audio-settings');
 
-  const sfxToggle = buildToggleRow('音效');
+  const sfxToggle = buildToggleRow('音效', '音效開關');
   const sfxVolume = buildVolumeRow('音效音量', '音效音量');
-  const musicToggle = buildToggleRow('背景音樂');
+  const musicToggle = buildToggleRow('背景音樂', '音樂開關');
   const musicVolume = buildVolumeRow('音樂音量', '音樂音量');
 
   container.appendChild(sfxToggle.row);
