@@ -22,7 +22,7 @@ import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
 import { initAudio, loadSfxPack, playSfx } from './audio-manager.js';
-import { renderAudioControls } from './audio-settings-ui.js';
+import { renderAudioControls, initAudioMuteButtons } from './audio-settings-ui.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -1185,6 +1185,9 @@ updateAiLevelDisplay();
 initAudio();
 renderAudioControls(document.getElementById('homeAudioSettings'));
 renderAudioControls(document.getElementById('goAudioSettings'));
+// 快捷靜音鈕（首頁 header／六棋 mode-header）：一次掃描整份 document 就好，
+// 各棋畫面雖隱藏但按鈕 DOM 已存在，不必等進入該畫面才掛 listener。
+initAudioMuteButtons();
 
 const _isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
 if ('serviceWorker' in navigator && _isLocalDev) {

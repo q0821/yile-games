@@ -42,6 +42,15 @@
 <div class="home-screen" id="homeScreen" style="display:none">
   <div class="home-header-row">
     <button class="mode-settings" onclick="openAudioSettings()" aria-label="全域設定">設定</button>
+    <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+        <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+        <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
   </div>
   <p class="home-tagline">選擇練習模式</p>
   <div class="home-menu" id="homeMenu"></div>
@@ -64,6 +73,15 @@
   <button class="mode-back" onclick="goHome()">回首頁</button>
   <h2 class="mode-title">圍棋對弈</h2>
   <button class="mode-settings" onclick="openGoSettings()" aria-label="遊戲設定">設定</button>
+  <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+      <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+      <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+      <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+    </svg>
+  </button>
 </div>
 
 <!-- 圍棋對弈：單欄置中（對齊其他棋類版面）。設定收進 #goSettingsModal，對弈功能列永遠可見。 -->
@@ -289,6 +307,15 @@
     <button class="mode-back" id="gomokuHome">回首頁</button>
     <h2 class="mode-title">五子棋對弈</h2>
     <button class="mode-settings" id="gomokuSettingsBtn" aria-label="遊戲設定">設定</button>
+    <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+        <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+        <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
   </div>
   <div class="game-infobar" id="gomokuInfobar">
     <div class="turn-badge black" id="gomokuTurnBadge">黑方</div>
@@ -351,6 +378,15 @@
     <button class="mode-back" id="xiangqiHome">回首頁</button>
     <h2 class="mode-title">象棋對弈</h2>
     <button class="mode-settings" id="xiangqiSettingsBtn" aria-label="遊戲設定">設定</button>
+    <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+        <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+        <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
   </div>
   <div class="game-infobar" id="xiangqiInfobar">
     <div class="turn-badge red" id="xiangqiTurnBadge">紅方</div>
@@ -450,6 +486,15 @@
     <button class="mode-back" id="othelloHome">回首頁</button>
     <h2 class="mode-title">黑白棋</h2>
     <button class="mode-settings" id="othelloSettingsBtn" aria-label="遊戲設定">設定</button>
+    <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+        <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+        <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
   </div>
   <div class="game-infobar" id="othelloInfobar">
     <div class="turn-badge black" id="othelloTurnBadge">黑方</div>
@@ -552,6 +597,15 @@
     <button class="mode-back" id="shogiHome">回首頁</button>
     <h2 class="mode-title">日本將棋</h2>
     <button class="mode-settings" id="shogiSettingsBtn" aria-label="遊戲設定">設定</button>
+    <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+        <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+        <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
   </div>
   <div class="game-infobar" id="shogiInfobar">
     <div class="turn-badge black" id="shogiTurnBadge">先手</div>
@@ -691,6 +745,15 @@
     <button class="mode-back" id="chessHome">回首頁</button>
     <h2 class="mode-title">西洋棋</h2>
     <button class="mode-settings" id="chessSettingsBtn" aria-label="遊戲設定">設定</button>
+    <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+        <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+        <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
   </div>
   <div class="game-infobar" id="chessInfobar">
     <div class="turn-badge white" id="chessTurnBadge">白方</div>

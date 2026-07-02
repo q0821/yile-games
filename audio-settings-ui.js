@@ -119,3 +119,83 @@ export function renderAudioControls(container) {
   instances.set(container, refresh);
   refresh();
 }
+
+// ============================================================
+// 快捷靜音鈕：首頁 header／六棋 mode-header 各一顆常駐按鈕（見 index.html
+// `.audio-mute-btn`），點擊在「目前開關組合」與「全靜音」間切換：
+//   全關 → 恢復記住的組合（沒記住過或記住的也是全關，就回退成 {sfxOn:true, musicOn:false}）
+//   任一開 → 記住目前組合後兩者都關
+// 多顆按鈕（首頁＋各棋種）共用同一份 AudioSettings，靠 audio-settings-changed 廣播互相同步。
+// ============================================================
+const MUTE_RESTORE_KEY = 'audio-mute-restore-v1';
+
+const muteButtons = new Set();
+let muteListenerAttached = false;
+
+function isGloballyMuted(s) {
+  return !s.sfxOn && !s.musicOn;
+}
+
+function readMuteRestore() {
+  try {
+    const raw = localStorage.getItem(MUTE_RESTORE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return { sfxOn: !!parsed.sfxOn, musicOn: !!parsed.musicOn };
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeMuteRestore(combo) {
+  try { localStorage.setItem(MUTE_RESTORE_KEY, JSON.stringify(combo)); } catch (_) { /* storage 滿或不可用時忽略 */ }
+}
+
+function syncMuteButton(btn, s) {
+  const muted = isGloballyMuted(s);
+  btn.classList.toggle('is-muted', muted);
+  btn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+}
+
+function syncAllMuteButtons() {
+  const s = AudioSettings.get();
+  muteButtons.forEach((btn) => {
+    if (!btn.isConnected) { muteButtons.delete(btn); return; }
+    syncMuteButton(btn, s);
+  });
+}
+
+function ensureMuteListener() {
+  if (muteListenerAttached) return;
+  muteListenerAttached = true;
+  document.addEventListener('audio-settings-changed', syncAllMuteButtons);
+}
+
+function handleMuteClick() {
+  const s = AudioSettings.get();
+  if (isGloballyMuted(s)) {
+    const restore = readMuteRestore();
+    const combo = (restore && !isGloballyMuted(restore)) ? restore : { sfxOn: true, musicOn: false };
+    AudioSettings.set({ sfxOn: combo.sfxOn, musicOn: combo.musicOn });
+  } else {
+    writeMuteRestore({ sfxOn: s.sfxOn, musicOn: s.musicOn });
+    AudioSettings.set({ sfxOn: false, musicOn: false });
+  }
+}
+
+/**
+ * 掃描（預設整份 document）內所有 `.audio-mute-btn`，掛上點擊切換與跨實例同步。
+ * 可重入呼叫安全：已掛過的按鈕會被略過，不會重複綁定 listener。
+ */
+export function initAudioMuteButtons(root) {
+  ensureMuteListener();
+  const scope = root || document;
+  const buttons = scope.querySelectorAll('.audio-mute-btn');
+  buttons.forEach((btn) => {
+    if (muteButtons.has(btn)) return;
+    muteButtons.add(btn);
+    btn.addEventListener('click', handleMuteClick);
+  });
+  syncAllMuteButtons();
+}

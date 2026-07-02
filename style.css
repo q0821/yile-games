@@ -794,6 +794,8 @@ a.version-link { display: inline-block; }
 .home-header-row {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
   width: 100%;
 }
 .home-tagline {
@@ -1460,6 +1462,30 @@ h1.brush-title {
   padding: 6px 16px;
   border-radius: var(--radius-sm);
 }
+
+/* 音效/音樂快捷靜音鈕：常駐於首頁與六棋 mode-header，緊鄰「設定」鈕右側。
+   點擊在「目前開關組合」與「全靜音」間切換；靜音中改喇叭斜線圖示＋印泥紅提示。 */
+.mode-mute-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: auto;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-dim);
+}
+.mode-mute-btn svg { width: 18px; height: 18px; display: block; }
+.mode-mute-btn .audio-mute-slash { display: none; }
+.mode-mute-btn.is-muted {
+  color: var(--seal);
+  border-color: rgba(178,58,46,0.45);
+  background: rgba(178,58,46,0.10);
+}
+.mode-mute-btn.is-muted .audio-mute-wave { display: none; }
+.mode-mute-btn.is-muted .audio-mute-slash { display: inline; }
 
 /* 資訊列（六棋共用）：回合徽章 + 逐棋欄位（提子/手數/被吃摘要/子數…，見 PRD §7 表）。
    六棋一體套用同一個外框與徽章樣式，欄位內容各自的 mode.js 依表組裝、不套單一模板。 */
