@@ -1370,6 +1370,42 @@ function initHomeArrows() {
   menu.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update);
   update();
+
+  // 滑鼠拖曳捲動：觸控裝置本就原生滑動，故僅處理 mouse pointer。
+  // 「移動超過閾值才 setPointerCapture」→ 單純點擊不被捕獲、可正常進入棋種；
+  // 真的拖曳過才捕獲並在其後抑制卡片 click（避免拖完誤觸）。
+  let dragActive = false, dragCaptured = false, dragMoved = false;
+  let dragStartX = 0, dragStartScroll = 0, dragPointer = null;
+  menu.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    dragActive = true; dragCaptured = false; dragMoved = false;
+    dragStartX = e.clientX; dragStartScroll = menu.scrollLeft; dragPointer = e.pointerId;
+  });
+  menu.addEventListener('pointermove', (e) => {
+    if (!dragActive || e.pointerId !== dragPointer) return;
+    const dx = e.clientX - dragStartX;
+    if (!dragCaptured) {
+      if (Math.abs(dx) <= 4) return;      // 閾值內視為點擊、不啟動拖曳
+      dragCaptured = true; dragMoved = true;
+      menu.setPointerCapture(dragPointer);
+      menu.classList.add('dragging');
+    }
+    menu.scrollLeft = dragStartScroll - dx;
+  });
+  const endDrag = () => {
+    if (!dragActive) return;
+    dragActive = false;
+    if (dragCaptured) {
+      try { menu.releasePointerCapture(dragPointer); } catch (_) { /* 已釋放 */ }
+      menu.classList.remove('dragging');
+    }
+  };
+  menu.addEventListener('pointerup', endDrag);
+  menu.addEventListener('pointercancel', endDrag);
+  // 拖曳過才抑制隨後的卡片 click（capture 階段攔截，避免導航進棋種）
+  menu.addEventListener('click', (e) => {
+    if (dragMoved) { e.preventDefault(); e.stopPropagation(); dragMoved = false; }
+  }, true);
 }
 
 function showScreen(name) {

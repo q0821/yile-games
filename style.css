@@ -829,6 +829,10 @@ a.version-link { display: inline-block; }
   justify-content: flex-start;
 }
 .home-menu::-webkit-scrollbar { display: none; }  /* WebKit 隱藏捲軸 */
+/* 滑鼠拖曳捲動：間隙處顯示可拖曳游標；拖曳中關閉 snap 讓跟手、並禁選取 */
+.home-menu { cursor: grab; }
+.home-menu.dragging { cursor: grabbing; scroll-snap-type: none; user-select: none; }
+.home-menu.dragging .home-card { cursor: grabbing; }
 /* 卡片數少（iOS 3 張）在桌機塞得下時置中不留左偏 */
 @media (min-width: 900px) {
   .home-menu { justify-content: safe center; }
