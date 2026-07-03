@@ -33,6 +33,11 @@ const TARGETS = [
   'tsumego',
   'licenses/gpl-3.0.txt',
   'licenses/tsumego-LICENSE.txt',
+  'img/cards/tsumego.webp',
+  'img/cards/xiangqi.webp',
+  'img/cards/xqpuzzle.webp',
+  'img/cards/shogi.webp',
+  'img/cards/chess.webp',
 ];
 
 let removed = 0;
