@@ -2,3 +2,4 @@
 .amp/
 node_modules/
 dist/
+.playwright-mcp/
