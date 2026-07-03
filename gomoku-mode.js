@@ -178,6 +178,7 @@ function onCellClick(r, c) {
 function maybeAiMove() {
   if (mode !== 'pvc' || gameOver) return;
   if (currentPlayer === playerColor) return; // 不是 AI 回合
+  if (aiBusy) return;                         // 已排程／思考中，勿重複排（重入畫面時的防呆）
   aiBusy = true;
   setStatus('電腦思考中…');
   // 給點延遲避免瞬間落子；放進 timeout 也讓 UI 先更新。
@@ -310,7 +311,7 @@ export async function enterGomokuMode() {
   loadSfxPack('gomoku');
   loadSfxPack('common');
   if (!board) newGame();
-  else render();
+  else { render(); maybeAiMove(); } // 重入既有對局：若在 AI 思考中離開過（timeout 已放棄該回合），回來時續排 AI，避免卡死
 }
 
 export const GomokuMode = { enterGomokuMode };

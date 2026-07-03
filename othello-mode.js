@@ -203,6 +203,7 @@ async function onCellClick(r, c) {
 
 function maybeAiMove() {
   if (mode !== 'pvc' || gameOver || isPlayerTurn()) return;
+  if (aiBusy) return;                         // 已排程／思考中，勿重複排（重入畫面時的防呆）
   aiBusy = true;
   showThinking(true);
   setStatus('電腦思考中…');
@@ -330,7 +331,7 @@ export async function enterOthelloMode() {
   loadSfxPack('othello');
   loadSfxPack('common');
   if (!board) newGame();
-  else render();
+  else { render(); maybeAiMove(); } // 重入既有對局：若在 AI 思考中離開過（timeout 已放棄該回合），回來時續排 AI，避免卡死
 }
 
 export const OthelloMode = { enterOthelloMode };
