@@ -1360,8 +1360,12 @@ function initHomeArrows() {
     const atStart = menu.scrollLeft <= 2;
     const atEnd = menu.scrollLeft + menu.clientWidth >= menu.scrollWidth - 2;
     const overflowing = menu.scrollWidth > menu.clientWidth + 4;
-    prev.classList.toggle('is-hidden', !overflowing || atStart);
-    next.classList.toggle('is-hidden', !overflowing || atEnd);
+    const prevHidden = !overflowing || atStart;
+    const nextHidden = !overflowing || atEnd;
+    prev.classList.toggle('is-hidden', prevHidden);
+    next.classList.toggle('is-hidden', nextHidden);
+    prev.tabIndex = prevHidden ? -1 : 0;
+    next.tabIndex = nextHidden ? -1 : 0;
   };
   menu.addEventListener('scroll', update, { passive: true });
   window.addEventListener('resize', update);
@@ -1423,7 +1427,7 @@ function applyRoute(animateTitle) {
   if (hash === '#tsumego') {
     showScreen('tsumego');
     if (title) title.style.visibility = 'visible';
-    if (!__IOS_STORE__) import('./tsumego-mode.js').then(m => m.enterTsumegoMode());
+    if (!__IOS_STORE__) import('./tsumego-mode.js').then(m => m.enterTsumegoMode()).catch(err => { console.error('模式載入失敗', err); location.hash = '#home'; });
   } else if (hash === '#gomoku') {
     showScreen('gomoku');
     if (title) title.style.visibility = 'visible';
@@ -1431,15 +1435,15 @@ function applyRoute(animateTitle) {
   } else if (hash === '#xiangqi') {
     showScreen('xiangqi');
     if (title) title.style.visibility = 'visible';
-    if (!__IOS_STORE__) import('./xiangqi-mode.js').then(m => m.enterXiangqiMode());
+    if (!__IOS_STORE__) import('./xiangqi-mode.js').then(m => m.enterXiangqiMode()).catch(err => { console.error('模式載入失敗', err); location.hash = '#home'; });
   } else if (hash === '#shogi') {
     showScreen('shogi');
     if (title) title.style.visibility = 'visible';
-    if (!__IOS_STORE__) import('./shogi-mode.js').then(m => m.enterShogiMode());
+    if (!__IOS_STORE__) import('./shogi-mode.js').then(m => m.enterShogiMode()).catch(err => { console.error('模式載入失敗', err); location.hash = '#home'; });
   } else if (hash === '#chess') {
     showScreen('chess');
     if (title) title.style.visibility = 'visible';
-    if (!__IOS_STORE__) import('./chess-mode.js').then(m => m.enterChessMode());
+    if (!__IOS_STORE__) import('./chess-mode.js').then(m => m.enterChessMode()).catch(err => { console.error('模式載入失敗', err); location.hash = '#home'; });
   } else if (hash === '#othello') {
     showScreen('othello');
     if (title) title.style.visibility = 'visible';
@@ -1447,7 +1451,7 @@ function applyRoute(animateTitle) {
   } else if (hash === '#xqpuzzle') {
     showScreen('xqpuzzle');
     if (title) title.style.visibility = 'visible';
-    if (!__IOS_STORE__) import('./xiangqi-puzzle-mode.js').then(m => m.enterXiangqiPuzzleMode());
+    if (!__IOS_STORE__) import('./xiangqi-puzzle-mode.js').then(m => m.enterXiangqiPuzzleMode()).catch(err => { console.error('模式載入失敗', err); location.hash = '#home'; });
   } else if (hash === '#play') {
     showScreen('play');
     if (title) title.style.visibility = 'visible';
