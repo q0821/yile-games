@@ -929,6 +929,40 @@ a.version-link { display: inline-block; }
   .home-card:hover .home-card-bg { transform: none; }
 }
 
+/* 桌機左右箭頭鈕（漸進增強，僅 hover 裝置顯示，觸控裝置維持手勢捲動） */
+.home-nav-arrow {
+  display: none;
+}
+@media (hover: hover) and (min-width: 900px) {
+  .home-screen { position: relative; }
+  .home-nav-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: calc(50% + 8px);
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--border-hl);
+    background: rgba(250,246,234,0.92);
+    color: var(--gold-dim);
+    box-shadow: 0 6px 18px rgba(60,46,24,0.22);
+    cursor: pointer;
+    z-index: 3;
+    transition: opacity var(--transition), background var(--transition), transform var(--transition);
+  }
+  .home-nav-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.06); }
+  .home-nav-prev { left: -6px; }
+  .home-nav-next { right: -6px; }
+  .home-nav-arrow.is-hidden { opacity: 0; pointer-events: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-nav-arrow { transition: opacity var(--transition); }
+}
+
 /* ===== Tsumego (Life & Death) practice ===== */
 .tsumego-screen {
   display: flex;

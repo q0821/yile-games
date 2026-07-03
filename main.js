@@ -1323,6 +1323,48 @@ function renderHome() {
     card.addEventListener('click', () => { location.hash = item.hash; });
     menu.appendChild(card);
   }
+  if (homeArrowsInited) requestAnimationFrame(() => document.getElementById('homeMenu')?.dispatchEvent(new Event('scroll')));
+}
+
+let homeArrowsInited = false;
+function initHomeArrows() {
+  if (homeArrowsInited) return;
+  const menu = document.getElementById('homeMenu');
+  if (!menu || !menu.parentElement) return;
+  homeArrowsInited = true;
+
+  const mk = (dir, label) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `home-nav-arrow home-nav-${dir}`;
+    b.setAttribute('aria-label', label);
+    b.innerHTML = dir === 'prev'
+      ? '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>'
+      : '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+    b.addEventListener('click', () => {
+      const card = menu.querySelector('.home-card');
+      const step = card ? card.getBoundingClientRect().width + 16 : menu.clientWidth * 0.8;
+      menu.scrollBy({ left: dir === 'prev' ? -step : step, behavior: 'smooth' });
+    });
+    return b;
+  };
+
+  const wrap = menu.parentElement;      // .home-screen
+  const prev = mk('prev', '上一組棋');
+  const next = mk('next', '下一組棋');
+  wrap.appendChild(prev);
+  wrap.appendChild(next);
+
+  const update = () => {
+    const atStart = menu.scrollLeft <= 2;
+    const atEnd = menu.scrollLeft + menu.clientWidth >= menu.scrollWidth - 2;
+    const overflowing = menu.scrollWidth > menu.clientWidth + 4;
+    prev.classList.toggle('is-hidden', !overflowing || atStart);
+    next.classList.toggle('is-hidden', !overflowing || atEnd);
+  };
+  menu.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
 }
 
 function showScreen(name) {
@@ -1412,6 +1454,7 @@ function applyRoute(animateTitle) {
   } else {
     showScreen('home');
     renderHome();
+    initHomeArrows();
     // 首次載入進首頁時標題水墨暈開；經由過渡切換進來則直接靜態顯示（過渡本身已是揭示）
     if (animateTitle) playTitleReveal(title, { force: true });
     else if (title) title.style.visibility = 'visible';
