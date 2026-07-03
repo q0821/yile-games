@@ -184,6 +184,17 @@ function sandboxWithGomoku() {
   return ctx;
 }
 
+/** Returns a sandbox with Connect6 rules + AI loaded (pure logic; no DOM needed). */
+function sandboxWithConnect6() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './rules.js');
+  loadIntoContext(ctx, localRequire, './gomoku-rules.js');
+  loadIntoContext(ctx, localRequire, './gomoku-ai.js');
+  loadIntoContext(ctx, localRequire, './connect6-rules.js');
+  loadIntoContext(ctx, localRequire, './connect6-ai.js');
+  return ctx;
+}
+
 /** Returns a sandbox with Othello rules + AI loaded (pure logic; no DOM needed). */
 function sandboxWithOthello() {
   const { ctx, localRequire } = createSandbox();
@@ -305,4 +316,4 @@ function sandboxWithAiController(mockKataGo = {}) {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController };
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithConnect6, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController };
