@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="弈樂">
-<link rel="manifest" href="manifest.json?v=v2026.07.03-5cb2a3e">
+<link rel="manifest" href="manifest.json?v=v2026.07.03-3dc922c">
 <link rel="icon" href="favicon.ico?v=icons20260702a" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=icons20260702a">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=icons20260702a">
@@ -33,7 +33,7 @@
 <meta name="twitter:image" content="https://yile.jackie-yeh.com/icon-512.png">
 <!-- 改用系統內建宋體（見 style.css --font-serif）：移除跨來源 Google Fonts，
      讓象棋引擎可用 COEP require-corp 全瀏覽器開啟 cross-origin isolation。 -->
-<link rel="stylesheet" href="style.css?v=v2026.07.03-5cb2a3e">
+<link rel="stylesheet" href="style.css?v=v2026.07.03-3dc922c">
 </head>
 <body>
   <h1 class="brush-title">弈樂</h1>
@@ -894,6 +894,7 @@
 
       <p>本站使用下列開源資源，謹此致謝並標注授權。</p>
 
+      <div data-web-only>
       <h3>死活題庫</h3>
       <p><a href="https://github.com/sanderland/tsumego" target="_blank" rel="noopener noreferrer">sanderland/tsumego</a>，MIT 授權。<br>
         Copyright © 2020 Sander Land and/or other authors.<br>
@@ -903,6 +904,7 @@
       <p>古典殘局題目（基本殺法、江湖殘局、夢入神機、適情雅趣）取自
         <a href="https://github.com/dffge552/xiangqi-pwa-offline" target="_blank" rel="noopener noreferrer">棋弈江湖（dffge552/xiangqi-pwa-offline）</a>，MIT 授權。<br>
         Copyright © 2026 dffge552。古譜本身屬公共領域，謹此致謝。</p>
+      </div>
 
       <h3>圍棋 AI 引擎（KataGo）</h3>
       <p>瀏覽器內的 KataGo 推論引擎移植自 <a href="https://github.com/Sir-Teo/web-katrain" target="_blank" rel="noopener noreferrer">Sir-Teo/web-katrain</a>，MIT 授權。<br>
@@ -911,10 +913,12 @@
       <p>底層引擎與神經網路權重來自 <a href="https://github.com/lightvector/KataGo" target="_blank" rel="noopener noreferrer">KataGo</a>（lightvector/KataGo，程式 MIT 授權）；網路權重由 KataGo 專案免費釋出供公眾使用。<br>
         <a href="licenses/katago-NOTICE.txt" target="_blank" rel="noopener noreferrer">署名說明</a></p>
 
+      <div data-web-only>
       <h3>象棋／將棋／西洋棋 AI 引擎（Fairy-Stockfish）</h3>
       <p>瀏覽器內的象棋、日本將棋與西洋棋 AI 同為 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">Fairy-Stockfish</a> 的 WebAssembly 版（<a href="https://github.com/fairy-stockfish/fairy-stockfish.wasm" target="_blank" rel="noopener noreferrer">fairy-stockfish.wasm</a>），<strong>GPL-3.0</strong> 授權，作者 Fabian Fichter。<br>
         兩種棋的棋規與合法手皆由同專案的 <a href="https://github.com/fairy-stockfish/Fairy-Stockfish" target="_blank" rel="noopener noreferrer">ffish</a>（ffish-es6）提供，亦為 GPL-3.0。<br>
         <a href="licenses/gpl-3.0.txt" target="_blank" rel="noopener noreferrer">GPL-3.0 授權條款全文</a>（本應用隨附）。引擎完整對應原始碼可透過 fairy-stockfish.wasm 專案取得；如無法連網取得，亦可來信向作者索取。</p>
+      </div>
 
       <h3>五子棋 AI</h3>
       <p>五子棋電腦對手為本站自製（威脅優先 + 連子型態啟發式評分），未使用第三方引擎。</p>

@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node generate-version.js && vite build",
+    "build:ios": "node generate-version.js && vite build --mode ios && node scripts/strip-ios-assets.mjs",
     "preview": "vite preview",
     "test": "jest",
     "version:generate": "node generate-version.js",

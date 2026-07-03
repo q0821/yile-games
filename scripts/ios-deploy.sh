@@ -7,7 +7,7 @@
 #
 # 用法：
 #   scripts/ios-deploy.sh                 # 互動選單（不用記參數）
-#   scripts/ios-deploy.sh --skip-web      # 跳過 npm run build（native 沒改、只想重簽/重裝）
+#   scripts/ios-deploy.sh --skip-web      # 跳過 npm run build:ios（native 沒改、只想重簽/重裝）
 #   scripts/ios-deploy.sh --no-launch     # 裝完不自動開啟
 #   DEVICE_ID=<udid> scripts/ios-deploy.sh   # 手動指定裝置（多台裝置時）
 #
@@ -100,8 +100,9 @@ echo "▶ 目標裝置：$DEVICE_ID"
 
 # --- 1. build 網頁並同步進 iOS 專案 ---
 if [ "$SKIP_WEB" -eq 0 ]; then
-  echo "▶ [1/4] build 網頁 (npm run build)…"
-  npm run build
+  echo "▶ [1/4] build 網頁 (npm run build:ios)…"
+  # iOS 版：拔掉 GPL 棋種（象棋/將棋/西洋棋/殘局）與死活，並剝除對應資產。見 strip-ios-assets.mjs。
+  npm run build:ios
   echo "▶ 同步進 iOS 專案 (npx cap copy ios)…"
   npx cap copy ios
 else
