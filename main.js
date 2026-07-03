@@ -1344,7 +1344,8 @@ function initHomeArrows() {
     b.addEventListener('click', () => {
       const card = menu.querySelector('.home-card');
       const step = card ? card.getBoundingClientRect().width + 16 : menu.clientWidth * 0.8;
-      menu.scrollBy({ left: dir === 'prev' ? -step : step, behavior: 'smooth' });
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      menu.scrollBy({ left: dir === 'prev' ? -step : step, behavior: reduce ? 'auto' : 'smooth' });
     });
     return b;
   };
