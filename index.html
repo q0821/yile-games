@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="弈樂">
-<link rel="manifest" href="manifest.json?v=v2026.07.03-83073fd">
+<link rel="manifest" href="manifest.json?v=v2026.07.03-c8d42dc">
 <link rel="icon" href="favicon.ico?v=icons20260704a" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=icons20260704a">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=icons20260704a">
@@ -33,7 +33,7 @@
 <meta name="twitter:image" content="https://yile.jackie-yeh.com/icon-512.png">
 <!-- 改用系統內建宋體（見 style.css --font-serif）：移除跨來源 Google Fonts，
      讓象棋引擎可用 COEP require-corp 全瀏覽器開啟 cross-origin isolation。 -->
-<link rel="stylesheet" href="style.css?v=v2026.07.03-83073fd">
+<link rel="stylesheet" href="style.css?v=v2026.07.03-c8d42dc">
 </head>
 <body>
   <h1 class="brush-title">弈樂</h1>
@@ -367,6 +367,78 @@
 
     <h3>音效與音樂</h3>
     <div id="gomokuAudioSettings"></div>
+
+    <button class="primary" data-close-settings>關閉</button>
+  </div>
+</div>
+
+<!-- Connect6 (連六棋) screen -->
+<div class="gomoku-screen" id="connect6Screen" style="display:none">
+  <div class="mode-header">
+    <button class="mode-back" id="connect6Home">回首頁</button>
+    <h2 class="mode-title">連六棋對弈</h2>
+    <button class="mode-settings" id="connect6SettingsBtn" aria-label="遊戲設定">設定</button>
+    <button type="button" class="mode-mute-btn audio-mute-btn" aria-label="靜音切換" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"></polygon>
+        <path class="audio-mute-wave" d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path class="audio-mute-wave" d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+        <line class="audio-mute-slash" x1="23" y1="9" x2="17" y2="15"></line>
+        <line class="audio-mute-slash" x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>
+    </button>
+  </div>
+  <div class="game-infobar" id="connect6Infobar">
+    <div class="turn-badge black" id="connect6TurnBadge">黑方</div>
+    <div class="info-item">還可下 <span id="connect6Remaining">1</span> 子</div>
+    <div class="info-item">第 <span id="connect6MoveCount">0</span> 回合</div>
+  </div>
+  <div class="board-wrap">
+    <canvas id="connect6Board" role="img" aria-label="連六棋棋盤"></canvas>
+    <div class="board-end" id="connect6End" style="display:none" role="dialog" aria-live="assertive">
+      <div class="board-end-card">
+        <div class="board-end-title" id="connect6EndTitle">黑方勝</div>
+        <div class="board-end-sub" id="connect6EndSub"></div>
+        <button class="board-end-btn" id="connect6EndBtn">再來一局</button>
+      </div>
+    </div>
+  </div>
+  <div class="gomoku-status" id="connect6Status" role="status" aria-live="polite"></div>
+  <div class="gomoku-controls">
+    <button id="connect6Undo">悔棋</button>
+    <button id="connect6Restart">重新開始</button>
+  </div>
+</div>
+
+<!-- 連六棋遊戲設定 modal -->
+<div class="modal-overlay" id="connect6SettingsModal">
+  <div class="modal changelog-modal go-settings-modal">
+    <h2>遊戲設定</h2>
+    <div class="control-group">
+      <label for="connect6Mode">對弈模式</label>
+      <select id="connect6Mode">
+        <option value="pvc">人 vs 電腦</option>
+        <option value="pvp">雙人對局</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="connect6Color">玩家執子</label>
+      <select id="connect6Color">
+        <option value="1">執黑（先手）</option>
+        <option value="2">執白（後手）</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="connect6Level">電腦難度</label>
+      <select id="connect6Level">
+        <option value="1">簡單</option>
+        <option value="2">普通</option>
+        <option value="3">困難</option>
+      </select>
+    </div>
+
+    <h3>音效與音樂</h3>
+    <div id="connect6AudioSettings"></div>
 
     <button class="primary" data-close-settings>關閉</button>
   </div>

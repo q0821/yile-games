@@ -12,6 +12,7 @@ import { openGoSettings, closeGoSettings, toggleGoSettings } from './go-settings
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
 import { enterGomokuMode } from './gomoku-mode.js';
+import { enterConnect6Mode } from './connect6-mode.js';
 import { enterOthelloMode } from './othello-mode.js';
 // 死活的已解題數用薄薄的 progress 模組同步取得（不牽動 tsumego-mode 全模組）；
 // 死活/象棋/將棋/西洋棋/象棋殘局的進入點改為 applyRoute 內動態 import（見下），
@@ -1251,6 +1252,7 @@ const HOME_ITEMS = [
   { id: 'xqpuzzle',title: '象棋殘局', desc: '古譜殘局，絕處覓殺機', hash: '#xqpuzzle', img: 'img/cards/xqpuzzle.webp', webOnly: true },
   { id: 'shogi',   title: '日本將棋', desc: '升變打入，俘子再成軍', hash: '#shogi',   img: 'img/cards/shogi.webp', webOnly: true },
   { id: 'gomoku',  title: '五子棋',   desc: '縱橫連珠，先連者為王', hash: '#gomoku',  img: 'img/cards/gomoku.webp' },
+  { id: 'connect6',title: '連六棋',   desc: '雙落連橫，六子成龍', hash: '#connect6',img: 'img/cards/connect6.webp' },
   { id: 'othello', title: '黑白棋',   desc: '黑白翻覆，一夾定乾坤', hash: '#othello', img: 'img/cards/othello.webp' },
   { id: 'chess',   title: '西洋棋',   desc: '兩軍對壘，將死擒敵王', hash: '#chess',   img: 'img/cards/chess.webp', webOnly: true },
 ].filter(item => !(IOS_STORE && item.webOnly));
@@ -1413,6 +1415,7 @@ function showScreen(name) {
   document.getElementById('goScreen').style.display = name === 'play' ? 'flex' : 'none';
   document.getElementById('tsumegoScreen').style.display = name === 'tsumego' ? 'flex' : 'none';
   document.getElementById('gomokuScreen').style.display = name === 'gomoku' ? 'flex' : 'none';
+  document.getElementById('connect6Screen').style.display = name === 'connect6' ? 'flex' : 'none';
   document.getElementById('xiangqiScreen').style.display = name === 'xiangqi' ? 'flex' : 'none';
   document.getElementById('shogiScreen').style.display = name === 'shogi' ? 'flex' : 'none';
   document.getElementById('chessScreen').style.display = name === 'chess' ? 'flex' : 'none';
@@ -1437,7 +1440,7 @@ function goHome() { location.hash = '#home'; }
 // hash SPA 的 page_path 會被去掉 hash，否則各棋種在報表裡長一樣）。
 const SITE_TITLE = '弈樂 · 多棋類線上對弈';
 const ROUTE_TITLES = {
-  '#tsumego': '圍棋死活', '#gomoku': '五子棋', '#xiangqi': '象棋對弈',
+  '#tsumego': '圍棋死活', '#gomoku': '五子棋', '#connect6': '連六棋', '#xiangqi': '象棋對弈',
   '#shogi': '日本將棋', '#chess': '西洋棋', '#othello': '黑白棋',
   '#xqpuzzle': '象棋殘局', '#play': '圍棋對弈',
 };
@@ -1468,6 +1471,10 @@ function applyRoute(animateTitle) {
     showScreen('gomoku');
     if (title) title.style.visibility = 'visible';
     enterGomokuMode();
+  } else if (hash === '#connect6') {
+    showScreen('connect6');
+    if (title) title.style.visibility = 'visible';
+    enterConnect6Mode();
   } else if (hash === '#xiangqi') {
     showScreen('xiangqi');
     if (title) title.style.visibility = 'visible';
