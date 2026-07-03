@@ -843,7 +843,7 @@ a.version-link { display: inline-block; }
   padding: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;    /* 文字沉底 */
+  justify-content: flex-start;  /* 文字置頂：圖片主體（棋盤/棋子）在下方，上方留白處放標題才清晰 */
   text-align: left;
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -861,16 +861,25 @@ a.version-link { display: inline-block; }
   z-index: 0;
   transition: transform var(--transition);
 }
+/* 頂部遮罩掛在卡片本身、固定佔上半高度（不隨文字塊高度變化），
+   讓標題＋對句整段都落在夠深的區域，下方圖片主體保持清晰。 */
+.home-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 52%;
+  z-index: 1;
+  background: linear-gradient(to bottom, rgba(28,20,10,0.9) 0%, rgba(28,20,10,0.64) 46%, transparent 100%);
+  pointer-events: none;
+}
 .home-card-body {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  padding: 16px 16px 18px;
-  /* 底部深到透遮罩：壓住文字、確保可讀 */
-  background: linear-gradient(to top, rgba(28,20,10,0.86) 0%, rgba(28,20,10,0.62) 32%, transparent 78%);
+  padding: 18px 16px 16px;
 }
 @media (hover: hover) {
   .home-card:hover {
@@ -894,7 +903,7 @@ a.version-link { display: inline-block; }
   flex-direction: column;
   align-items: flex-start;
   font-size: 13px;
-  color: rgba(244,228,189,0.82);
+  color: rgba(247,234,201,0.94);
   letter-spacing: 1px;
   line-height: 1.55;
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
