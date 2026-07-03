@@ -402,7 +402,12 @@ function doPass() {
 }
 
 function doUndo() {
-  if (isGameBlocked()) return;
+  // 注意：不能只擋 isGameBlocked()。AI 回合中（isAIThinking=true）悔棋會在 aiController
+  // 的 katagoMove() promise 還吊在半空時把 boardHistory／currentPlayer 往回轉，等該 promise
+  // 事後才 resolve，會把「早已不合時宜」的一手用回轉後的 currentPlayer 誤植進棋譜（實測重現：
+  // 原本一手黑棋落子後，會多冒出一手不明的黑子＋一手白子）。isGameBusy() 才會把 isAIThinking
+  // 一併擋下。
+  if (isGameBusy()) return;
   showingHint = false;
   suggestMove = null;
   if (!document.getElementById('undoToggle').checked) {
@@ -423,7 +428,10 @@ function doUndo() {
 }
 
 function doResign() {
-  if (isGameBlocked()) return;
+  // 同 doUndo()：AI 回合中（isAIThinking=true）認輸會在 katagoMove() 仍在跑時就把
+  // gameOver 設為 true，該 promise 事後 resolve 時 aiController 仍會嘗試 applyStateFromStore／
+  // placeStone，對已結束的對局動手。isGameBusy() 才會把 isAIThinking 一併擋下。
+  if (isGameBusy()) return;
   const winner = opponent(currentPlayer);
   // 認輸視為大敗/大勝：認輸者的對手贏。以人類視角換算 margin 給自適應難度。
   const humanWon = (winner === playerColor);

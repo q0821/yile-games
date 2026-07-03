@@ -31,6 +31,29 @@ export function makeAiController(app) {
   const MAX_RECOVER = 1;
   let recoverAttempts = 0;
 
+  // Watchdog：katagoMove() 底層是 Worker postMessage/onmessage 配對（katago-service.js →
+  // katago-engine/engine/katago/client.ts）。client.ts 完全沒掛 worker.onerror／
+  // onmessageerror——若 Worker 執行緒本身意外死掉（iOS 實機常見：WebGPU device lost、
+  // 記憶體不足被系統直接砍掉整個 worker），對應的 pending promise 永遠不會 resolve
+  // 也不會 reject，katagoMove() 會卡在 await 上動也不動。requestAIMove() 的 try/catch
+  // 只能接住「reject」，接不住「永遠 pending」，isAIThinking 會卡 true 到天荒地老，
+  // isGameBusy() 因此擋死玩家所有操作、AI 也真的再也不會動——症狀正是「AI 突然死掉、
+  // 兩邊都點不動」。加這層逾時把「永遠不 settle」轉成「逾時視為一次失敗」，讓下面既有
+  // 的重試／reset／恢復流程能接手，不讓 UI 真的卡死。
+  // 可由 app.aiMoveWatchdogMs 覆寫（測試用短逾時，避免測試真的等 20 秒）。
+  const AI_MOVE_WATCHDOG_MS = app.aiMoveWatchdogMs ?? 20000;
+  function withWatchdog(promise, ms) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`AI 引擎逾時無回應（超過 ${ms}ms，可能是 Worker 已死掉）`));
+      }, ms);
+      promise.then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (err) => { clearTimeout(timer); reject(err); }
+      );
+    });
+  }
+
   async function requestAIMove() {
     if (app.gameOver || app.isAIThinking) return;
     // 只有「不是玩家回合」時 AI 才該落子。防止失敗後自動重試的排程在使用者已開新局／
@@ -54,7 +77,7 @@ export function makeAiController(app) {
       let lastErr = null;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
-          move = await katagoMove();
+          move = await withWatchdog(katagoMove(), AI_MOVE_WATCHDOG_MS);
           lastErr = null;
           break;
         } catch (err) {

@@ -63,8 +63,16 @@ function makeRequire(ctx, cache) {
   return localRequire;
 }
 
-function createSandbox(extraGlobals = {}) {
-  const cache = {};
+/**
+ * @param {object} extraGlobals 額外注入 vm context 的全域變數（如 document/window mock）。
+ * @param {object} moduleMocks  以 require id（如 './katago-service.js'）為 key 預先塞進模組
+ *                              cache 的假模組，讓 sandbox 內其他檔案 require 到它時直接拿到
+ *                              mock、不會真的去讀來源檔——用於像 katago-service.js 這種內部
+ *                              import 了 .ts（本測試 Babel 設定無法轉譯）且依賴真實瀏覽器
+ *                              Worker 的檔案，讓依賴它的模組（如 ai-controller.js）仍可測試。
+ */
+function createSandbox(extraGlobals = {}, moduleMocks = {}) {
+  const cache = { ...moduleMocks };
   const ctx = vm.createContext({
     // Minimal browser-like globals
     document: {
@@ -281,4 +289,20 @@ function sandboxWithAudioManager() {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine };
+/**
+ * Returns a sandbox with ai-controller.js loaded (`makeAiController`), with
+ * './katago-service.js' pre-mocked to `mockKataGo`（呼叫端提供 ensureReady/genmoveCandidates/
+ * reset 等假實作）。katago-service.js 本身 import 了 katago-engine/.../client.ts——本專案
+ * 測試用的 Babel 設定只有 @babel/preset-env（無 TypeScript 支援），且 client.ts 依賴真實
+ * 瀏覽器 Worker，兩者都無法在 vm sandbox 裡真的載入，所以一律 mock 掉，讓
+ * ai-controller.js 的重試／watchdog／恢復邏輯可離線測試。
+ * './adaptive-difficulty.js' 是純邏輯、無 DOM 依賴，直接載入真實檔案。
+ */
+function sandboxWithAiController(mockKataGo = {}) {
+  const { ctx, localRequire } = createSandbox({}, { './katago-service.js': mockKataGo });
+  loadIntoContext(ctx, localRequire, './adaptive-difficulty.js');
+  loadIntoContext(ctx, localRequire, './ai-controller.js');
+  return ctx;
+}
+
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController };
