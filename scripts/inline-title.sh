@@ -5,7 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 IMG=public/img/title-ink.webp
 [ -f "$IMG" ] || { echo "找不到 $IMG"; exit 1; }
-b64=$(base64 -w0 "$IMG")
+# base64：macOS(BSD) 不支援 GNU 的 -w0；用 stdin + tr 去換行，跨平台皆單行輸出
+b64=$(base64 < "$IMG" | tr -d '\n')
 # 砍掉舊的內嵌區塊（從標記行到檔尾），再重新附加
 python3 - "$b64" <<'PY'
 import sys,re
@@ -19,8 +20,9 @@ block=f'''
    外部圖片請求曾被 CDN 快取成 HTML 導致標題消失；data URI 隨 style.css 送達、
    不發額外請求、CDN 碰不到，標題永遠在且是毛筆字。更新圖後重跑 scripts/inline-title.sh。 */
 h1.brush-title {{
-  width: min(440px, 76vw);
-  height: clamp(72px, 18vw, 104px);
+  width: clamp(160px, 42vw, 240px);
+  aspect-ratio: 1327 / 816;
+  height: auto;
   text-indent: -9999px;
   overflow: hidden;
   white-space: nowrap;
