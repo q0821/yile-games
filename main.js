@@ -11,13 +11,12 @@ import { buildSGF } from './sgf.js';
 import { openGoSettings, closeGoSettings, toggleGoSettings } from './go-settings.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
-import { enterTsumegoMode, tsumegoSolvedTotal } from './tsumego-mode.js';
 import { enterGomokuMode } from './gomoku-mode.js';
-import { enterXiangqiMode } from './xiangqi-mode.js';
-import { enterShogiMode } from './shogi-mode.js';
-import { enterChessMode } from './chess-mode.js';
 import { enterOthelloMode } from './othello-mode.js';
-import { enterXiangqiPuzzleMode } from './xiangqi-puzzle-mode.js';
+// 死活的已解題數用薄薄的 progress 模組同步取得（不牽動 tsumego-mode 全模組）；
+// 死活/象棋/將棋/西洋棋/象棋殘局的進入點改為 applyRoute 內動態 import（見下），
+// 讓 iOS build（__IOS_STORE__）能 DCE 掉 GPL 模組。tsumego-progress 無 GPL，靜態引入無妨。
+import { loadProgress as loadTsumegoProgress, totalSolved as tsumegoTotalSolved } from './tsumego-progress.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
@@ -1240,16 +1239,21 @@ applyAppVersion().then((version) => {
 //   ''/'#home' → 首頁、'#play' → 對弈、'#tsumego' → 死活練習。
 // 對弈只在首次進入「對弈」時初始化（保留 loadGame 自動恢復未完成對局）。
 // desc 寫成「上句，下句」對句（意象＋氣勢），renderHome 會固定在逗號處斷成兩行（對聯感、不孤字）。
+// iOS App Store 版旗標（vite define 注入）。GPL 棋種與死活練習不進 iOS build。
+// 直接用於 UI 過濾即可；動態 import 的守衛須直接寫 `__IOS_STORE__`（見 applyRoute）才會被 DCE。
+const IOS_STORE = typeof __IOS_STORE__ !== 'undefined' ? __IOS_STORE__ : false;
+
+// webOnly：GPL 授權（象棋/將棋/西洋棋/象棋殘局）或 iOS 不收錄（死活）→ iOS 版首頁不列。
 const HOME_ITEMS = [
-  { id: 'play',    title: '圍棋對弈', desc: '黑白手談，方圓論天地', hash: '#play' },
-  { id: 'tsumego', title: '死活練習', desc: '方寸之間，一子定生死', hash: '#tsumego' },
-  { id: 'xiangqi', title: '象棋對弈', desc: '楚河漢界，車馬論英雄', hash: '#xiangqi' },
-  { id: 'xqpuzzle',title: '象棋殘局', desc: '古譜殘局，絕處覓殺機', hash: '#xqpuzzle' },
-  { id: 'shogi',   title: '日本將棋', desc: '升變打入，俘子再成軍', hash: '#shogi' },
-  { id: 'gomoku',  title: '五子棋',   desc: '縱橫連珠，先連者為王', hash: '#gomoku' },
-  { id: 'othello', title: '黑白棋',   desc: '黑白翻覆，一夾定乾坤', hash: '#othello' },
-  { id: 'chess',   title: '西洋棋',   desc: '兩軍對壘，將死擒敵王', hash: '#chess' },
-];
+  { id: 'play',    title: '圍棋對弈', desc: '黑白手談，方圓論天地', hash: '#play',    img: 'img/cards/play.webp' },
+  { id: 'tsumego', title: '死活練習', desc: '方寸之間，一子定生死', hash: '#tsumego', img: 'img/cards/tsumego.webp', webOnly: true },
+  { id: 'xiangqi', title: '象棋對弈', desc: '楚河漢界，車馬論英雄', hash: '#xiangqi', img: 'img/cards/xiangqi.webp', webOnly: true },
+  { id: 'xqpuzzle',title: '象棋殘局', desc: '古譜殘局，絕處覓殺機', hash: '#xqpuzzle', img: 'img/cards/xqpuzzle.webp', webOnly: true },
+  { id: 'shogi',   title: '日本將棋', desc: '升變打入，俘子再成軍', hash: '#shogi',   img: 'img/cards/shogi.webp', webOnly: true },
+  { id: 'gomoku',  title: '五子棋',   desc: '縱橫連珠，先連者為王', hash: '#gomoku',  img: 'img/cards/gomoku.webp' },
+  { id: 'othello', title: '黑白棋',   desc: '黑白翻覆，一夾定乾坤', hash: '#othello', img: 'img/cards/othello.webp' },
+  { id: 'chess',   title: '西洋棋',   desc: '兩軍對壘，將死擒敵王', hash: '#chess',   img: 'img/cards/chess.webp', webOnly: true },
+].filter(item => !(IOS_STORE && item.webOnly));
 
 let playInited = false;
 
@@ -1265,7 +1269,7 @@ function hasUnfinishedGame() {
 function homeItemHint(id) {
   if (id === 'play') return hasUnfinishedGame() ? '有對局可續弈' : '';
   if (id === 'tsumego') {
-    const n = tsumegoSolvedTotal();
+    const n = tsumegoTotalSolved(loadTsumegoProgress());
     return n > 0 ? `已解 ${n} 題` : '';
   }
   return '';
@@ -1279,14 +1283,24 @@ function renderHome() {
     card.className = 'home-card';
     card.type = 'button';
 
+    // 背景水墨圖層（裝飾性，不進無障礙樹）
+    const bg = document.createElement('span');
+    bg.className = 'home-card-bg';
+    bg.setAttribute('aria-hidden', 'true');
+    if (item.img) bg.style.backgroundImage = `url("${item.img}")`;
+    card.appendChild(bg);
+
+    // 文字層（疊在圖與遮罩之上）
+    const body = document.createElement('span');
+    body.className = 'home-card-body';
+
     const title = document.createElement('span');
     title.className = 'home-card-title';
     title.textContent = item.title;
-    card.appendChild(title);
+    body.appendChild(title);
 
     const desc = document.createElement('span');
     desc.className = 'home-card-desc';
-    // 對句固定在首個逗號／頓號處斷成上下兩行（避免 CJK 逐字斷行的孤字）
     const parts = item.desc.split(/[，、]/);
     if (parts.length === 2) {
       const top = document.createElement('span'); top.textContent = parts[0];
@@ -1295,16 +1309,17 @@ function renderHome() {
     } else {
       desc.textContent = item.desc;
     }
-    card.appendChild(desc);
+    body.appendChild(desc);
 
     const hint = homeItemHint(item.id);
     if (hint) {
       const tag = document.createElement('span');
       tag.className = 'home-card-hint';
       tag.textContent = hint;
-      card.appendChild(tag);
+      body.appendChild(tag);
     }
 
+    card.appendChild(body);
     card.addEventListener('click', () => { location.hash = item.hash; });
     menu.appendChild(card);
   }
@@ -1352,14 +1367,20 @@ function trackPageview() {
   try { window.zaraz?.track('spa_pageview'); } catch { /* 追蹤失敗不可影響對弈 */ }
 }
 
+// iOS 版未收錄的棋種 hash（GPL 棋種 + 死活）。舊書籤/殘留 hash 導回首頁，不顯示空畫面。
+const IOS_EXCLUDED_HASHES = new Set(['#tsumego', '#xiangqi', '#shogi', '#chess', '#xqpuzzle']);
+
 function applyRoute(animateTitle) {
-  const hash = location.hash;
+  let hash = location.hash;
+  if (IOS_STORE && IOS_EXCLUDED_HASHES.has(hash)) hash = '#home';
   document.title = ROUTE_TITLES[hash] ? `${ROUTE_TITLES[hash]} · 弈樂` : SITE_TITLE;
   const title = document.querySelector('h1');
+  // 被排除棋種以動態 import 進場，並用 `if (!__IOS_STORE__)` 直接守衛（見檔頭）：
+  // iOS build 時整段被 esbuild DCE，對應 chunk 不生成、GPL 碼不進包。
   if (hash === '#tsumego') {
     showScreen('tsumego');
     if (title) title.style.visibility = 'visible';
-    enterTsumegoMode();
+    if (!__IOS_STORE__) import('./tsumego-mode.js').then(m => m.enterTsumegoMode());
   } else if (hash === '#gomoku') {
     showScreen('gomoku');
     if (title) title.style.visibility = 'visible';
@@ -1367,15 +1388,15 @@ function applyRoute(animateTitle) {
   } else if (hash === '#xiangqi') {
     showScreen('xiangqi');
     if (title) title.style.visibility = 'visible';
-    enterXiangqiMode();
+    if (!__IOS_STORE__) import('./xiangqi-mode.js').then(m => m.enterXiangqiMode());
   } else if (hash === '#shogi') {
     showScreen('shogi');
     if (title) title.style.visibility = 'visible';
-    enterShogiMode();
+    if (!__IOS_STORE__) import('./shogi-mode.js').then(m => m.enterShogiMode());
   } else if (hash === '#chess') {
     showScreen('chess');
     if (title) title.style.visibility = 'visible';
-    enterChessMode();
+    if (!__IOS_STORE__) import('./chess-mode.js').then(m => m.enterChessMode());
   } else if (hash === '#othello') {
     showScreen('othello');
     if (title) title.style.visibility = 'visible';
@@ -1383,7 +1404,7 @@ function applyRoute(animateTitle) {
   } else if (hash === '#xqpuzzle') {
     showScreen('xqpuzzle');
     if (title) title.style.visibility = 'visible';
-    enterXiangqiPuzzleMode();
+    if (!__IOS_STORE__) import('./xiangqi-puzzle-mode.js').then(m => m.enterXiangqiPuzzleMode());
   } else if (hash === '#play') {
     showScreen('play');
     if (title) title.style.visibility = 'visible';
@@ -1401,5 +1422,7 @@ window.goHome = goHome;
 // 畫面切換用墨暈過渡；過渡覆蓋到中點時才換 DOM。換頁後補送一次 page_view
 // （只在 hashchange 觸發＝不含初次載入，避免與 Zaraz 自動 Pageview 雙重計數）。
 window.addEventListener('hashchange', () => playTransition(() => { applyRoute(false); trackPageview(); }));
+// iOS 版：移除授權彈窗中僅適用 web 版的區塊（死活題庫、象棋殘局題庫、Fairy-Stockfish/GPL）。
+if (IOS_STORE) document.querySelectorAll('[data-web-only]').forEach(el => el.remove());
 applyRoute(true);   // 初始載入：標題暈開、不走過渡（page_view 由 Zaraz 自動 Pageview 記）
 startAmbient();     // 背景墨雲飄動（桌機）
