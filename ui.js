@@ -142,6 +142,12 @@ export function showBoardToast(container, msg) {
     boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
     zIndex: '70',
     pointerEvents: 'none',
+    // .board-wrap 有 line-height:0（消 canvas 間隙），不覆寫會讓換行文字兩行相疊；
+    // width:max-content 修正絕對定位＋left:50% 的「可用寬度剩一半」換行問題。
+    lineHeight: '1.5',
+    width: 'max-content',
+    maxWidth: '88vw',
+    textAlign: 'center',
   });
   const prevTimer = _boardToastTimers.get(container);
   if (prevTimer) clearTimeout(prevTimer);

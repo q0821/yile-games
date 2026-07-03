@@ -192,6 +192,12 @@ function showToast(msg) {
     boxShadow: '0 6px 24px rgba(0,0,0,0.35)',
     zIndex: '70',
     pointerEvents: 'none',
+    // .board-wrap 有 line-height:0（消 canvas 間隙），不覆寫的話文字換行會兩行疊在一起；
+    // width:max-content 修正絕對定位＋left:50% 造成「可用寬度只剩容器一半、字多必換行」的問題。
+    lineHeight: '1.5',
+    width: 'max-content',
+    maxWidth: '88vw',
+    textAlign: 'center',
   });
   if (_toastTimer) clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { el.style.display = 'none'; }, 1800);
