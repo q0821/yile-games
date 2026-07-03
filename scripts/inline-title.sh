@@ -20,14 +20,17 @@ block=f'''
    外部圖片請求曾被 CDN 快取成 HTML 導致標題消失；data URI 隨 style.css 送達、
    不發額外請求、CDN 碰不到，標題永遠在且是毛筆字。更新圖後重跑 scripts/inline-title.sh。 */
 h1.brush-title {{
+  box-sizing: content-box;              /* width/aspect 定義內容框，padding 再往下推整張圖 */
   width: clamp(160px, 42vw, 240px);
   aspect-ratio: 1327 / 816;
   height: auto;
+  padding-top: var(--safe-top);         /* 閃開動態島/瀏海 */
   text-indent: -9999px;
   overflow: hidden;
   white-space: nowrap;
   text-shadow: none;
   background: url('data:image/webp;base64,{b64}') center/contain no-repeat;
+  background-origin: content-box;        /* 圖只畫在內容框（padding 之下），不侵入安全區 */
 }}
 h1.brush-title::after {{ display: none; }}
 '''
