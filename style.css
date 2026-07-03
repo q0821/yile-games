@@ -1127,3 +1127,541 @@ h1.brush-title {
   background-origin: content-box;        /* 圖只畫在內容框（padding 之下），不侵入安全區 */
 }
 h1.brush-title::after { display: none; }
+
+/* ===== 對弈畫面版面（還原：3383240 書法標題 commit 誤刪了 .gomoku-screen 起的整段遊戲版面 CSS，導致 gomoku/象棋/將棋/西洋棋/黑白棋/連六棋全跑版）===== */
+.gomoku-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 700px;
+  padding: 8px 16px 24px;
+  gap: 12px;
+}
+.gomoku-settings {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+.gomoku-settings .control-group {
+  margin-bottom: 0;
+  min-width: 130px;
+}
+/* 五子棋／黑白棋設定內嵌區的音訊控制：獨立整排、與上方對弈設定用細線隔開 */
+.gomoku-settings .audio-settings-embed {
+  flex: 1 1 100%;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+.gomoku-status {
+  min-height: 22px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+.gomoku-controls {
+  display: flex;
+  flex-wrap: wrap;             /* 常駐功能列最多可到 5 顆（如將棋悔棋/建議/重新開始/覆盤/規則說明），需要換行 */
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;            /* 對齊 .go-controls 寬度 */
+}
+.gomoku-controls button {
+  flex: 1 1 calc(50% - 4px);   /* 每排 2 顆，與 .go-controls 一致 */
+  width: auto;
+  min-width: 80px;
+  margin: 0;
+}
+.gomoku-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+@media (max-width: 900px) {
+  .gomoku-screen { padding: 8px 10px 20px; }
+  .gomoku-settings { gap: 10px; }
+}
+
+/* ===== 象棋：board-wrap / 將軍 / 思考 spinner / 結束畫面 ===== */
+.board-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0; /* 消除 canvas 下方間隙 */
+}
+
+/* 將軍橫幅：閃示一下即淡出 */
+.xiangqi-check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  padding: 8px 26px;
+  background: rgba(210, 59, 59, 0.92);
+  color: #fff8ec;
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: clamp(28px, 8vw, 44px);
+  letter-spacing: 0.3em;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(120, 20, 20, 0.45);
+  pointer-events: none;
+  opacity: 0;
+  line-height: 1.2;
+}
+.xiangqi-check.show {
+  animation: xqCheckFlash 1.1s ease both;
+}
+@keyframes xqCheckFlash {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  18%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  32%  { transform: translate(-50%, -50%) scale(1); }
+  72%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 思考中：狀態列 + 三點脈動 spinner */
+.xiangqi-statusrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 24px;
+}
+.xiangqi-spinner { display: inline-flex; gap: 5px; align-items: center; }
+.xiangqi-spinner i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  display: inline-block;
+  animation: xqDot 1s ease-in-out infinite both;
+}
+.xiangqi-spinner i:nth-child(2) { animation-delay: 0.16s; }
+.xiangqi-spinner i:nth-child(3) { animation-delay: 0.32s; }
+@keyframes xqDot {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
+  40%           { transform: scale(1);   opacity: 1; }
+}
+
+/* 結束覆蓋畫面 */
+.board-end {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 30, 18, 0.55);
+  backdrop-filter: blur(2px);
+  border-radius: 10px;
+  z-index: 5;
+  animation: xqEndIn 0.3s ease both;
+}
+@keyframes xqEndIn { from { opacity: 0; } to { opacity: 1; } }
+.board-end-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border, #cabd9f);
+  border-radius: 18px;
+  padding: 34px 48px 30px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(40, 28, 12, 0.4);
+  animation: xqCardIn 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  min-width: min(74vw, 270px);
+}
+@keyframes xqCardIn { from { opacity: 0; transform: translateY(12px) scale(0.94); } to { opacity: 1; transform: none; } }
+.board-end-title {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: clamp(30px, 7vw, 40px);
+  line-height: 1.2;
+  color: var(--text, #2c2417);
+}
+.board-end-sub {
+  font-size: clamp(15px, 3.6vw, 18px);
+  color: var(--text-dim, #6a5c44);
+  margin-top: 8px;
+}
+.board-end-sub:empty { display: none; }
+.board-end-btn {
+  margin-top: 26px;
+  font-size: 17px;
+  padding: 12px 34px;
+  border-radius: 10px;
+  border: 1px solid var(--gold);
+  background: var(--gold);
+  color: #f7f0e0;
+  cursor: pointer;
+}
+.board-end-btn:hover { filter: brightness(1.06); }
+
+/* 圍棋結束彈窗：對齊 .board-end 視覺語言（暖色卡 + 宋體結果標題），
+   scoped 到 #resultModal，不影響「關於 / 更新日誌」彈窗。 */
+#resultModal { background: rgba(40, 30, 18, 0.6); }
+#resultModal .modal {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+#resultModal #modalTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+#resultModal #modalResult {
+  font-family: var(--font-serif);
+  font-weight: 900;
+  font-size: clamp(28px, 7vw, 38px);
+  line-height: 1.2;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+#resultModal #modalDetail { color: var(--text-dim) !important; }
+
+/* ===== 象棋覆盤 ===== */
+.xqp-info {
+  font-size: 14px;
+  color: var(--text-dim);
+  text-align: center;
+  font-family: var(--font-serif);
+}
+
+.board-end-btn.ghost {
+  margin-top: 10px;
+  background: transparent;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+.board-end-btn.ghost:hover { background: rgba(133, 98, 25, 0.08); filter: none; }
+
+.xiangqi-review {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 460px;
+}
+.xiangqi-eval-graph {
+  width: 100%;
+  height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  cursor: pointer;
+}
+.xiangqi-review .review-slider { width: 100%; }
+.xiangqi-review-controls,
+.xiangqi-review-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.xiangqi-review-controls button,
+.xiangqi-review-actions button {
+  flex: 1;
+  font-size: 14px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-hl);
+  background: var(--bg-input);
+  color: var(--text);
+  cursor: pointer;
+}
+.xiangqi-review-controls button:hover,
+.xiangqi-review-actions button:hover { background: var(--bg-panel); }
+.xiangqi-review-actions button:disabled { opacity: 0.5; cursor: default; }
+.xiangqi-review-info {
+  min-height: 44px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--text);
+}
+.xiangqi-review-info .xq-cls { font-weight: 700; }
+.xq-cls.best { color: #2e7d46; }
+.xq-cls.good { color: var(--text-dim); }
+.xq-cls.inaccuracy { color: #b5851f; }
+.xq-cls.mistake { color: #c0392b; }
+.xq-cls.blunder { color: #a01b1b; }
+
+/* ===== 將棋：持駒區 / 升變選擇 / 規則 ===== */
+.shogi-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 460px;
+  min-height: 40px;
+  padding: 5px 8px;
+  margin: 4px 0;
+  border-radius: 10px;
+  background: var(--bg-panel, rgba(120, 90, 45, 0.08));
+  border: 1px solid var(--border, #cabd9f);
+}
+.shogi-hand-piece {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 38px;
+  padding: 0;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 19px;
+  color: #5b4222;
+  background: #f2dca8;
+  border: 1px solid #8a6a34;
+  border-radius: 4px 4px 6px 6px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.shogi-hand-piece.gote { transform: rotate(180deg); }
+.shogi-hand-piece:hover:not(:disabled) { box-shadow: 0 2px 8px rgba(60, 40, 15, 0.3); }
+.shogi-hand-piece.sel {
+  background: #f7e9c5;
+  border-color: #c0392b;
+  box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.5);
+}
+.shogi-hand-piece:disabled { cursor: default; opacity: 0.92; }
+.shogi-hand-piece.hint {
+  background: #dce9f7;
+  border-color: #1e6fc0;
+  box-shadow: 0 0 0 2px rgba(30, 111, 192, 0.55);
+}
+.shogi-hand-count {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  font-family: var(--font-sans, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  color: #fff;
+  background: #8a6a34;
+  border-radius: 8px;
+}
+.shogi-hand-piece.gote .shogi-hand-count { transform: rotate(180deg); }
+.shogi-hand-empty { font-size: 13px; color: var(--text-muted, #9a8a6a); }
+
+/* 升變 成る/不成 選擇 */
+.shogi-promo {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(40, 30, 18, 0.45);
+  border-radius: 10px;
+  z-index: 6;
+}
+.shogi-promo-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border, #cabd9f);
+  border-radius: 16px;
+  padding: 22px 26px;
+  text-align: center;
+  box-shadow: 0 14px 40px rgba(40, 28, 12, 0.4);
+}
+.shogi-promo-title {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--text, #2c2417);
+  margin-bottom: 14px;
+}
+.shogi-promo-btns { display: flex; gap: 10px; justify-content: center; }
+.shogi-promo-btns .board-end-btn { margin-top: 0; font-size: 15px; padding: 10px 16px; white-space: nowrap; }
+
+/* 規則 modal 內的駒走法清單 */
+.shogi-rules dl {
+  margin: 6px 0 4px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+}
+.shogi-rules dt { font-weight: 700; color: var(--text); white-space: nowrap; }
+.shogi-rules dd { margin: 0; color: var(--text-dim); }
+
+/* ===== 圍棋對弈：單欄置中版面（對齊其他棋類；設定收進 modal、功能列永遠可見） ===== */
+.go-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 8px 16px 24px;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* mode-header 右側「設定」鈕 */
+.mode-settings {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: auto;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding: 6px 16px;
+  border-radius: var(--radius-sm);
+}
+
+/* 音效/音樂快捷靜音鈕：常駐於首頁與六棋 mode-header，緊鄰「設定」鈕右側。
+   點擊在「目前開關組合」與「全靜音」間切換；靜音中改喇叭斜線圖示＋印泥紅提示。 */
+.mode-mute-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: auto;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-dim);
+}
+.mode-mute-btn svg { width: 18px; height: 18px; display: block; }
+.mode-mute-btn .audio-mute-slash { display: none; }
+.mode-mute-btn.is-muted {
+  color: var(--seal);
+  border-color: rgba(178,58,46,0.45);
+  background: rgba(178,58,46,0.10);
+}
+.mode-mute-btn.is-muted .audio-mute-wave { display: none; }
+.mode-mute-btn.is-muted .audio-mute-slash { display: inline; }
+
+/* 資訊列（六棋共用）：回合徽章 + 逐棋欄位（提子/手數/被吃摘要/子數…，見 PRD §7 表）。
+   六棋一體套用同一個外框與徽章樣式，欄位內容各自的 mode.js 依表組裝、不套單一模板。 */
+.game-infobar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  width: 100%;
+  max-width: 500px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.game-infobar .turn-badge {
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--bg-card);
+  color: var(--text-dim);
+}
+.game-infobar .turn-badge.black { background: #2b2b30; color: #f0ece0; }
+.game-infobar .turn-badge.white { background: #efe6d2; color: #2c2417; }
+.game-infobar .turn-badge.red { background: #8f3226; color: #fff8ec; }
+.game-infobar .info-item { color: var(--text-muted); white-space: nowrap; }
+.game-infobar .info-item span { color: var(--text); font-weight: 700; }
+.go-timers { display: flex; gap: 12px; align-items: center; }
+.go-timer { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* 棋盤容器（沿用 .board-wrap：position:relative + inline-block） */
+.go-board-wrap { margin: 0 auto; }
+
+/* 狀態列 */
+.go-status {
+  min-height: 22px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* 對弈功能列（永遠可見、可換行） */
+.go-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+.go-controls button {
+  flex: 1 1 calc(50% - 4px);        /* 每排 2 顆 = 一類（行棋／提示／終局） */
+  width: auto;                      /* 覆蓋全域 select,button{width:100%} */
+  min-width: 80px;
+  margin: 0;
+  min-height: 42px;
+}
+.go-controls #goRestartBtn { flex-basis: 100%; }   /* 重置／掀桌：獨立一排全寬 */
+.go-controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 覆盤面板 */
+.go-review {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* 數目結果（暖色，取代舊深色主題殘留） */
+.go-scoring {
+  width: 100%;
+  max-width: 500px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.go-scoring h4 { margin: 0 0 8px; color: var(--gold); font-size: 15px; }
+.go-scoring .score-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 3px 0; font-size: 14px; color: var(--text);
+}
+.go-scoring .score-row-total {
+  border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;
+}
+.go-scoring .scoring-tip { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+.go-scoring .scoring-actions { display: flex; gap: 8px; margin-top: 8px; }
+.go-scoring .scoring-actions button { flex: 1; margin: 0; min-height: 42px; }
+
+/* 設定 modal（沿用 .changelog-modal 可捲動容器） */
+.go-settings-modal .control-group { margin-bottom: 14px; }
+.go-settings-modal .toggle-row {
+  display: flex; align-items: center; justify-content: space-between; padding: 6px 0;
+}
+.go-settings-modal h3 {
+  color: var(--gold); font-size: 15px; margin: 16px 0 8px;
+  border-bottom: 1px solid var(--border); padding-bottom: 6px; letter-spacing: 2px;
+}
+
+@media (max-width: 900px) {
+  .go-screen { padding: 8px 10px 20px; }
+  .go-controls button { font-size: 13px; min-width: 0; flex-basis: calc(50% - 4px); }
+}
+
+/* ===== 減少動態效果（系統偏好） ===== */
+/* 使用者於系統開啟「減少動態效果」時，全站 CSS 動畫/轉場一律跳過、直接呈現終態
+   （modal 開合、王手橫幅、思考中 spinner、標題墨韻等）。canvas 內的落子 scale-in／
+   翻子／滑動動畫由對應 *-ui.js / *-mode.js 各自呼叫 motion.js 的 prefersReducedMotion()
+   判斷、直接畫終態，不在這裡處理。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
