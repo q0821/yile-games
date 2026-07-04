@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="弈樂">
-<link rel="manifest" href="manifest.json?v=v2026.07.04-7857985">
+<link rel="manifest" href="manifest.json?v=v2026.07.04-802b688">
 <link rel="icon" href="favicon.ico?v=icons20260704a" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=icons20260704a">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=icons20260704a">
@@ -35,7 +35,7 @@
 <meta name="twitter:image" content="https://yile.jackie-yeh.com/icon-512.png">
 <!-- 改用系統內建宋體（見 style.css --font-serif）：移除跨來源 Google Fonts，
      讓象棋引擎可用 COEP require-corp 全瀏覽器開啟 cross-origin isolation。 -->
-<link rel="stylesheet" href="style.css?v=v2026.07.04-7857985">
+<link rel="stylesheet" href="style.css?v=v2026.07.04-802b688">
 </head>
 <body>
   <h1 class="brush-title">弈樂</h1>
@@ -167,8 +167,7 @@
     <p id="scoringWarn" class="scoring-warn" style="display:none"></p>
     <p class="scoring-tip">點擊棋盤上的死子將其標記</p>
     <div class="scoring-actions">
-      <button onclick="confirmScoring()" class="primary">確認結果</button>
-      <button onclick="cancelScoring()">取消數目</button>
+      <button onclick="showScoringResult()" class="primary">查看結果</button>
     </div>
   </div>
 </div>
@@ -956,6 +955,25 @@
 </div>
 
 <!-- Changelog Modal -->
+<!-- 數目結果 modal：申請數目算完即彈中央，避免結果只出現在畫面下方沒被注意到。
+     「調整死子」關閉本視窗回棋盤點擊標記（下方 scoringPanel 照舊，該處也可確認/取消）。 -->
+<div class="modal-overlay" id="scoringModal">
+  <div class="modal changelog-modal">
+    <h2>數目結果</h2>
+    <div class="changelog-body">
+      <p id="scoringModalResult" style="font-weight:bold;font-size:20px;text-align:center;margin:6px 0"></p>
+      <p id="scoringModalDetail" style="text-align:center;color:var(--text-dim)"></p>
+      <p id="scoringModalWarn" class="scoring-warn" style="display:none"></p>
+      <p class="control-hint" style="text-align:center">死子由 AI 自動判定；覺得不對可回棋盤點擊死子修正。</p>
+    </div>
+    <div class="scoring-modal-actions">
+      <button onclick="cancelScoring()">繼續對弈</button>
+      <button onclick="adjustDeadStones()">修正死子</button>
+      <button class="primary" onclick="confirmScoring()">確認結果</button>
+    </div>
+  </div>
+</div>
+
 <!-- 完整版說明 modal：功能鎖住時說明解鎖範圍（IAP 接上前先以說明代替購買流程） -->
 <div class="modal-overlay" id="premiumModal">
   <div class="modal changelog-modal">

@@ -429,17 +429,13 @@ button.danger:active:not(:disabled) { transform: scale(0.97); box-shadow: none; 
   gap: 6px;
   margin-top: 8px;
 }
+/* 按鈕外觀走全站預設（字級/底色/hover 皆繼承 select,button 與 button 規則），
+   只保留排版差異：等寬並排＋窄水平 padding＋觸控高度（對齊 .go-controls 的 42px）。 */
 .review-controls button {
   flex: 1;
-  padding: 10px 4px;
-  font-size: 18px;
-  min-height: 44px;
-  background: var(--bg-card);
-}
-.review-controls button:hover {
-  background: var(--border-hl);
-  color: var(--gold);
-  border-color: var(--border-hl);
+  padding: 8px 4px;
+  min-height: 42px;
+  margin: 0;
 }
 .move-info {
   text-align: center;
@@ -1636,6 +1632,10 @@ h1.brush-title::after { display: none; }
 .go-scoring .scoring-tip { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
 .go-scoring .scoring-actions { display: flex; gap: 8px; margin-top: 8px; }
 .go-scoring .scoring-actions button { flex: 1; margin: 0; min-height: 42px; }
+
+/* 數目結果彈窗：動作鈕單排等寬（取代全寬堆疊的大鈕；三顆文案皆四字，窄幕也放得下） */
+.scoring-modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+.scoring-modal-actions button { width: auto; flex: 1; margin: 0; min-height: 40px; padding: 8px 6px; }
 
 /* 設定 modal（沿用 .changelog-modal 可捲動容器） */
 .go-settings-modal .control-group { margin-bottom: 14px; }

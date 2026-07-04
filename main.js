@@ -698,8 +698,40 @@ async function endGameByScoring() {
   updateScoringDisplay();
   applyUnfinishedWarning();
   drawBoard();
+  showScoringResultModal();
 }
 let _lastOwnership = null;
+
+// 數目結果置中彈窗：算完直接彈在畫面中央（結果只放下方 panel 會被沒捲動的人漏看）。
+function showScoringResultModal() {
+  const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
+  const diff = score.black - score.white;
+  const resEl = document.getElementById('scoringModalResult');
+  const detEl = document.getElementById('scoringModalDetail');
+  const warnEl = document.getElementById('scoringModalWarn');
+  if (resEl) {
+    resEl.textContent = diff > 0 ? `黑勝 ${diff.toFixed(1)} 目`
+      : diff < 0 ? `白勝 ${(-diff).toFixed(1)} 目` : '和局';
+  }
+  if (detEl) detEl.textContent = `黑 ${score.black.toFixed(1)}・白 ${score.white.toFixed(1)}（白含貼目 ${komi}）`;
+  if (warnEl) {
+    const neutral = countNeutralEmpty(score);
+    if (neutral > size) {
+      warnEl.textContent = `尚未終局？還有 ${neutral} 個雙方交界的空點未圍定，目前結果可能不準，建議按「繼續對弈」收完官子再數。`;
+      warnEl.style.display = 'block';
+    } else {
+      warnEl.style.display = 'none';
+    }
+  }
+  document.getElementById('scoringModal')?.classList.add('show');
+}
+
+// 關閉結果彈窗回棋盤標記死子；下方 scoringPanel 顯示即時明細，標完按「查看結果」
+// 回到結果彈窗確認（閉環：彈窗 ↔ 盤面修正，最終動作都在彈窗完成）。
+function adjustDeadStones() {
+  document.getElementById('scoringModal')?.classList.remove('show');
+  setStatus('點擊棋盤上的死子標記／取消標記，完成後按「查看結果」');
+}
 
 function updateScoringDisplay() {
   const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
@@ -738,6 +770,7 @@ function applyUnfinishedWarning() {
 }
 
 function confirmScoring() {
+  document.getElementById('scoringModal')?.classList.remove('show');
   const score = calculateScore(board, size, deadStones, captures, gameRules, komi);
   const diff = score.black - score.white;
   const winner = diff > 0 ? '黑方' : '白方';
@@ -753,10 +786,11 @@ function confirmScoring() {
 }
 
 function cancelScoring() {
+  document.getElementById('scoringModal')?.classList.remove('show');
   GameState.cancelScoring();
   applyStateFromStore();
   document.getElementById('scoringPanel').style.display = 'none';
-  setStatus('已取消數目');
+  setStatus('已取消數目，繼續對弈');
   drawBoard();
 }
 
@@ -1343,6 +1377,8 @@ Object.assign(window, {
   closeAudioSettings,
   confirmScoring,
   cancelScoring,
+  adjustDeadStones,
+  showScoringResult: showScoringResultModal,
   openGoSettings,
   closeGoSettings,
   toggleGoSettings,
