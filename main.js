@@ -1431,7 +1431,10 @@ if (location.port === '3333') {
   if (src) src.remove();
   const author = document.getElementById('aboutAuthorLine');
   if (author) author.textContent = '作者：Jackie Yeh';
-  document.querySelectorAll('#aboutModal a[href*="github.com"], .version-footer a[href*="github.com"]').forEach((a) => {
+  // 頁尾的作者項在 App 內整個移除（使用者要求 App 不顯示作者/GitHub 導流；
+  // 關於頁保留純文字作者資訊即可）。
+  document.querySelector('.version-footer a[href*="github.com"]')?.remove();
+  document.querySelectorAll('#aboutModal a[href*="github.com"]').forEach((a) => {
     const span = document.createElement('span');
     span.className = a.className;
     span.textContent = a.textContent;
