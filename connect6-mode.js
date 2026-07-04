@@ -324,8 +324,11 @@ function closeSettings() { dom.settingsModal?.classList.remove('show'); }
 function cellFromEvent(e) {
   const rect = dom.canvas.getBoundingClientRect();
   const pt = e.touches?.[0] || e.changedTouches?.[0] || e;
-  const scaleX = rect.width > 0 ? dom.canvas.width / rect.width : 1;
-  const scaleY = rect.height > 0 ? dom.canvas.height / rect.height : 1;
+  // HiDPI 後 canvas.width 是裝置解析度；點擊需換算到 CSS 邏輯座標（cellSize/padding 所在座標系）
+  const logicalW = parseFloat(dom.canvas.style.width) || dom.canvas.width;
+  const logicalH = parseFloat(dom.canvas.style.height) || dom.canvas.height;
+  const scaleX = rect.width > 0 ? logicalW / rect.width : 1;
+  const scaleY = rect.height > 0 ? logicalH / rect.height : 1;
   const mx = (pt.clientX - rect.left) * scaleX;
   const my = (pt.clientY - rect.top) * scaleY;
   const col = Math.round((mx - deps.padding) / deps.cellSize);

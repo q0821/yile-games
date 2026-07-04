@@ -4,7 +4,8 @@
 // view = { board, size, legalMoves, lastMove, hover }；座標 board[row][col]。
 import { EMPTY, BLACK } from './rules.js';
 import { drawStonePixel } from './stone.js';
-import { paintWoodGrain, paintVignette } from './board-texture.js';
+import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
+import { makeHiDPIOffscreen } from './canvas-dpr.js';
 
 const BG = '#e6c98a';
 const LINE = 'rgba(91,68,35,0.55)';
@@ -16,15 +17,12 @@ let _bg = null;
 let _bgKey = '';
 
 function buildBackground(deps) {
-  const key = `${deps._w}_${deps.size}`;
+  const key = `${deps._w}_${deps.size}_${deps.dpr || 1}`;
   if (_bg && _bgKey === key) return _bg;
-  const off = document.createElement('canvas');
-  off.width = deps._w; off.height = deps._w;
-  const ctx = off.getContext('2d');
+  const { off, ctx } = makeHiDPIOffscreen(deps._w, deps._w);
   const size = deps.size, cell = deps.cellSize, pad = deps.padding;
 
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, deps._w, deps._w);
+  paintBoardBase(ctx, deps._w, deps._w, { top: '#f0d79c', mid: '#e6c98a', bottom: '#d6b370' });
   paintWoodGrain(ctx, deps._w, deps._w, { seed: 13, grainColor: 'rgba(80,58,26,0.10)', speckColor: 'rgba(255,244,214,0.10)' });
 
   ctx.strokeStyle = LINE; ctx.lineWidth = 1;
@@ -61,6 +59,7 @@ export function resizeOthelloCanvas(deps, maxWidthPx) {
   canvas.style.width = w + 'px';
   canvas.style.height = w + 'px';
   deps.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  deps.dpr = dpr;
   deps._w = w;
   return { w, cell };
 }
@@ -77,7 +76,7 @@ export function drawOthello(deps, view) {
   const { ctx } = deps;
   const size = deps.size, cell = deps.cellSize, pad = deps.padding;
   ctx.clearRect(0, 0, deps._w, deps._w);
-  ctx.drawImage(buildBackground(deps), 0, 0);
+  ctx.drawImage(buildBackground(deps), 0, 0, deps._w, deps._w);
 
   const radius = cell * 0.42;
   const anim = view.anim;

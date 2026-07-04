@@ -4,8 +4,9 @@
 // pending 子畫一圈細環提示。offscreen 背景快取以 (寬,高,size) 為 key，與五子棋各自獨立。
 import { EMPTY, WHITE, inBounds } from './rules.js';
 import { drawStone } from './ui.js';
-import { paintWoodGrain, paintVignette } from './board-texture.js';
+import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
 import { prefersReducedMotion } from './motion.js';
+import { setupHiDPICanvas, makeHiDPIOffscreen } from './canvas-dpr.js';
 
 // 19 路盤星位（圍棋標準九星）。
 const STAR_19 = [
@@ -19,18 +20,15 @@ let _bgCache = null;
 let _bgKey = '';
 
 function buildBackground(deps, size) {
-  const w = deps.canvas.width, h = deps.canvas.height;
-  const key = `${w}_${h}_${size}`;
+  const w = deps._cssW || deps.canvas.width, h = deps._cssW || deps.canvas.height;
+  const key = `${w}_${h}_${size}_${deps.dpr || 1}`;
   if (_bgCache && _bgKey === key) return _bgCache;
-  const off = document.createElement('canvas');
-  off.width = w; off.height = h;
-  const ctx = off.getContext('2d');
+  const { off, ctx } = makeHiDPIOffscreen(w, h);
   const cs = deps.cellSize, pad = deps.padding;
   const sx = (c) => pad + c * cs;
   const sy = (r) => pad + r * cs;
 
-  ctx.fillStyle = '#dcb35c';
-  ctx.fillRect(0, 0, w, h);
+  paintBoardBase(ctx, w, h);
   paintWoodGrain(ctx, w, h, { seed: 9, grainColor: 'rgba(90,64,24,0.12)', speckColor: 'rgba(255,244,214,0.10)' });
 
   ctx.strokeStyle = '#5a4420';
@@ -73,10 +71,8 @@ export function resizeConnect6Canvas(deps, view) {
   const padding = Math.max(20, Math.round(maxSize * 0.04));
   const cellSize = Math.max(12, Math.floor((maxSize - padding * 2) / span));
   const wh = cellSize * span + padding * 2;
-  deps.canvas.width = wh;
-  deps.canvas.height = wh;
-  deps.canvas.style.width = `${wh}px`;
-  deps.canvas.style.height = `${wh}px`;
+  deps._cssW = wh;
+  deps.dpr = setupHiDPICanvas(deps.canvas, wh, wh);
   deps.padding = padding;
   deps.cellSize = cellSize;
   return cellSize;
@@ -90,7 +86,10 @@ export function drawConnect6(deps, view) {
   const sx = (c) => pad + c * cs;
   const sy = (r) => pad + r * cs;
 
-  ctx.drawImage(buildBackground(deps, size), 0, 0);
+  const dpr = deps.dpr || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const bgW = deps._cssW || deps.canvas.width;
+  ctx.drawImage(buildBackground(deps, size), 0, 0, bgW, bgW);
 
   // 落子 scale-in 偵測（事件觸發：lastMove 座標變動才起動畫）
   const reduceMotion = prefersReducedMotion();

@@ -1,7 +1,8 @@
 import { EMPTY, BLACK, WHITE, getGroup } from './rules.js';
 import { drawStonePixel } from './stone.js';
-import { paintWoodGrain, paintVignette } from './board-texture.js';
+import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
 import { prefersReducedMotion } from './motion.js';
+import { hidpiScale, setupHiDPICanvas, makeHiDPIOffscreen } from './canvas-dpr.js';
 
 // ——— Liberty map for emotion mode ———
 function computeLibertyMap(board, size) {
@@ -48,21 +49,26 @@ let _captureFade = null;    // { stones: [{x,y,color}], start }
 const _easeOutBack = (t) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
 
 function _layoutKey(deps, state) {
-  return `${window.innerWidth}_${window.innerHeight}_${state.size}`;
+  return `${window.innerWidth}_${window.innerHeight}_${state.size}_${hidpiScale()}`;
+}
+
+// 從 canvas 自身推導 CSS 尺寸與 dpr（attr = css × dpr，見 resizeCanvas）。
+// 不能依賴 deps.dpr：main.js 每次 drawBoard 都重建 deps 物件，只回存 cellSize/padding，
+// 掛在 deps 上的值第二幀就消失——曾造成「第二幀起 transform 退回 1x、盤面縮到左上角」。
+function canvasCssMetrics(canvas) {
+  const cssW = parseFloat(canvas.style.width) || canvas.width;
+  return { cssW, dpr: cssW > 0 ? canvas.width / cssW : 1 };
 }
 
 function renderBoardBackground(deps, state) {
-  const w = deps.canvas.width;
-  const cacheKey = `${w}_${state.size}`;
+  // 全程以 CSS 像素座標作畫；offscreen 內部為 HiDPI 解析度（ctx 已預先 scale）。
+  const { cssW: w, dpr } = canvasCssMetrics(deps.canvas);
+  const cacheKey = `${w}_${dpr}_${state.size}`;
   if (_bgCache && _bgCacheKey === cacheKey) return _bgCache;
 
-  const offscreen = document.createElement('canvas');
-  offscreen.width = w;
-  offscreen.height = w;
-  const ctx = offscreen.getContext('2d');
+  const { off: offscreen, ctx } = makeHiDPIOffscreen(w, w);
 
-  ctx.fillStyle = '#dcb35c';
-  ctx.fillRect(0, 0, w, w);
+  paintBoardBase(ctx, w, w);
   // 低對比 procedural 木紋（纖維弧線＋木孔斑），一次畫進快取，不每 frame 重算
   paintWoodGrain(ctx, w, w, { seed: 5, grainColor: 'rgba(90,64,24,0.12)', speckColor: 'rgba(255,244,214,0.10)' });
 
@@ -278,10 +284,8 @@ export function resizeCanvas(deps, state) {
   deps.padding = Math.max(30, minPadding);
   const cellSize = Math.floor((maxSize - deps.padding * 2) / s);
   const canvasSize = cellSize * s + deps.padding * 2;
-  deps.canvas.width = canvasSize;
-  deps.canvas.height = canvasSize;
-  deps.canvas.style.width = `${canvasSize}px`;
-  deps.canvas.style.height = `${canvasSize}px`;
+  deps.cssSize = canvasSize;
+  deps.dpr = setupHiDPICanvas(deps.canvas, canvasSize, canvasSize);
   return cellSize;
 }
 
@@ -382,9 +386,11 @@ export function drawBoard(deps, state) {
 
   const ctx = deps.ctx;
   const canvas = deps.canvas;
-  const w = canvas.width;
+  // HiDPI：以 dpr transform 讓後續所有繪圖沿用 CSS 像素座標（cellSize/padding 不變）。
+  const { cssW: w, dpr } = canvasCssMetrics(canvas);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  ctx.drawImage(renderBoardBackground(deps, state), 0, 0);
+  ctx.drawImage(renderBoardBackground(deps, state), 0, 0, w, w);
 
   if (state.isScoring && state.scoreData) {
     for (let x = 0; x < state.size; x++) {
@@ -629,8 +635,17 @@ export function updateReviewAnalysisInfo(state) {
 export function drawWinrateGraph(canvas, analysis, cursor) {
   if (!canvas || !analysis || analysis.length === 0) return;
   const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
+  // HiDPI：以顯示尺寸（CSS px，.winrate-graph 為 width:100%）為邏輯座標、內部解析度 × dpr。
+  // rect 為 0（尚未顯示）時退回既有屬性尺寸，行為與原本相同。
+  const rect = canvas.getBoundingClientRect();
+  const dpr = hidpiScale();
+  const W = Math.round(rect.width) || canvas.width;
+  const H = Math.round(rect.height) || canvas.height;
+  if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const N = analysis.length - 1; // 位置 0..N
   ctx.clearRect(0, 0, W, H);
 

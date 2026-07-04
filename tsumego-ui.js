@@ -9,6 +9,8 @@
  */
 import { EMPTY, WHITE } from './rules.js';
 import { drawStone } from './ui.js';
+import { setupHiDPICanvas } from './canvas-dpr.js';
+import { paintBoardBase } from './board-texture.js';
 
 const STAR_19 = [
   [3, 3], [3, 9], [3, 15],
@@ -38,10 +40,9 @@ export function resizeTsumegoCanvas(deps, view) {
   const w = cellSize * cols + padding * 2;
   const h = cellSize * rows + padding * 2;
 
-  deps.canvas.width = w;
-  deps.canvas.height = h;
-  deps.canvas.style.width = `${w}px`;
-  deps.canvas.style.height = `${h}px`;
+  deps._cssW = w;
+  deps._cssH = h;
+  deps.dpr = setupHiDPICanvas(deps.canvas, w, h);
   deps.padding = padding;
   deps.cellSize = cellSize;
   return cellSize;
@@ -53,15 +54,16 @@ export function drawTsumego(deps, view) {
   const size = view.size;
   const cs = deps.cellSize;
   const pad = deps.padding;
-  const w = deps.canvas.width;
-  const h = deps.canvas.height;
+  const dpr = deps.dpr || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = deps._cssW || deps.canvas.width;
+  const h = deps._cssH || deps.canvas.height;
 
   const sx = (col) => pad + (col - vp.minCol) * cs;
   const sy = (row) => pad + (row - vp.minRow) * cs;
 
   // ——— 木紋底 ———
-  ctx.fillStyle = '#dcb35c';
-  ctx.fillRect(0, 0, w, h);
+  paintBoardBase(ctx, w, h);
 
   // ——— 格線（真實盤邊 vs 內部裁切邊）———
   const leftEdge = vp.minCol === 0;

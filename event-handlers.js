@@ -8,8 +8,11 @@ export function registerEventHandlers(app) {
   function getBoardPositionFromEvent(e) {
     const rect = canvas.getBoundingClientRect();
     const point = e.touches?.[0] || e.changedTouches?.[0] || e;
-    const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-    const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+    // HiDPI 後 canvas.width 是裝置解析度；點擊需換算到「CSS 邏輯座標」（cellSize/padding 所在座標系）
+    const logicalW = parseFloat(canvas.style.width) || canvas.width;
+    const logicalH = parseFloat(canvas.style.height) || canvas.height;
+    const scaleX = rect.width > 0 ? logicalW / rect.width : 1;
+    const scaleY = rect.height > 0 ? logicalH / rect.height : 1;
     const mx = (point.clientX - rect.left) * scaleX;
     const my = (point.clientY - rect.top) * scaleY;
     const x = Math.round((my - app.padding) / app.cellSize);
