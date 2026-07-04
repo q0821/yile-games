@@ -62,6 +62,19 @@ export function nextLevel(level, margin) {
 }
 
 /**
+ * 依模式算新等級：'manual'（手動選級）不自動升降，只夾在合法範圍；'auto' 走 nextLevel 階梯。
+ * @param {number} level
+ * @param {number} margin  人類視角的勝負目數
+ * @param {'auto'|'manual'} mode
+ */
+export function nextLevelForMode(level, margin, mode) {
+  if (mode === 'manual') {
+    return { level: Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, level | 0)), change: 'same' };
+  }
+  return nextLevel(level, margin);
+}
+
+/**
  * 從 KataGo 候選手中，依等級挑一手（含隨機弱化）。
  * @param {Array<{x,y,pointsLost,order}>} moves  引擎候選手（本專案座標 x=row,y=col）
  * @param {number} level

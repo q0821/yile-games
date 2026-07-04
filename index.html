@@ -2,12 +2,14 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- maximum-scale/user-scalable：鎖住 App 內（WKWebView）的捏合與雙擊縮放；
+     Web 版瀏覽器基於無障礙會忽略這兩個值，網頁版仍可正常縮放。 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f0e6cf">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="弈樂">
-<link rel="manifest" href="manifest.json?v=v2026.07.04-9490c06">
+<link rel="manifest" href="manifest.json?v=v2026.07.04-7857985">
 <link rel="icon" href="favicon.ico?v=icons20260704a" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=icons20260704a">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=icons20260704a">
@@ -33,7 +35,7 @@
 <meta name="twitter:image" content="https://yile.jackie-yeh.com/icon-512.png">
 <!-- 改用系統內建宋體（見 style.css --font-serif）：移除跨來源 Google Fonts，
      讓象棋引擎可用 COEP require-corp 全瀏覽器開啟 cross-origin isolation。 -->
-<link rel="stylesheet" href="style.css?v=v2026.07.04-9490c06">
+<link rel="stylesheet" href="style.css?v=v2026.07.04-7857985">
 </head>
 <body>
   <h1 class="brush-title">弈樂</h1>
@@ -120,6 +122,7 @@
     <button onclick="doUndo()" id="undoBtn">悔棋</button>
     <button onclick="requestMoveHint()" id="moveHintBtn">建議走法</button>
     <button onclick="showHintOnce()" id="hintBtn">吃子提示</button>
+    <button onclick="requestPositionEstimate()" id="estimateBtn" title="評估目前盤面誰領先幾目，並上色顯示雙方地盤">形勢判斷</button>
     <button onclick="finishGame()" id="finishBtn">申請數目</button>
     <button onclick="doResign()" class="danger">認輸</button>
     <button onclick="newGame()" id="goRestartBtn">重新開始</button>
@@ -219,10 +222,17 @@
         </select>
       </div>
       <div class="control-group" id="aiStrengthGroup">
-        <label>電腦等級（自動調整）</label>
-        <div id="aiLevelDisplay" class="ai-level-display">第 1 級（約 25 級）</div>
-        <p class="control-hint">電腦會依你每局的勝負目數自動升降：贏夠多目會升級、輸太多會降級。等級越高棋力越強。級位為估計值，僅供參考。</p>
-        <button type="button" onclick="resetAiLevel()" class="control-reset">重設等級</button>
+        <label>電腦等級</label>
+        <select id="aiLevelMode">
+          <option value="auto" selected>自動調整（依戰績升降）</option>
+          <option value="manual">手動選級</option>
+        </select>
+        <select id="aiManualLevel" style="display:none" aria-label="手動選擇電腦等級"></select>
+        <div id="aiAutoRow">
+          <div id="aiLevelDisplay" class="ai-level-display">第 1 級（約 25 級）</div>
+          <p class="control-hint">電腦會依你每局的勝負目數自動升降：贏夠多目會升級、輸太多會降級。等級越高棋力越強。級位為估計值，僅供參考。</p>
+          <button type="button" onclick="resetAiLevel()" class="control-reset">重設等級</button>
+        </div>
       </div>
       <div class="control-group" id="handicapGroup">
         <label>讓子</label>
@@ -946,6 +956,29 @@
 </div>
 
 <!-- Changelog Modal -->
+<!-- 完整版說明 modal：功能鎖住時說明解鎖範圍（IAP 接上前先以說明代替購買流程） -->
+<div class="modal-overlay" id="premiumModal">
+  <div class="modal changelog-modal">
+    <h2>完整版</h2>
+    <div class="changelog-body">
+      <p id="premiumReason" style="color:#8899bb"></p>
+      <p>完整版一次購買、永久解鎖：</p>
+      <ul>
+        <li>AI 覆盤分析不限次數（免費版每日 1 次）</li>
+        <li>形勢判斷不限次數（免費版每日 1 次）</li>
+        <li>電腦等級手動任選（1–13 級）</li>
+        <li>SGF 棋譜匯出</li>
+      </ul>
+      <p id="premiumFootnote">完整版於 iOS App 內購買。</p>
+      <div id="premiumActions" style="display:none">
+        <button class="primary" onclick="buyFullVersion()" id="buyFullBtn">購買完整版</button>
+        <button onclick="restorePurchase()">恢復購買</button>
+      </div>
+    </div>
+    <button onclick="closePremiumModal()">關閉</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="changelogModal">
   <div class="modal changelog-modal">
     <h2>版本紀錄</h2>

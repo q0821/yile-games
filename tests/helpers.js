@@ -216,6 +216,27 @@ function sandboxWithXiangqiEngine() {
   return ctx;
 }
 
+/** Returns a sandbox with sgf-export loaded（File 由 node 20+ 全域提供給 vm context）。 */
+function sandboxWithSgfExport() {
+  const { ctx, localRequire } = createSandbox({ File: globalThis.File, Blob: globalThis.Blob });
+  loadIntoContext(ctx, localRequire, './sgf-export.js');
+  return ctx;
+}
+
+/** Returns a sandbox with position-estimate loaded（純邏輯；無 DOM 需求）。 */
+function sandboxWithPositionEstimate() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './position-estimate.js');
+  return ctx;
+}
+
+/** Returns a sandbox with entitlements loaded（純邏輯；storage 由呼叫端注入）。 */
+function sandboxWithEntitlements() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './entitlements.js');
+  return ctx;
+}
+
 /** 極簡 in-memory localStorage mock（audio-manager 測試用）。 */
 function createMockLocalStorage() {
   let store = {};
@@ -316,4 +337,4 @@ function sandboxWithAiController(mockKataGo = {}) {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithConnect6, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController };
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithConnect6, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController, sandboxWithSgfExport, sandboxWithPositionEstimate, sandboxWithEntitlements };

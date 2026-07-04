@@ -8,6 +8,7 @@ import { GoTimer } from './timer.js';
 import { GoHints } from './hints.js';
 import { GoReview } from './review.js';
 import { buildSGF } from './sgf.js';
+import { shareOrDownloadSgf } from './sgf-export.js';
 import { openGoSettings, closeGoSettings, toggleGoSettings } from './go-settings.js';
 import { makeAiController } from './ai-controller.js';
 import { registerEventHandlers } from './event-handlers.js';
@@ -20,7 +21,10 @@ import { enterOthelloMode } from './othello-mode.js';
 import { loadProgress as loadTsumegoProgress, totalSolved as tsumegoTotalSolved } from './tsumego-progress.js';
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
-import { nextLevel, kyuLabel, levelConfig, MIN_LEVEL } from './adaptive-difficulty.js';
+import { nextLevelForMode, kyuLabel, levelConfig, MIN_LEVEL, MAX_LEVEL } from './adaptive-difficulty.js';
+import { formatPositionEstimate } from './position-estimate.js';
+import { isPremium, remainingQuota, consumeQuota } from './entitlements.js';
+import * as Store from './store-service.js';
 import { initAudio, loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls, initAudioMuteButtons } from './audio-settings-ui.js';
 
@@ -54,8 +58,11 @@ let gameOver = false;
 let gameMode = 'pvc';
 let playerColor = BLACK;
 // 自適應難度：aiLevel 現在是「電腦等級」(1..MAX)，依戰績自動升降，獨立存於 localStorage。
+// aiLevelMode：'auto'（自適應升降）| 'manual'（手動選級、不升降），同樣持久化。
 const AI_LEVEL_KEY = 'gogame_ai_level';
+const AI_LEVEL_MODE_KEY = 'gogame_ai_level_mode';
 let aiLevel = loadAiLevel();
+let aiLevelMode = loadAiLevelMode();
 let isAIThinking = false;
 
 let timerEnabled = false;
@@ -69,6 +76,8 @@ let deadStones = new Set();
 let showingHint = false;
 let suggestMove = null; // KataGo 建議走法 [row,col]，null=不顯示
 let _suggestBusy = false;
+let liveOwnership = null; // 對局中形勢判斷的領地覆蓋層（KataGo ownership），落子/虛手/悔棋即清除
+let _estimateBusy = false;
 
 let invalidFlash = null; // 禁著點落子失敗時短暫閃現的紅 X [x,y]，null=不顯示
 let _invalidFlashTimer = null;
@@ -246,6 +255,99 @@ function clearSuggest() {
   suggestMove = null;
 }
 
+// ——— 完整版（premium）gating ———
+// 免費版：進階功能每日試用額度；完整版不限。旗標之後由商店 IAP 寫入（見 entitlements.js）。
+const FREE_DAILY_ANALYSIS = 1; // 「分析本局」每日免費次數
+const FREE_DAILY_ESTIMATE = 1; // 「形勢判斷」每日免費次數
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function hasPremium() {
+  try { return isPremium(localStorage); } catch (_) { return false; }
+}
+
+// 完整版判定：付費只存在於原生 App（商店可購買）；Web 版全功能免費——
+// 它是導流與 SEO 入口、也沒有購買管道，鎖了只會做出「永遠解不開的鎖」。
+function premiumUnlocked() {
+  return !Store.storeAvailable() || hasPremium();
+}
+
+function openPremiumModal(reason) {
+  const el = document.getElementById('premiumReason');
+  if (el) el.textContent = reason || '';
+  // 原生 App 內顯示購買/恢復按鈕（價格非同步從商店帶入）；Web 版只顯示說明。
+  const actions = document.getElementById('premiumActions');
+  const foot = document.getElementById('premiumFootnote');
+  const canBuy = Store.storeAvailable();
+  if (actions) actions.style.display = canBuy ? '' : 'none';
+  if (foot) foot.style.display = canBuy ? 'none' : '';
+  if (canBuy) {
+    Store.getFullVersionPrice().then((p) => {
+      const btn = document.getElementById('buyFullBtn');
+      if (btn && p) btn.textContent = `購買完整版 ${p}`;
+    });
+  }
+  document.getElementById('premiumModal')?.classList.add('show');
+}
+
+function closePremiumModal() {
+  document.getElementById('premiumModal')?.classList.remove('show');
+}
+
+async function buyFullVersion() {
+  const btn = document.getElementById('buyFullBtn');
+  const el = document.getElementById('premiumReason');
+  if (btn) btn.disabled = true;
+  const r = await Store.purchaseFullVersion();
+  if (btn) btn.disabled = false;
+  if (r.ok) {
+    if (el) el.textContent = '已解鎖完整版，感謝支持！';
+    setTimeout(() => closePremiumModal(), 1200);
+  } else if (el) {
+    el.textContent = r.cancelled ? '已取消購買' : `購買失敗：${r.message}`;
+  }
+}
+
+async function restorePurchase() {
+  const el = document.getElementById('premiumReason');
+  if (el) el.textContent = '恢復購買中…';
+  const r = await Store.restoreFullVersion();
+  if (el) el.textContent = r.message;
+  if (r.owned) setTimeout(() => closePremiumModal(), 1200);
+}
+
+// 形勢判斷：對局中隨時評估目前盤面。顯示黑方視角勝率＋領先目數，並以領地覆蓋層
+// 上色（重用覆盤的 ownership 繪圖）；下一手（落子/虛手/悔棋）即自動清除覆蓋層。
+async function requestPositionEstimate() {
+  if (isGameBusy() || _estimateBusy) return;
+  if (moveHistory.length === 0) { setStatus('盤面還是空的，先下幾手再判斷形勢'); return; }
+  if (!premiumUnlocked() && remainingQuota(localStorage, 'estimate', FREE_DAILY_ESTIMATE, todayStr()) <= 0) {
+    openPremiumModal('免費版每天可用 1 次「形勢判斷」，今天的額度已用完。');
+    return;
+  }
+  _estimateBusy = true;
+  setStatus('形勢判斷中…');
+  try {
+    await KataGo.ensureReady(setStatus);
+    const a = await KataGo.evaluate({
+      board, size, currentPlayer, moveHistory, komi, gameRules,
+    }, { visits: 24 });
+    const txt = formatPositionEstimate({ winrate: a?.rootWinRate, scoreLead: a?.rootScoreLead });
+    liveOwnership = a?.ownership || null;
+    setStatus(txt || '形勢判斷失敗，請稍候再試');
+    drawBoard();
+    if (txt && !premiumUnlocked()) consumeQuota(localStorage, 'estimate', todayStr());
+  } catch (err) {
+    console.error('position estimate error:', err);
+    setStatus('形勢判斷失敗，請稍候再試');
+  } finally {
+    _estimateBusy = false;
+  }
+}
+
 // 禁著點/無效點擊回饋：該交叉點紅 X 閃現約 600ms（見 ui.js drawBoard 的 invalidFlash）。
 function flashInvalid(x, y) {
   invalidFlash = [x, y];
@@ -301,7 +403,8 @@ function buildBoardViewState() {
     hoverPos,
     invalidFlash,
     ownership: (isReviewing && reviewOwnershipOn && reviewAnalysis && reviewAnalysis[currentReviewMove])
-      ? reviewAnalysis[currentReviewMove].ownership : null,
+      ? reviewAnalysis[currentReviewMove].ownership
+      : (!isReviewing && !isScoring ? liveOwnership : null),
   };
 }
 
@@ -335,6 +438,7 @@ function placeStone(x, y) {
 
   showingHint = false;
   suggestMove = null;
+  liveOwnership = null;
 
   updateUI();
   const willRequestAI = gameMode === 'pvc' && currentPlayer !== playerColor && !gameOver;
@@ -361,6 +465,7 @@ function doPass() {
 
   showingHint = false;
   suggestMove = null;
+  liveOwnership = null;
 
   const result = GameState.applyPass();
   if (!result.ok) return;
@@ -410,6 +515,7 @@ function doUndo() {
   if (isGameBusy()) return;
   showingHint = false;
   suggestMove = null;
+  liveOwnership = null;
   if (!document.getElementById('undoToggle').checked) {
     setStatus('悔棋功能已關閉，可在設定中開啟');
     return;
@@ -460,10 +566,55 @@ function saveAiLevel() {
   try { localStorage.setItem(AI_LEVEL_KEY, String(aiLevel)); } catch (_) {}
 }
 
+function loadAiLevelMode() {
+  try {
+    if (localStorage.getItem(AI_LEVEL_MODE_KEY) === 'manual') return 'manual';
+  } catch (_) {}
+  return 'auto';
+}
+
+function saveAiLevelMode() {
+  try { localStorage.setItem(AI_LEVEL_MODE_KEY, aiLevelMode); } catch (_) {}
+}
+
 // 更新設定面板的「電腦等級」顯示。
 function updateAiLevelDisplay() {
   const el = document.getElementById('aiLevelDisplay');
   if (el) el.textContent = `第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
+}
+
+// 初始化「電腦等級」設定控件：填手動選級下拉（1..MAX 級＋約當級位）、還原持久化的
+// 模式與等級、依模式切換自動/手動兩組 UI 的顯示。
+function initAiLevelControls() {
+  const modeSel = document.getElementById('aiLevelMode');
+  const manualSel = document.getElementById('aiManualLevel');
+  if (!modeSel || !manualSel) return;
+
+  for (let lv = MIN_LEVEL; lv <= MAX_LEVEL; lv++) {
+    const opt = document.createElement('option');
+    opt.value = String(lv);
+    opt.textContent = `第 ${lv} 級（${kyuLabel(lv)}）`;
+    manualSel.appendChild(opt);
+  }
+  // 完整版旗標若已失效（換裝置/尚未恢復購買），持久化的手動模式退回自動。
+  if (aiLevelMode === 'manual' && !premiumUnlocked()) { aiLevelMode = 'auto'; saveAiLevelMode(); }
+  modeSel.value = aiLevelMode;
+  manualSel.value = String(Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, aiLevel)));
+
+  const syncVisibility = () => {
+    const manual = modeSel.value === 'manual';
+    manualSel.style.display = manual ? '' : 'none';
+    const autoRow = document.getElementById('aiAutoRow');
+    if (autoRow) autoRow.style.display = manual ? 'none' : '';
+  };
+  modeSel.addEventListener('change', () => {
+    if (modeSel.value === 'manual' && !premiumUnlocked()) {
+      modeSel.value = 'auto';
+      openPremiumModal('電腦等級手動任選（1–13 級）為完整版功能。免費版由電腦依戰績自動調整。');
+    }
+    syncVisibility();
+  });
+  syncVisibility();
 }
 
 let _pendingLevelMsg = null; // 升降訊息，於結束彈窗顯示
@@ -472,12 +623,13 @@ let _pendingLevelMsg = null; // 升降訊息，於結束彈窗顯示
 function applyResultToLevel(humanMargin) {
   if (gameMode !== 'pvc') return; // 只在人機對局調整
   const before = aiLevel;
-  const r = nextLevel(before, humanMargin);
+  const r = nextLevelForMode(before, humanMargin, aiLevelMode);
   aiLevel = r.level;
   saveAiLevel();
   updateAiLevelDisplay();
   if (r.change === 'up') _pendingLevelMsg = `🎉 你贏得漂亮！電腦升到第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
   else if (r.change === 'down') _pendingLevelMsg = `電腦降到第 ${aiLevel} 級（${kyuLabel(aiLevel)}），調整步調再來`;
+  else if (aiLevelMode === 'manual') _pendingLevelMsg = `電腦固定第 ${aiLevel} 級（${kyuLabel(aiLevel)}，手動選級）`;
   else _pendingLevelMsg = `電腦維持第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
 }
 
@@ -642,17 +794,17 @@ function endGame(title, detail, outcome) {
   playSfx(`game-${outcome || 'win'}`);
 }
 
-function exportSGF() {
+async function exportSGF() {
+  if (!premiumUnlocked()) {
+    openPremiumModal('SGF 棋譜匯出為完整版功能。');
+    return;
+  }
   const handicapStones = GameState.getState().handicap >= 2 ? handicapPoints(size, GameState.getState().handicap) : [];
   const sgf = buildSGF(moveHistory, size, komi, handicapStones);
-  const blob = new Blob([sgf], { type: 'application/x-go-sgf' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
   const date = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `gogame_${date}_${size}x${size}.sgf`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const result = await shareOrDownloadSgf(sgf, `gogame_${date}_${size}x${size}.sgf`);
+  if (result === 'shared') setStatus('SGF 已分享');
+  else if (result === 'downloaded') setStatus('SGF 已下載');
 }
 
 function closeModal() {
@@ -755,6 +907,10 @@ function toggleReviewOwnership() {
 // 用 KataGo 誠實逐手分析本局（opt-in；低 visits；黑方觀點，不宣稱精確目數）。
 async function analyzeReview() {
   if (!isReviewing || reviewAnalyzing) return;
+  if (!premiumUnlocked() && remainingQuota(localStorage, 'analysis', FREE_DAILY_ANALYSIS, todayStr()) <= 0) {
+    openPremiumModal('免費版每天可用 1 次「分析本局」，今天的額度已用完。');
+    return;
+  }
   reviewAnalyzing = true;
   const btn = document.getElementById('analyzeReviewBtn');
   if (btn) btn.disabled = true;
@@ -773,6 +929,7 @@ async function analyzeReview() {
       results[k] = { wr: a.rootWinRate, lead: a.rootScoreLead, ownership: a.ownership };
     }
     reviewAnalysis = results;
+    if (!premiumUnlocked()) consumeQuota(localStorage, 'analysis', todayStr());
     setStatus('分析完成 — 逐手切換看勝率與失分，或點曲線跳手');
     const g = document.getElementById('winrateGraph');
     if (g) g.style.display = 'block';
@@ -883,8 +1040,17 @@ function startNewGame() {
   gameMode = VALID_GAME_MODES.includes(rawMode) ? rawMode : 'pvc';
 
   playerColor = parseInt(document.getElementById('playerColor').value);
-  // aiLevel 由自適應系統管理（不再從下拉讀取），沿用目前等級。
-  aiLevel = loadAiLevel();
+  // aiLevel：自動模式由自適應系統管理；手動模式由設定面板選定（該局不升降）。
+  const modeSel = document.getElementById('aiLevelMode');
+  aiLevelMode = (modeSel && modeSel.value === 'manual' && premiumUnlocked()) ? 'manual' : 'auto';
+  saveAiLevelMode();
+  if (aiLevelMode === 'manual') {
+    const lv = parseInt(document.getElementById('aiManualLevel')?.value);
+    aiLevel = levelConfig(Number.isFinite(lv) ? lv : MIN_LEVEL).level;
+    saveAiLevel();
+  } else {
+    aiLevel = loadAiLevel();
+  }
   updateAiLevelDisplay();
   timerEnabled = document.getElementById('timerToggle').checked;
   gameRules = document.getElementById('gameRules').value;
@@ -917,6 +1083,7 @@ function startNewGame() {
   document.getElementById('exportSgfBtn').style.display = 'none';
   document.getElementById('resultModal').classList.remove('show');
   clearReviewAnalysis();
+  liveOwnership = null;
 
   stopTimer();
   if (timerEnabled) { initTimer(); startTimer(); }
@@ -1154,6 +1321,7 @@ Object.assign(window, {
   resetAiLevel,
   showHintOnce,
   requestMoveHint,
+  requestPositionEstimate,
   enterReview,
   exitReview,
   reviewGo,
@@ -1163,6 +1331,9 @@ Object.assign(window, {
   onWinrateGraphClick,
   toggleReviewOwnership,
   exportSGF,
+  closePremiumModal,
+  buyFullVersion,
+  restorePurchase,
   closeModal,
   openChangelog,
   closeChangelog,
@@ -1192,6 +1363,9 @@ Object.defineProperty(window, 'moveHistory', {
 // ==================== INIT ====================
 registerEventHandlers(app);
 updateAiLevelDisplay();
+initAiLevelControls();
+// IAP 權益啟動校正（原生 App 內才有動作；失敗不影響啟動）
+Store.syncEntitlements();
 
 // 全域音訊：掛一次性解鎖手勢＋背景/前景生命週期監聽；設定 UI 容器在頁面載入時就存在
 // （各棋畫面雖隱藏但 DOM 已渲染），可一次性渲染，靠 audio-settings-ui.js 的

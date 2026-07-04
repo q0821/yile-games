@@ -2,6 +2,8 @@ PODS:
   - Capacitor (7.6.7):
     - CapacitorCordova
   - CapacitorCordova (7.6.7)
+  - CapgoNativePurchases (7.19.3):
+    - Capacitor
   - GCDWebServer (3.5.4):
     - GCDWebServer/Core (= 3.5.4)
   - GCDWebServer/Core (3.5.4)
@@ -9,6 +11,7 @@ PODS:
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapgoNativePurchases (from `../../node_modules/@capgo/native-purchases`)"
   - GCDWebServer (~> 3.0)
 
 SPEC REPOS:
@@ -20,12 +23,15 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  CapgoNativePurchases:
+    :path: "../../node_modules/@capgo/native-purchases"
 
 SPEC CHECKSUMS:
   Capacitor: ee608ffbcf73b0030813d77ce8b10142f26cad4a
   CapacitorCordova: 139e2ed3d91c54b5aeae7941135c9f9aefc6da1d
+  CapgoNativePurchases: b27183e75ca1b241a746069e3508b4c9720e65db
   GCDWebServer: 2c156a56c8226e2d5c0c3f208a3621ccffbe3ce4
 
-PODFILE CHECKSUM: 9c270cfa5089fd355df9a3cec47b74de5849b6aa
+PODFILE CHECKSUM: 088f4abe9b5080045c0eae7880dc149763656ff6
 
 COCOAPODS: 1.16.2

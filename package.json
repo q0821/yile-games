@@ -23,6 +23,7 @@
     "@capacitor/cli": "^7.6.7",
     "@capacitor/core": "^7.6.7",
     "@capacitor/ios": "^7.6.7",
+    "@capgo/native-purchases": "^7.19.3",
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-backend-wasm": "^4.22.0",
     "@tensorflow/tfjs-backend-webgpu": "^4.22.0",

@@ -14,7 +14,7 @@
  *   licenses/gpl-3.0.txt        GPL 全文（已無 GPL 內容隨附，不需保留）
  *   licenses/tsumego-LICENSE.txt 死活題庫授權（題庫已移除）
  */
-import { existsSync, rmSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, rmSync, readdirSync, readFileSync, statSync, copyFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -50,6 +50,19 @@ for (const rel of TARGETS) {
   }
 }
 console.log(`已移除 ${removed} 項 web-only 資產。`);
+
+// ── 1.5 換用 iOS 專用版本紀錄 ─────────────────────────────────────
+// Web 版 CHANGELOG 記載的是全站歷史（含 iOS 未收錄的象棋/將棋/西洋棋/死活/殘局），
+// iOS 使用者沒經歷那段歷史、且會看到 App 內不存在的功能，故 App 內的「版本紀錄」
+// 換成從 1.0 起算的 iOS 專用版（CHANGELOG-ios.md）。
+const iosChangelog = join(ROOT, 'CHANGELOG-ios.md');
+if (existsSync(iosChangelog)) {
+  copyFileSync(iosChangelog, join(DIST, 'CHANGELOG.md'));
+  console.log('  ↺  dist/CHANGELOG.md 已換為 iOS 專用版（CHANGELOG-ios.md）');
+} else {
+  console.error('✖ 找不到 CHANGELOG-ios.md（iOS 版本紀錄）');
+  process.exit(1);
+}
 
 // ── 2. 合規驗證：bundle 內不得殘留 GPL 引擎 ──────────────────────────
 // 掃描所有打包後的 JS（含 assets/ 與根目錄），比對 GPL 引擎特徵字串。

@@ -68,3 +68,19 @@ describe('pickMove (random weakening)', () => {
     expect(A.pickMove([], 5)).toBeNull();
   });
 });
+
+describe('nextLevelForMode（手動選級模式不自動升降）', () => {
+  test('manual 模式贏再多也不升級', () => {
+    expect(A.nextLevelForMode(5, 30, 'manual')).toEqual({ level: 5, change: 'same' });
+  });
+  test('manual 模式輸再多也不降級', () => {
+    expect(A.nextLevelForMode(5, -50, 'manual')).toEqual({ level: 5, change: 'same' });
+  });
+  test('manual 模式等級仍夾在合法範圍', () => {
+    expect(A.nextLevelForMode(999, 0, 'manual')).toEqual({ level: A.MAX_LEVEL, change: 'same' });
+  });
+  test('auto 模式行為等同 nextLevel', () => {
+    expect(A.nextLevelForMode(3, 10, 'auto')).toEqual(A.nextLevel(3, 10));
+    expect(A.nextLevelForMode(5, -20, 'auto')).toEqual(A.nextLevel(5, -20));
+  });
+});
