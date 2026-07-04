@@ -14,6 +14,7 @@
 | 價格 | 免費（含 App 內購買） |
 | 隱私政策 URL | https://yile.jackie-yeh.com/privacy.html |
 | 支援 URL | https://yile.jackie-yeh.com/ |
+| 支援信箱 | yile@jackie-yeh.com（Cloudflare Email Routing 轉寄至 q0821yeh@gmail.com，需先到 Cloudflare 後台建立） |
 
 ## 描述（草稿）
 

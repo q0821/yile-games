@@ -538,6 +538,8 @@ function doResign() {
   // gameOver 設為 true，該 promise 事後 resolve 時 aiController 仍會嘗試 applyStateFromStore／
   // placeStone，對已結束的對局動手。isGameBusy() 才會把 isAIThinking 一併擋下。
   if (isGameBusy()) return;
+  // 認輸不可逆且會影響自適應等級，先確認避免誤觸（比照「重新開始」的既有做法）。
+  if (!window.confirm('確定要認輸嗎？這局將以對方獲勝結束。')) return;
   const winner = opponent(currentPlayer);
   // 認輸視為大敗/大勝：認輸者的對手贏。以人類視角換算 margin 給自適應難度。
   const humanWon = (winner === playerColor);
@@ -627,7 +629,7 @@ function applyResultToLevel(humanMargin) {
   aiLevel = r.level;
   saveAiLevel();
   updateAiLevelDisplay();
-  if (r.change === 'up') _pendingLevelMsg = `🎉 你贏得漂亮！電腦升到第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
+  if (r.change === 'up') _pendingLevelMsg = `你贏得漂亮！電腦升到第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
   else if (r.change === 'down') _pendingLevelMsg = `電腦降到第 ${aiLevel} 級（${kyuLabel(aiLevel)}），調整步調再來`;
   else if (aiLevelMode === 'manual') _pendingLevelMsg = `電腦固定第 ${aiLevel} 級（${kyuLabel(aiLevel)}，手動選級）`;
   else _pendingLevelMsg = `電腦維持第 ${aiLevel} 級（${kyuLabel(aiLevel)}）`;
@@ -1314,6 +1316,13 @@ function closeChangelog() {
 }
 
 function openAbout() {
+  // 問題回報 mailto 的主旨帶當前版本與平台，來信不用再問「你哪一版」。
+  const mail = document.getElementById('feedbackMailLink');
+  if (mail) {
+    const platform = location.port === '3333' ? 'App' : 'Web';
+    const subject = encodeURIComponent(`弈樂問題回報（${platform} ${_currentVersion}）`);
+    mail.href = `mailto:yile@jackie-yeh.com?subject=${subject}`;
+  }
   document.getElementById('aboutModal').classList.add('show');
 }
 
@@ -1414,17 +1423,31 @@ renderAudioControls(document.getElementById('goAudioSettings'));
 initAudioMuteButtons();
 
 // App 版（iOS/Android 內嵌 server，port 3333）不顯示 GitHub 連結（使用者要求）：
-// 自家「原始碼」行整行移除、作者改純文字；第三方授權標註保留文字但去連結化（GPL/MIT 署名合規）。
+// 自家「原始碼」行整行移除、作者改純文字（含頁尾）；第三方授權標註保留文字但去連結化
+// （GPL/MIT 署名合規）。另在關於頁加「網頁版」低調連結（外開瀏覽器；措辭刻意不做
+// 功能/價格對比，避開 App Store 反規避條款的灰色地帶）。
 if (location.port === '3333') {
   const src = document.getElementById('aboutSourceLine');
   if (src) src.remove();
   const author = document.getElementById('aboutAuthorLine');
   if (author) author.textContent = '作者：Jackie Yeh';
-  document.querySelectorAll('#aboutModal a[href*="github.com"]').forEach((a) => {
+  document.querySelectorAll('#aboutModal a[href*="github.com"], .version-footer a[href*="github.com"]').forEach((a) => {
     const span = document.createElement('span');
+    span.className = a.className;
     span.textContent = a.textContent;
     a.replaceWith(span);
   });
+  if (author) {
+    const web = document.createElement('p');
+    web.append('網頁版： ');
+    const link = document.createElement('a');
+    link.href = 'https://yile.jackie-yeh.com';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'yile.jackie-yeh.com';
+    web.appendChild(link);
+    author.after(web);
+  }
 }
 
 const _isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);

@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import GCDWebServer
+import AVFoundation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -8,6 +9,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // 音訊類別設為 ambient：遊戲音效跟隨實體靜音鍵（Apple 慣例），且不中斷使用者
+        // 自己在聽的音樂/podcast（mixWithOthers）。不設的話 WKWebView 播 Web Audio 時
+        // session 會落在 playback 類，靜音鍵切了照響。
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
         // 先啟動本地 HTTP server，之後 WKWebView 才會載入 http://localhost:PORT。
         // GCDWebServer.start 為同步（回傳前已綁好 port），故 webview 載入時必定就緒。
         LocalServer.shared.start()

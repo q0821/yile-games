@@ -230,6 +230,20 @@ function sandboxWithPositionEstimate() {
   return ctx;
 }
 
+/** Returns a sandbox with sgf.js loaded（純字串工具）。 */
+function sandboxWithSgf() {
+  const { ctx, localRequire } = createSandbox();
+  loadIntoContext(ctx, localRequire, './sgf.js');
+  return ctx;
+}
+
+/** Returns a sandbox with canvas-dpr loaded（devicePixelRatio 從 ctx 頂層讀，測試可直接改）。 */
+function sandboxWithCanvasDpr() {
+  const { ctx, localRequire } = createSandbox({ devicePixelRatio: 1 });
+  loadIntoContext(ctx, localRequire, './canvas-dpr.js');
+  return ctx;
+}
+
 /** Returns a sandbox with entitlements loaded（純邏輯；storage 由呼叫端注入）。 */
 function sandboxWithEntitlements() {
   const { ctx, localRequire } = createSandbox();
@@ -337,4 +351,4 @@ function sandboxWithAiController(mockKataGo = {}) {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithConnect6, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController, sandboxWithSgfExport, sandboxWithPositionEstimate, sandboxWithEntitlements };
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithConnect6, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController, sandboxWithSgfExport, sandboxWithPositionEstimate, sandboxWithEntitlements, sandboxWithSgf, sandboxWithCanvasDpr };
