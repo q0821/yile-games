@@ -8,6 +8,7 @@
 //   hint = { from, to }：建議走法箭頭（AI 建議按鈕，見 chess-mode.js）。
 import { COLUMNS, ROWS } from './chess-game.js';
 import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
+import { makeHiDPIOffscreen, hidpiScale } from './canvas-dpr.js';
 
 // 棋子用系統西洋棋符號字型（macOS/iOS=Apple Symbols；其餘退回）
 const PIECEFONT = '"Apple Symbols","Segoe UI Symbol","Noto Sans Symbols 2","DejaVu Sans",sans-serif';
@@ -56,14 +57,14 @@ const _pieceSpriteCache = new Map();
  *  sprite 以裝置像素解析度繪製（off.width = s*dpr、繪圖前 scale(dpr)），貼回主畫布時用邏輯尺寸
  *  drawImage，確保 Retina 清晰。回傳 { canvas, half, s }（s = sprite 邊長之邏輯像素）。 */
 function buildPieceSprite(deps, size, piece) {
-  const key = `${piece.glyph}_${piece.white ? 1 : 0}_${size}`;
+  const dpr = (deps.canvas.width / deps._w) || 1;
+  const key = `${piece.glyph}_${piece.white ? 1 : 0}_${size}_${dpr}`;
   const cached = _pieceSpriteCache.get(key);
   if (cached) return cached;
   if (_pieceSpriteCache.size > 64) _pieceSpriteCache.clear();
 
   const s = Math.ceil(size * 1.6);           // 邏輯像素邊長，與主畫布座標系一致
   const half = s / 2;
-  const dpr = (deps.canvas.width / deps._w) || 1;
 
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(s * dpr));
@@ -179,11 +180,9 @@ let _bg = null;
 let _bgKey = '';
 
 function buildBackground(deps) {
-  const key = `${deps._w}_${deps.cellSize}`;
+  const key = `${deps._w}_${deps.cellSize}_${hidpiScale()}`;
   if (_bg && _bgKey === key) return _bg;
-  const off = document.createElement('canvas');
-  off.width = deps._w; off.height = deps._w;
-  const ctx = off.getContext('2d');
+  const { off, ctx } = makeHiDPIOffscreen(deps._w, deps._w);
   const cell = deps.cellSize;
   const W = deps._w;
 
@@ -249,7 +248,7 @@ export function drawChess(deps, view) {
   const cell = deps.cellSize;
   const W = deps._w;
   ctx.clearRect(0, 0, W, W);
-  ctx.drawImage(buildBackground(deps), 0, 0);
+  ctx.drawImage(buildBackground(deps), 0, 0, W, W);
 
   // 最後一手底色（from + to）
   if (view.lastMove) {

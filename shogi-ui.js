@@ -9,10 +9,10 @@
 import { COLUMNS, ROWS } from './shogi-game.js';
 import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
 import { posHash01, engraveText, paintPieceGrain } from './piece-texture.js';
+import { makeHiDPIOffscreen, hidpiScale } from './canvas-dpr.js';
 
 const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
 
-const BG = '#f0d9a8';       // 暖木盤底
 const FRAME = '#6b4f2a';
 const LINE = '#7a5a31';
 const SEL = '#c0392b';
@@ -97,6 +97,7 @@ function drawPiece(ctx, x, y, size, piece, lifted) {
   ctx.clip();
   paintPieceGrain(ctx, 'straight', seed, { w, h });
   ctx.restore();
+  komaPath(ctx, w, h);
   ctx.lineWidth = Math.max(1.4, size * 0.045);
   ctx.strokeStyle = PIECE_EDGE;
   ctx.stroke();
@@ -161,11 +162,9 @@ let _bg = null;
 let _bgKey = '';
 
 function buildBackground(deps) {
-  const key = `${deps._w}_${deps._h}_${deps.cellSize}`;
+  const key = `${deps._w}_${deps._h}_${deps.cellSize}_${hidpiScale()}`;
   if (_bg && _bgKey === key) return _bg;
-  const off = document.createElement('canvas');
-  off.width = deps._w; off.height = deps._h;
-  const ctx = off.getContext('2d');
+  const { off, ctx } = makeHiDPIOffscreen(deps._w, deps._h);
   const bg = { ctx, cellSize: deps.cellSize, padding: deps.padding };
   const cell = deps.cellSize;
 
@@ -204,7 +203,7 @@ export function drawShogi(deps, view) {
   const { ctx } = deps;
   const cell = deps.cellSize;
   ctx.clearRect(0, 0, deps._w, deps._h);
-  ctx.drawImage(buildBackground(deps), 0, 0);
+  ctx.drawImage(buildBackground(deps), 0, 0, deps._w, deps._h);
 
   // 最後一手底色（from + to 格）
   if (view.lastMove) {

@@ -7,6 +7,7 @@
 import { COLUMNS, ROWS } from './xiangqi-game.js';
 import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
 import { posHash01, engraveText, paintPieceGrain } from './piece-texture.js';
+import { makeHiDPIOffscreen, hidpiScale } from './canvas-dpr.js';
 
 // 與 style.css --font-serif 同步（canvas 無法吃 CSS 變數，故重複一份系統宋體 stack）
 const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
@@ -102,6 +103,8 @@ function drawPiece(ctx, x, y, r, piece, lifted) {
   paintPieceGrain(ctx, 'ring', seed, { x, y, r });
   ctx.restore();
   // 3) 外描邊 + 內圈
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.lineWidth = Math.max(2, r * 0.10);
   ctx.strokeStyle = edge;
   ctx.stroke();
@@ -155,11 +158,9 @@ let _bg = null;
 let _bgKey = '';
 
 function buildBackground(deps) {
-  const key = `${deps._w}_${deps._h}_${deps.cellSize}`;
+  const key = `${deps._w}_${deps._h}_${deps.cellSize}_${hidpiScale()}`;
   if (_bg && _bgKey === key) return _bg;
-  const off = document.createElement('canvas');
-  off.width = deps._w; off.height = deps._h;
-  const ctx = off.getContext('2d');
+  const { off, ctx } = makeHiDPIOffscreen(deps._w, deps._h);
   const bg = { ctx, cellSize: deps.cellSize, padding: deps.padding };
   const cell = deps.cellSize;
 
@@ -211,7 +212,7 @@ export function drawXiangqi(deps, view) {
   const { ctx } = deps;
   const cell = deps.cellSize;
   ctx.clearRect(0, 0, deps._w, deps._h);
-  ctx.drawImage(buildBackground(deps), 0, 0);
+  ctx.drawImage(buildBackground(deps), 0, 0, deps._w, deps._h);
 
   // 最後一手標記
   if (view.lastMove) {

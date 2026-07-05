@@ -96,6 +96,12 @@ describe('engraveText', () => {
     engraveText(ctx, '兵', x, y, fontPx, { ink: '#000', font: 'serif' });
     expect(log).toHaveLength(0);
   });
+
+  test('opts.ink 未傳時不畫任何東西（避免靜默沿用前一個 fillStyle）', () => {
+    const { ctx, log } = createMockCtx();
+    engraveText(ctx, '卒', 10, 10, 24, { font: 'serif' });
+    expect(log).toHaveLength(0);
+  });
 });
 
 describe('paintPieceGrain', () => {

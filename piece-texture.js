@@ -53,6 +53,8 @@ export function engraveText(ctx, char, x, y, fontPx, opts = {}) {
     lightColor = 'rgba(255,255,255,0.30)',
     shadowColor = 'rgba(0,0,0,0.28)',
   } = opts;
+  // 防護：ink 未傳時不畫——否則主字會靜默沿用呼叫前殘留的 fillStyle，顏色不可預期
+  if (!ink) return;
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
