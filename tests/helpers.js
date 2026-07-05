@@ -153,6 +153,15 @@ function sandboxWithTsumegoProgress() {
   return ctx;
 }
 
+/** Returns a sandbox with GameStats loaded（純 reducer；localStorage 為 in-memory mock，
+ *  測試可經 ctx.localStorage 直接檢查/操作 mock 狀態）。 */
+function sandboxWithStats() {
+  const localStorage = createMockLocalStorage();
+  const { ctx, localRequire } = createSandbox({ localStorage });
+  loadIntoContext(ctx, localRequire, './stats.js');
+  return ctx;
+}
+
 /** Returns a sandbox with GoRules + GoReview loaded. */
 function sandboxWithReview() {
   const { ctx, localRequire } = createSandbox();
@@ -251,7 +260,7 @@ function sandboxWithEntitlements() {
   return ctx;
 }
 
-/** 極簡 in-memory localStorage mock（audio-manager 測試用）。 */
+/** 極簡 in-memory localStorage mock（audio-manager / stats 等需要 localStorage 的測試共用）。 */
 function createMockLocalStorage() {
   let store = {};
   return {
@@ -351,4 +360,4 @@ function sandboxWithAiController(mockKataGo = {}) {
   return ctx;
 }
 
-module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithConnect6, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController, sandboxWithSgfExport, sandboxWithPositionEstimate, sandboxWithEntitlements, sandboxWithSgf, sandboxWithCanvasDpr };
+module.exports = { sandboxWithRules, sandboxWithGameState, sandboxWithHints, sandboxWithTimer, sandboxWithTsumego, sandboxWithTsumegoProgress, sandboxWithStats, sandboxWithReview, sandboxWithAdaptive, sandboxWithAdaptiveChess, sandboxWithGomoku, sandboxWithConnect6, sandboxWithOthello, sandboxWithAudioManager, sandboxWithXiangqiEngine, sandboxWithAiController, sandboxWithSgfExport, sandboxWithPositionEstimate, sandboxWithEntitlements, sandboxWithSgf, sandboxWithCanvasDpr, createMockLocalStorage };

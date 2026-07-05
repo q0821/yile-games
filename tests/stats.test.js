@@ -1,32 +1,17 @@
 // stats.test.js — stats.js（對電腦累計戰績）reducer 全覆蓋 + loadStats 容錯測試。
 //
-// 載入方式：沿用 tests/helpers.js 的 vm sandbox 機制，不自帶 loader。
-// helpers.js 沒有 export createSandbox（只 export 各 sandboxWithXxx 工廠），
-// 而每個工廠回傳的 ctx 都帶有 ctx.localRequire（可載入任意來源檔）；這裡借用
-// sandboxWithTsumegoProgress()（stats.js 的模仿對象，同為純 reducer、無 DOM 依賴）
-// 取得 ctx，先注入 in-memory localStorage mock 再 localRequire('./stats.js')。
-// stats.js 的 loadStats/saveStats 在呼叫當下才解析全域 localStorage，
-// 所以注入 ctx.localStorage 即可生效；每個測試都建新 sandbox＋新 mock，互不污染。
-const { sandboxWithTsumegoProgress } = require('./helpers');
-
-function createMockLocalStorage() {
-  let store = {};
-  return {
-    getItem: (k) => (Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null),
-    setItem: (k, v) => { store[k] = String(v); },
-    removeItem: (k) => { delete store[k]; },
-    clear: () => { store = {}; }
-  };
-}
+// 每個測試都建新 sandbox（sandboxWithStats 內含全新的 in-memory localStorage mock，
+// 經 ctx.localStorage 可直接檢查/操作），互不污染；loadStats/saveStats 的容錯測試
+// 直接改 mock 的方法模擬損毀資料與 storage 失效。
+const { sandboxWithStats } = require('./helpers');
 
 let S;
 let mockStorage;
 
 beforeEach(() => {
-  const ctx = sandboxWithTsumegoProgress();
-  mockStorage = createMockLocalStorage();
-  ctx.localStorage = mockStorage;
-  S = ctx.localRequire('./stats.js');
+  const ctx = sandboxWithStats();
+  S = ctx.GameStats;
+  mockStorage = ctx.localStorage;
 });
 
 describe('recordGame', () => {
