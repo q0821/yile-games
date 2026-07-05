@@ -1,16 +1,13 @@
 // stats.test.js — stats.js（對電腦累計戰績）reducer 全覆蓋 + loadStats 容錯測試。
 //
-// stats.js 用 ES6 export，且 loadStats/saveStats 會讀寫全域 localStorage；jest 跑在
-// node 環境（無 jsdom、無全域 localStorage）。本 task 紅線只能新增 stats.js 與本檔，
-// 不能改動 tests/helpers.js，所以這裡就地複製一份與 helpers.js 同款的
-// vm + babel 轉譯手法（另加一個極簡 in-memory localStorage mock），把 stats.js
-// 單獨載入執行，不依賴任何既有測試檔案。
-const vm = require('vm');
-const fs = require('fs');
-const path = require('path');
-const babel = require('@babel/core');
-
-const STATS_PATH = path.join(__dirname, '..', 'stats.js');
+// 載入方式：沿用 tests/helpers.js 的 vm sandbox 機制，不自帶 loader。
+// helpers.js 沒有 export createSandbox（只 export 各 sandboxWithXxx 工廠），
+// 而每個工廠回傳的 ctx 都帶有 ctx.localRequire（可載入任意來源檔）；這裡借用
+// sandboxWithTsumegoProgress()（stats.js 的模仿對象，同為純 reducer、無 DOM 依賴）
+// 取得 ctx，先注入 in-memory localStorage mock 再 localRequire('./stats.js')。
+// stats.js 的 loadStats/saveStats 在呼叫當下才解析全域 localStorage，
+// 所以注入 ctx.localStorage 即可生效；每個測試都建新 sandbox＋新 mock，互不污染。
+const { sandboxWithTsumegoProgress } = require('./helpers');
 
 function createMockLocalStorage() {
   let store = {};
@@ -22,30 +19,14 @@ function createMockLocalStorage() {
   };
 }
 
-/** 把 stats.js 轉成 CJS 並在 vm context 裡執行，回傳其 exports。 */
-function loadStatsModule(localStorage) {
-  const code = fs.readFileSync(STATS_PATH, 'utf8');
-  const cjs = babel.transformSync(code, {
-    presets: [['@babel/preset-env', { targets: { node: 'current' }, modules: 'commonjs' }]],
-    babelrc: false,
-    configFile: false,
-    filename: STATS_PATH
-  }).code;
-
-  const ctx = vm.createContext({ localStorage, console, JSON, Object, Array });
-  const localModule = { exports: {} };
-  ctx.localModule = localModule;
-  const script = new vm.Script('(function(module, exports){ ' + cjs + ' })(localModule, localModule.exports);');
-  script.runInContext(ctx);
-  return localModule.exports;
-}
-
 let S;
 let mockStorage;
 
 beforeEach(() => {
+  const ctx = sandboxWithTsumegoProgress();
   mockStorage = createMockLocalStorage();
-  S = loadStatsModule(mockStorage);
+  ctx.localStorage = mockStorage;
+  S = ctx.localRequire('./stats.js');
 });
 
 describe('recordGame', () => {
