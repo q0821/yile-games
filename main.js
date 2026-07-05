@@ -621,13 +621,11 @@ function initAiLevelControls() {
 }
 
 let _pendingLevelMsg = null; // 升降訊息，於結束彈窗顯示
-let _levelBeforeResult = null; // 本局對戰時的電腦等級快照（戰績記錄用；自適應升降改 aiLevel 前先存，endGame 讀完即清）
 
 // 依「人類視角勝負目數」調整等級，回傳是否有變動，並備妥明示訊息。
 function applyResultToLevel(humanMargin) {
   if (gameMode !== 'pvc') return; // 只在人機對局調整
   const before = aiLevel;
-  _levelBeforeResult = before;
   const r = nextLevelForMode(before, humanMargin, aiLevelMode);
   aiLevel = r.level;
   saveAiLevel();
@@ -822,21 +820,17 @@ function endGame(title, detail, outcome) {
     _pendingLevelMsg = null;
   }
   // 累計戰績：只記 pvc（含認輸/超時/數目，皆經此函式），pvp 該行清空。
-  // 難度取「本局對戰時」的等級：各終局路徑都先呼叫 applyResultToLevel()（會把 aiLevel 升降成
-  // 下一局的等級），故用其存下的 _levelBeforeResult 快照，而非升降後的 aiLevel。
   const modalStats = document.getElementById('modalStats');
   if (modalStats) {
     if (gameMode === 'pvc') {
       const statsOutcome = outcome === 'lose' ? 'loss' : outcome; // outcome 為 'win'|'lose'|'draw'
-      const playedLevel = _levelBeforeResult ?? aiLevel; // 快照理應必有；防禦性 fallback
-      const st = recordGame(loadStats(), 'go', `L${playedLevel}`, statsOutcome);
+      const st = recordGame(loadStats(), 'go', statsOutcome);
       saveStats(st);
       modalStats.textContent = formatRecord(totals(st, 'go'));
     } else {
       modalStats.textContent = '';
     }
   }
-  _levelBeforeResult = null;
   const reviewOn = document.getElementById('reviewToggle').checked;
   document.getElementById('modalReviewBtn').style.display = reviewOn ? 'block' : 'none';
   document.getElementById('resultModal').classList.add('show');

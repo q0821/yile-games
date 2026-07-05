@@ -139,7 +139,7 @@ function playEndSound(w) {
   }
   const outcome = w === null ? 'draw' : (w === playerColor ? 'win' : 'loss');
   playSfx(outcome === 'draw' ? 'game-draw' : (outcome === 'win' ? 'game-win' : 'game-lose'));
-  const s = recordGame(loadStats(), 'gomoku', `L${aiLevel}`, outcome);
+  const s = recordGame(loadStats(), 'gomoku', outcome);
   saveStats(s);
   if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'gomoku'));
 }

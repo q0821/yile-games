@@ -16,85 +16,81 @@ beforeEach(() => {
 
 describe('recordGame', () => {
   test('記錄一勝', () => {
-    const s = S.recordGame(S.emptyStats(), 'go', 'L5', 'win');
-    expect(s.go.L5).toEqual({ w: 1, l: 0, d: 0 });
+    const s = S.recordGame(S.emptyStats(), 'go', 'win');
+    expect(s.go).toEqual({ w: 1, l: 0, d: 0 });
   });
 
   test('記錄一敗', () => {
-    const s = S.recordGame(S.emptyStats(), 'chess', 'L2', 'loss');
-    expect(s.chess.L2).toEqual({ w: 0, l: 1, d: 0 });
+    const s = S.recordGame(S.emptyStats(), 'chess', 'loss');
+    expect(s.chess).toEqual({ w: 0, l: 1, d: 0 });
   });
 
   test('記錄一和', () => {
-    const s = S.recordGame(S.emptyStats(), 'othello', 'L1', 'draw');
-    expect(s.othello.L1).toEqual({ w: 0, l: 0, d: 1 });
+    const s = S.recordGame(S.emptyStats(), 'othello', 'draw');
+    expect(s.othello).toEqual({ w: 0, l: 0, d: 1 });
   });
 
-  test('同棋同難度累計多局', () => {
+  test('同棋累計多局', () => {
     let s = S.emptyStats();
-    s = S.recordGame(s, 'gomoku', 'L1', 'win');
-    s = S.recordGame(s, 'gomoku', 'L1', 'win');
-    s = S.recordGame(s, 'gomoku', 'L1', 'loss');
-    expect(s.gomoku.L1).toEqual({ w: 2, l: 1, d: 0 });
+    s = S.recordGame(s, 'gomoku', 'win');
+    s = S.recordGame(s, 'gomoku', 'win');
+    s = S.recordGame(s, 'gomoku', 'loss');
+    expect(s.gomoku).toEqual({ w: 2, l: 1, d: 0 });
   });
 
   test('不可變：原 stats 不被修改', () => {
     const orig = S.emptyStats();
-    const s = S.recordGame(orig, 'go', 'L5', 'win');
+    const s = S.recordGame(orig, 'go', 'win');
     expect(orig).toEqual({});
     expect(s).not.toBe(orig);
   });
 
   test('不可變：既有資料的物件也不被就地修改', () => {
-    const orig = S.recordGame(S.emptyStats(), 'go', 'L5', 'win');
-    const next = S.recordGame(orig, 'go', 'L5', 'win');
-    expect(orig.go.L5).toEqual({ w: 1, l: 0, d: 0 });
-    expect(next.go.L5).toEqual({ w: 2, l: 0, d: 0 });
+    const orig = S.recordGame(S.emptyStats(), 'go', 'win');
+    const next = S.recordGame(orig, 'go', 'win');
+    expect(orig.go).toEqual({ w: 1, l: 0, d: 0 });
+    expect(next.go).toEqual({ w: 2, l: 0, d: 0 });
     expect(next).not.toBe(orig);
-    expect(next.go).not.toBe(orig.go);
   });
 
   test('非法 outcome 不記錄，原樣回傳同一參考', () => {
     const orig = S.emptyStats();
-    const s = S.recordGame(orig, 'go', 'L5', 'giveup');
+    const s = S.recordGame(orig, 'go', 'giveup');
     expect(s).toBe(orig);
     expect(s).toEqual({});
   });
 
   test('undefined outcome 不記錄', () => {
-    const orig = S.recordGame(S.emptyStats(), 'go', 'L5', 'win');
-    const s = S.recordGame(orig, 'go', 'L5', undefined);
+    const orig = S.recordGame(S.emptyStats(), 'go', 'win');
+    const s = S.recordGame(orig, 'go', undefined);
     expect(s).toBe(orig);
-  });
-
-  test('difficulty 為 undefined 時記入 unknown', () => {
-    const s = S.recordGame(S.emptyStats(), 'shogi', undefined, 'win');
-    expect(s.shogi.unknown).toEqual({ w: 1, l: 0, d: 0 });
-  });
-
-  test('difficulty 為空字串時記入 unknown', () => {
-    const s = S.recordGame(S.emptyStats(), 'shogi', '', 'loss');
-    expect(s.shogi.unknown).toEqual({ w: 0, l: 1, d: 0 });
   });
 });
 
 describe('totals', () => {
-  test('跨難度加總', () => {
+  test('直接取值＋normalize', () => {
     let s = S.emptyStats();
-    s = S.recordGame(s, 'xiangqi', 'L1', 'win');
-    s = S.recordGame(s, 'xiangqi', 'L2', 'win');
-    s = S.recordGame(s, 'xiangqi', 'L2', 'loss');
-    s = S.recordGame(s, 'xiangqi', 'L3', 'draw');
+    s = S.recordGame(s, 'xiangqi', 'win');
+    s = S.recordGame(s, 'xiangqi', 'win');
+    s = S.recordGame(s, 'xiangqi', 'loss');
+    s = S.recordGame(s, 'xiangqi', 'draw');
     expect(S.totals(s, 'xiangqi')).toEqual({ w: 2, l: 1, d: 1 });
   });
 
   test('查無棋種回全 0', () => {
-    const s = S.recordGame(S.emptyStats(), 'go', 'L5', 'win');
+    const s = S.recordGame(S.emptyStats(), 'go', 'win');
     expect(S.totals(s, 'connect6')).toEqual({ w: 0, l: 0, d: 0 });
   });
 
   test('空 stats 回全 0', () => {
     expect(S.totals(S.emptyStats(), 'go')).toEqual({ w: 0, l: 0, d: 0 });
+  });
+
+  test('舊巢狀資料讀入不爆炸：舊版分難度結構退化為全 0', () => {
+    // 舊版結構殘留：{ go: { L5: { w: 1, l: 0, d: 0 } } }；新版直接取 go.w/l/d，
+    // 該物件沒有這些欄位，normalize 保底為 0，不應 NaN 或拋錯。
+    const legacy = { go: { L5: { w: 1, l: 0, d: 0 } } };
+    expect(S.totals(legacy, 'go')).toEqual({ w: 0, l: 0, d: 0 });
   });
 });
 
@@ -134,7 +130,7 @@ describe('loadStats / saveStats', () => {
   });
 
   test('saveStats 後可用 loadStats 讀回同樣內容', () => {
-    const s = S.recordGame(S.emptyStats(), 'go', 'L5', 'win');
+    const s = S.recordGame(S.emptyStats(), 'go', 'win');
     S.saveStats(s);
     expect(S.loadStats()).toEqual(s);
   });

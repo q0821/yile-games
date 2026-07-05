@@ -6,17 +6,10 @@
  *
  * 只記錄 pvc（人機對弈）的結果；pvp（同機雙人）不呼叫 recordGame，由呼叫端自行判斷。
  *
- * 資料結構：
+ * 資料結構（每棋一組累計，不分難度）：
  *   {
- *     [gameId]: {                     // 'go'|'gomoku'|'connect6'|'othello'|'xiangqi'|'shogi'|'chess'
- *       [difficultyKey]: { w, l, d }  // 難度字串（各棋自報，見下），值為累計局數
- *     }
+ *     [gameId]: { w, l, d }  // 'go'|'gomoku'|'connect6'|'othello'|'xiangqi'|'shogi'|'chess'
  *   }
- *
- * difficultyKey 慣例：
- *   圍棋 'L1'–'L13'；其餘六棋 'L1'–'L3'（皆取「終局當下」實際等級，
- *   象棋/西洋棋自動難度模式取自適應階梯當下等級，不是設定頁的手動值）。
- *   difficulty 未提供／空字串時記入 'unknown'（容錯，理論上不應發生）。
  *
  * 呼叫端契約：只在「終局發生的那一刻」呼叫一次 recordGame → saveStats（單次記錄保證）——
  *   象棋/將棋/西洋棋掛 onGameOver()；圍棋掛 main.js 的 endGame()（含認輸/數子/中盤勝）；
@@ -32,6 +25,8 @@ export function emptyStats() {
   return {};
 }
 
+// entry 可能是舊版巢狀結構（{ [difficultyKey]: {w,l,d} }）殘留，此時 entry.w/l/d
+// 皆為 undefined（而非數字），|| 0 保底即可安全退化為全 0，不會 NaN。
 function normalizeRecord(entry) {
   return entry ? { w: entry.w || 0, l: entry.l || 0, d: entry.d || 0 } : { w: 0, l: 0, d: 0 };
 }
@@ -39,37 +34,24 @@ function normalizeRecord(entry) {
 /**
  * 記錄一局結果，回傳新的 stats（不可變更新；原 stats 不被修改）。
  * outcome：人類視角 'win' | 'loss' | 'draw'；其他值原樣回傳 stats（防禦性忽略，不記錄）。
- * difficulty：字串；空字串／undefined 記入 'unknown'。
  */
-export function recordGame(stats, gameId, difficulty, outcome) {
+export function recordGame(stats, gameId, outcome) {
   if (outcome !== 'win' && outcome !== 'loss' && outcome !== 'draw') return stats;
 
-  const key = difficulty || 'unknown';
   const next = { ...stats };
-  const game = { ...(next[gameId] || {}) };
-  const rec = normalizeRecord(game[key]);
+  const rec = normalizeRecord(next[gameId]);
 
   if (outcome === 'win') rec.w += 1;
   else if (outcome === 'loss') rec.l += 1;
   else rec.d += 1;
 
-  game[key] = rec;
-  next[gameId] = game;
+  next[gameId] = rec;
   return next;
 }
 
-/** 某棋種跨難度累計 { w, l, d }；查無棋種回全 0。 */
+/** 某棋種累計 { w, l, d }；查無棋種回全 0。 */
 export function totals(stats, gameId) {
-  const game = stats && stats[gameId];
-  const result = { w: 0, l: 0, d: 0 };
-  if (!game) return result;
-  for (const key of Object.keys(game)) {
-    const rec = game[key] || {};
-    result.w += rec.w || 0;
-    result.l += rec.l || 0;
-    result.d += rec.d || 0;
-  }
-  return result;
+  return normalizeRecord(stats && stats[gameId]);
 }
 
 /**

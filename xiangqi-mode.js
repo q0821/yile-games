@@ -196,22 +196,18 @@ function onGameOver() {
   const r = Game.result();
   playEndSound(r);
   // 將死不播語音（使用者決定：TTS「死棋」語音質感不到位，終局結果由畫面終局卡片呈現即可）
-  // 先記戰績再 showEnd()：showEnd() 內的 maybeApplyAdaptive() 會把 autoLevel 升降成下一局的等級，
-  // 記錄須取「本局對戰時」的等級。
   recordStats(r);
   showEnd();
 }
 
-/** 只記 pvc；pvp 結束卡片的戰績行清空。難度：自動模式取階梯等級（autoLevel，須在 maybeApplyAdaptive
- *  升降前呼叫，記到的才是本局對戰難度），手動取下拉值（level）。 */
+/** 只記 pvc；pvp 結束卡片的戰績行清空。 */
 function recordStats(r) {
   if (mode !== 'pvc') {
     if (dom.endStats) dom.endStats.textContent = '';
     return;
   }
   const outcome = r === '1/2-1/2' ? 'draw' : (((r === '1-0') === playerRed) ? 'win' : 'loss');
-  const diff = `L${autoMode ? autoLevel : level}`;
-  const s = recordGame(loadStats(), 'xiangqi', diff, outcome);
+  const s = recordGame(loadStats(), 'xiangqi', outcome);
   saveStats(s);
   if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'xiangqi'));
 }

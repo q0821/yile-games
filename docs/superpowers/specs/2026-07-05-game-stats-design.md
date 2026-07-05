@@ -2,6 +2,14 @@
 
 狀態：已與使用者確認設計（記錄範圍、統計維度、顯示位置三項決策見下），進入實作。
 
+## 2026-07-05 決策反轉：移除難度維度
+
+功能完成後（未上線、零使用者資料）重新檢視，判定「分難度存」是過度設計：顯示層本來就跨難度彙總，
+分難度明細從未也不打算被使用者看到；而為了「難度取本局對戰當下的等級」這件事，圍棋額外掛了
+`_levelBeforeResult` 快照時序機制（象棋/西洋棋則靠呼叫順序判斷 autoLevel）。維度本身的成本已超過其
+價值（YAGNI）。因為功能尚未 push、沒有真實使用者資料需要相容，是零成本簡化的時機——之後才決定要分
+難度分析，重加即可，不需要現在為假設性需求付維護成本。以下內容已改寫為簡化後的單一結構。
+
 ## 目標
 
 七種對弈棋（圍棋、五子棋、連六棋、黑白棋、象棋、將棋、西洋棋）記錄**對電腦（pvc）**的累計勝敗和，
@@ -10,7 +18,7 @@
 ## 已確認的三項決策
 
 1. **只記 pvc**：pvp（同機雙人）不記任何資料。
-2. **分難度存、彙總顯示**：資料以「棋種 × 難度」細粒度儲存，顯示層跨難度彙總；日後要看分難度明細不需 migrate。
+2. **每棋一組累計，不分難度**：資料以「棋種」為單位存 `{ w, l, d }`（原規劃分難度儲存，2026-07-05 已反轉移除，見上）。
 3. **只在結束卡片顯示**：不做首頁總覽、不做各棋選單入口（YAGNI，之後要加再說）。
 
 ## 非目標
@@ -26,34 +34,26 @@
 localStorage key: 'gogame_stats'
 結構：
 {
-  [gameId]: {                     // 'go'|'gomoku'|'connect6'|'othello'|'xiangqi'|'shogi'|'chess'
-    [difficultyKey]: { w, l, d }  // 難度字串，各棋自報（見下）
-  }
+  [gameId]: { w, l, d }  // 'go'|'gomoku'|'connect6'|'othello'|'xiangqi'|'shogi'|'chess'
 }
 ```
 
 ### API
 
 - `emptyStats()` → `{}`
-- `recordGame(stats, gameId, difficulty, outcome)` → 回傳新 stats（不可變更新）。
+- `recordGame(stats, gameId, outcome)` → 回傳新 stats（不可變更新）。
   - `outcome`：一律**人類視角**的 `'win' | 'loss' | 'draw'`；非法值不記錄（防禦性忽略，不拋錯）。
-  - `difficulty`：字串；空/undefined 時記入 `'unknown'`（容錯，不應發生）。
-- `totals(stats, gameId)` → `{ w, l, d }`（跨難度加總；查無棋種回全 0）。
+- `totals(stats, gameId)` → `{ w, l, d }`（直接取值＋normalize；查無棋種回全 0）。
 - `formatRecord(totalsObj)` → 顯示字串：
   - 一般：「對電腦累計 12 勝 8 敗 1 和」；為 0 的項省略（如「對電腦累計 3 勝」）；
   - 全 0（不該被呼叫到，防禦）回空字串。
-- `loadStats()` / `saveStats(stats)`：localStorage I/O，read 損毀時回 `emptyStats()`。
-
-### difficulty key 慣例
-
-- 五子棋/連六/黑白棋/象棋/將棋/西洋棋：`'L1'`–`'L3'`（取**終局當下**實際等級；象棋/西洋棋自動難度模式取自適應階梯當下等級，不是設定頁的手動值）。
-- 圍棋：`'L1'`–`'L13'`（同樣取終局當下 aiLevel，auto/manual 都一樣記實際等級）。
+- `loadStats()` / `saveStats(stats)`：localStorage I/O，read 損毀時回 `emptyStats()`；讀到舊版分難度巢狀結構視為損毀資料退化處理（normalize 保底為 0，不 migrate，見上方決策反轉說明）。
 
 ## 記錄規則
 
 | 情境 | 行為 |
 |---|---|
-| pvc 終局（勝/敗/和） | 記錄，難度取終局當下等級 |
+| pvc 終局（勝/敗/和） | 記錄 |
 | pvc 認輸 | 記一敗 |
 | pvp 任何結果 | 不記 |
 | 中途離開／直接開新局 | 不記 |
@@ -69,7 +69,7 @@ localStorage key: 'gogame_stats'
 
 ## 測試
 
-- `tests/stats.test.js`：reducer 全覆蓋——記錄三種 outcome、不可變性、多難度彙總、未知棋種/非法 outcome 容錯、formatRecord 各種省略組合、load 損毀資料容錯。
+- `tests/stats.test.js`：reducer 全覆蓋——記錄三種 outcome、不可變性、totals 直接取值、未知棋種/非法 outcome 容錯、舊版分難度巢狀資料讀入不爆炸、formatRecord 各種省略組合、load 損毀資料容錯。
 - 七棋掛點以實玩 smoke 驗證（Playwright 或手動：pvc 下到終局看卡片行、pvp 確認不顯示）。
 
 ## 隱私與相容

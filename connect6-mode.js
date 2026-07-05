@@ -157,7 +157,7 @@ function playEndSound(w) {
   }
   const outcome = w === null ? 'draw' : (w === playerColor ? 'win' : 'loss');
   playSfx(outcome === 'draw' ? 'game-draw' : (outcome === 'win' ? 'game-win' : 'game-lose'));
-  const s = recordGame(loadStats(), 'connect6', `L${aiLevel}`, outcome);
+  const s = recordGame(loadStats(), 'connect6', outcome);
   saveStats(s);
   if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'connect6'));
 }
