@@ -11,6 +11,7 @@ import { bestTurn } from './connect6-ai.js';
 import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 import { showBoardToast } from './ui.js';
+import { recordGame, totals, formatRecord, loadStats, saveStats } from './stats.js';
 
 const SETTINGS_KEY = 'connect6-settings-v1';
 
@@ -54,6 +55,7 @@ function cacheDom() {
     color: $('connect6Color'),
     level: $('connect6Level'),
     end: $('connect6End'), endTitle: $('connect6EndTitle'), endSub: $('connect6EndSub'), endBtn: $('connect6EndBtn'),
+    endStats: $('connect6EndStats'),
     audioSettings: $('connect6AudioSettings'),
     settingsBtn: $('connect6SettingsBtn'), settingsModal: $('connect6SettingsModal'),
     turnBadge: $('connect6TurnBadge'), moveCount: $('connect6MoveCount'), remaining: $('connect6Remaining'),
@@ -145,10 +147,19 @@ function hideEnd() { if (dom.end) dom.end.style.display = 'none'; }
 
 // ——— 對局邏輯 ———
 
+/** 終局單次觸發點（雖有多個呼叫點，但每局互斥、只會實際執行一次）：
+ *  播終局音效，一併記錄對電腦累計戰績並更新結束卡片文字。 */
 function playEndSound(w) {
-  if (mode !== 'pvc') { playSfx('game-win'); return; }
-  if (w === null) { playSfx('game-draw'); return; }
-  playSfx(w === playerColor ? 'game-win' : 'game-lose');
+  if (mode !== 'pvc') {
+    playSfx('game-win');
+    if (dom.endStats) dom.endStats.textContent = '';
+    return;
+  }
+  const outcome = w === null ? 'draw' : (w === playerColor ? 'win' : 'loss');
+  playSfx(outcome === 'draw' ? 'game-draw' : (outcome === 'win' ? 'game-win' : 'game-lose'));
+  const s = recordGame(loadStats(), 'connect6', `L${aiLevel}`, outcome);
+  saveStats(s);
+  if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'connect6'));
 }
 
 /** 把 pending 收成一筆已提交回合。 */

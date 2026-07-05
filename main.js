@@ -27,6 +27,7 @@ import { isPremium, remainingQuota, consumeQuota } from './entitlements.js';
 import * as Store from './store-service.js';
 import { initAudio, loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls, initAudioMuteButtons } from './audio-settings-ui.js';
+import { recordGame, totals, formatRecord, loadStats, saveStats } from './stats.js';
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
@@ -817,6 +818,18 @@ function endGame(title, detail, outcome) {
     const sm2 = document.getElementById('modalSummary');
     if (sm2) sm2.textContent = (sm2.textContent ? sm2.textContent + '\n' : '') + _pendingLevelMsg;
     _pendingLevelMsg = null;
+  }
+  // 累計戰績：只記 pvc（含認輸/超時/數目，皆經此函式），難度取終局當下 aiLevel；pvp 該行清空。
+  const modalStats = document.getElementById('modalStats');
+  if (modalStats) {
+    if (gameMode === 'pvc') {
+      const statsOutcome = outcome === 'lose' ? 'loss' : outcome; // outcome 為 'win'|'lose'|'draw'
+      const st = recordGame(loadStats(), 'go', `L${aiLevel}`, statsOutcome);
+      saveStats(st);
+      modalStats.textContent = formatRecord(totals(st, 'go'));
+    } else {
+      modalStats.textContent = '';
+    }
   }
   const reviewOn = document.getElementById('reviewToggle').checked;
   document.getElementById('modalReviewBtn').style.display = reviewOn ? 'block' : 'none';

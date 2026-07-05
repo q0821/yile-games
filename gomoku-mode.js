@@ -10,6 +10,7 @@ import { bestMove } from './gomoku-ai.js';
 import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 import { showBoardToast } from './ui.js';
+import { recordGame, totals, formatRecord, loadStats, saveStats } from './stats.js';
 
 const SETTINGS_KEY = 'gomoku-settings-v1'; // 只存設定，不與圍棋 SAVE_KEY 相撞
 
@@ -47,6 +48,7 @@ function cacheDom() {
     color: $('gomokuColor'),
     level: $('gomokuLevel'),
     end: $('gomokuEnd'), endTitle: $('gomokuEndTitle'), endSub: $('gomokuEndSub'), endBtn: $('gomokuEndBtn'),
+    endStats: $('gomokuEndStats'),
     audioSettings: $('gomokuAudioSettings'),
     settingsBtn: $('gomokuSettingsBtn'), settingsModal: $('gomokuSettingsModal'),
     turnBadge: $('gomokuTurnBadge'), moveCount: $('gomokuMoveCount'),
@@ -127,11 +129,19 @@ function hideEnd() { if (dom.end) dom.end.style.display = 'none'; }
 
 // ——— 對局邏輯 ———
 
-/** PvP 一律播「勝」音（無輸家視角）；PvC 依人類玩家是否為贏家算 win/lose，winner 為 null 代表和局。 */
+/** PvP 一律播「勝」音（無輸家視角）；PvC 依人類玩家是否為贏家算 win/lose，winner 為 null 代表和局。
+ *  終局單次觸發點（每局只會經此函式一次）：一併記錄對電腦累計戰績並更新結束卡片文字。 */
 function playEndSound(w) {
-  if (mode !== 'pvc') { playSfx('game-win'); return; }
-  if (w === null) { playSfx('game-draw'); return; }
-  playSfx(w === playerColor ? 'game-win' : 'game-lose');
+  if (mode !== 'pvc') {
+    playSfx('game-win');
+    if (dom.endStats) dom.endStats.textContent = '';
+    return;
+  }
+  const outcome = w === null ? 'draw' : (w === playerColor ? 'win' : 'loss');
+  playSfx(outcome === 'draw' ? 'game-draw' : (outcome === 'win' ? 'game-win' : 'game-lose'));
+  const s = recordGame(loadStats(), 'gomoku', `L${aiLevel}`, outcome);
+  saveStats(s);
+  if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'gomoku'));
 }
 
 function place(r, c, player) {

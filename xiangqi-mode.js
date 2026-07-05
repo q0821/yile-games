@@ -11,6 +11,7 @@ import { resizeXiangqiCanvas, drawXiangqi } from './xiangqi-ui.js';
 import { prefersReducedMotion } from './motion.js';
 import { loadSfxPack, playSfx, playVoice } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
+import { recordGame, totals, formatRecord, loadStats, saveStats } from './stats.js';
 
 const SETTINGS_KEY = 'xiangqi-settings-v1';
 
@@ -64,6 +65,7 @@ function cacheDom() {
     hint: $('xiangqiHint'),
     thinking: $('xiangqiThinking'), checkBanner: $('xiangqiCheck'),
     endOverlay: $('xiangqiEnd'), endTitle: $('xiangqiEndTitle'), endSub: $('xiangqiEndSub'), endBtn: $('xiangqiEndBtn'),
+    endStats: $('xiangqiEndStats'),
     reviewBtn: $('xiangqiReviewBtn'), controls: $('xiangqiControls'),
     review: $('xiangqiReview'), rvSlider: $('xiangqiReviewSlider'), rvInfo: $('xiangqiReviewInfo'),
     rvFirst: $('xqRvFirst'), rvPrev: $('xqRvPrev'), rvNext: $('xqRvNext'), rvLast: $('xqRvLast'),
@@ -188,12 +190,27 @@ function playEndSound(r) {
 }
 
 /** 局面剛結束（gameOver 由 false→true 那一刻）才呼叫一次：終局音效＋將死語音，再顯示結束卡片。
- *  和 showEnd() 分開，避免覆盤結束後 exitReview() 重顯結束卡片時重播音效/語音。 */
+ *  和 showEnd() 分開，避免覆盤結束後 exitReview() 重顯結束卡片時重播音效/語音。
+ *  同一原因：對電腦累計戰績也記在這裡（單次觸發保證），不記在 showEnd()。 */
 function onGameOver() {
   const r = Game.result();
   playEndSound(r);
   // 將死不播語音（使用者決定：TTS「死棋」語音質感不到位，終局結果由畫面終局卡片呈現即可）
   showEnd();
+  recordStats(r);
+}
+
+/** 只記 pvc；pvp 結束卡片的戰績行清空。難度：自動模式取階梯當下等級（autoLevel），手動取下拉值（level）。 */
+function recordStats(r) {
+  if (mode !== 'pvc') {
+    if (dom.endStats) dom.endStats.textContent = '';
+    return;
+  }
+  const outcome = r === '1/2-1/2' ? 'draw' : (((r === '1-0') === playerRed) ? 'win' : 'loss');
+  const diff = `L${autoMode ? autoLevel : level}`;
+  const s = recordGame(loadStats(), 'xiangqi', diff, outcome);
+  saveStats(s);
+  if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'xiangqi'));
 }
 
 // ——— 自動難度（連勝連敗階梯，見 adaptive-chess.js）———

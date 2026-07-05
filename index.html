@@ -336,6 +336,7 @@
       <div class="board-end-card">
         <div class="board-end-title" id="gomokuEndTitle">黑方勝</div>
         <div class="board-end-sub" id="gomokuEndSub"></div>
+        <div class="board-end-stats" id="gomokuEndStats"></div>
         <button class="board-end-btn" id="gomokuEndBtn">再來一局</button>
       </div>
     </div>
@@ -408,6 +409,7 @@
       <div class="board-end-card">
         <div class="board-end-title" id="connect6EndTitle">黑方勝</div>
         <div class="board-end-sub" id="connect6EndSub"></div>
+        <div class="board-end-stats" id="connect6EndStats"></div>
         <button class="board-end-btn" id="connect6EndBtn">再來一局</button>
       </div>
     </div>
@@ -482,6 +484,7 @@
       <div class="board-end-card">
         <div class="board-end-title" id="xiangqiEndTitle">紅方勝</div>
         <div class="board-end-sub" id="xiangqiEndSub"></div>
+        <div class="board-end-stats" id="xiangqiEndStats"></div>
         <button class="board-end-btn" id="xiangqiEndBtn">再來一局</button>
       </div>
     </div>
@@ -588,6 +591,7 @@
       <div class="board-end-card">
         <div class="board-end-title" id="othelloEndTitle">黑方勝</div>
         <div class="board-end-sub" id="othelloEndSub"></div>
+        <div class="board-end-stats" id="othelloEndStats"></div>
         <button class="board-end-btn" id="othelloEndBtn">再來一局</button>
       </div>
     </div>
@@ -709,6 +713,7 @@
       <div class="board-end-card">
         <div class="board-end-title" id="shogiEndTitle">先手勝</div>
         <div class="board-end-sub" id="shogiEndSub"></div>
+        <div class="board-end-stats" id="shogiEndStats"></div>
         <button class="board-end-btn" id="shogiEndBtn">再來一局</button>
       </div>
     </div>
@@ -860,6 +865,7 @@
       <div class="board-end-card">
         <div class="board-end-title" id="chessEndTitle">白方勝</div>
         <div class="board-end-sub" id="chessEndSub"></div>
+        <div class="board-end-stats" id="chessEndStats"></div>
         <button class="board-end-btn" id="chessEndBtn">再來一局</button>
       </div>
     </div>
@@ -946,6 +952,7 @@
     <p id="modalResult"></p>
     <p id="modalDetail" style="font-size:13px;color:#8899bb"></p>
     <p id="modalSummary" class="modal-summary"></p>
+    <div id="modalStats" class="board-end-stats"></div>
     <div class="modal-actions">
       <button class="primary" onclick="closeModal(); newGame()">再來一局</button>
       <button onclick="closeModal(); enterReview()" id="modalReviewBtn">去覆盤</button>

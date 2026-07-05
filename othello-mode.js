@@ -10,6 +10,7 @@ import { prefersReducedMotion } from './motion.js';
 import { loadSfxPack, playSfx } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
 import { showBoardToast } from './ui.js';
+import { recordGame, totals, formatRecord, loadStats, saveStats } from './stats.js';
 
 const SETTINGS_KEY = 'othello-settings-v1';
 
@@ -43,6 +44,7 @@ function cacheDom() {
     thinking: $('othelloThinking'), restart: $('othelloRestart'), undo: $('othelloUndo'), home: $('othelloHome'),
     mode: $('othelloMode'), color: $('othelloColor'), level: $('othelloLevel'),
     end: $('othelloEnd'), endTitle: $('othelloEndTitle'), endSub: $('othelloEndSub'), endBtn: $('othelloEndBtn'),
+    endStats: $('othelloEndStats'),
     audioSettings: $('othelloAudioSettings'),
     settingsBtn: $('othelloSettingsBtn'), settingsModal: $('othelloSettingsModal'),
     turnBadge: $('othelloTurnBadge'), blackCount: $('othelloBlackCount'), whiteCount: $('othelloWhiteCount'),
@@ -125,11 +127,20 @@ function hideEnd() { if (dom.end) dom.end.style.display = 'none'; }
 function snapshot() { return { board: board.map((r) => r.slice()), player: currentPlayer, last: lastMove ? lastMove.slice() : null }; }
 function restore(s) { board = s.board.map((r) => r.slice()); currentPlayer = s.player; lastMove = s.last; gameOver = false; winner = null; passNotice = null; }
 
-/** PvP 一律播「勝」音（無輸家視角）；PvC 依人類玩家是否為贏家算 win/lose，winner 為 null 代表和局。 */
+/** PvP 一律播「勝」音（無輸家視角）；PvC 依人類玩家是否為贏家算 win/lose，winner 為 null 代表和局
+ *  （winner 已依終局子數多寡判定，見 advanceTurn）。
+ *  終局單次觸發點（每局只會經此函式一次）：一併記錄對電腦累計戰績並更新結束卡片文字。 */
 function playEndSound(w) {
-  if (mode !== 'pvc') { playSfx('game-win'); return; }
-  if (w === null) { playSfx('game-draw'); return; }
-  playSfx(w === playerColor ? 'game-win' : 'game-lose');
+  if (mode !== 'pvc') {
+    playSfx('game-win');
+    if (dom.endStats) dom.endStats.textContent = '';
+    return;
+  }
+  const outcome = w === null ? 'draw' : (w === playerColor ? 'win' : 'loss');
+  playSfx(outcome === 'draw' ? 'game-draw' : (outcome === 'win' ? 'game-win' : 'game-lose'));
+  const s = recordGame(loadStats(), 'othello', `L${level}`, outcome);
+  saveStats(s);
+  if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'othello'));
 }
 
 /** 一方剛走完後決定下一回合（含 pass / 終局）。 */

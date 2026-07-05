@@ -1282,6 +1282,13 @@ h1.brush-title::after { display: none; }
   margin-top: 8px;
 }
 .board-end-sub:empty { display: none; }
+/* 對電腦累計戰績：結束卡片副標下方一行小字（pvp 或未達終局時為空，:empty 隱藏不佔版位）。 */
+.board-end-stats {
+  font-size: 12px;
+  color: var(--text-muted, #9a8a6a);
+  margin-top: 6px;
+}
+.board-end-stats:empty { display: none; }
 .board-end-btn {
   margin-top: 26px;
   font-size: 17px;

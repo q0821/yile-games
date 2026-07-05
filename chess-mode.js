@@ -11,6 +11,7 @@ import { resizeChessCanvas, drawChess } from './chess-ui.js';
 import { prefersReducedMotion } from './motion.js';
 import { loadSfxPack, playSfx, playVoice } from './audio-manager.js';
 import { renderAudioControls } from './audio-settings-ui.js';
+import { recordGame, totals, formatRecord, loadStats, saveStats } from './stats.js';
 
 const SETTINGS_KEY = 'chess-settings-v1';
 
@@ -64,6 +65,7 @@ function cacheDom() {
     settingsBtn: $('chessSettingsBtn'), settingsModal: $('chessSettingsModal'),
     thinking: $('chessThinking'), checkBanner: $('chessCheck'),
     endOverlay: $('chessEnd'), endTitle: $('chessEndTitle'), endSub: $('chessEndSub'), endBtn: $('chessEndBtn'),
+    endStats: $('chessEndStats'),
     promo: $('chessPromo'), promoBtns: $('chessPromoBtns'), hint: $('chessHint'),
     reviewBtn: $('chessReviewBtn'), controls: $('chessControls'),
     review: $('chessReview'), rvSlider: $('chessReviewSlider'), rvInfo: $('chessReviewInfo'),
@@ -194,6 +196,20 @@ function onGameOver() {
   // Checkmate 語音：僅在真正被將死（終局時仍處於被將軍狀態）才播；和局／無子可動（stalemate）不播。
   if (r !== '1/2-1/2' && Game.isCheck()) playVoice('voice-chess-mate');
   showEnd();
+  recordStats(r);
+}
+
+/** 只記 pvc；pvp 結束卡片的戰績行清空。難度：自動模式取階梯當下等級（autoLevel），手動取下拉值（level）。 */
+function recordStats(r) {
+  if (mode !== 'pvc') {
+    if (dom.endStats) dom.endStats.textContent = '';
+    return;
+  }
+  const outcome = r === '1/2-1/2' ? 'draw' : (((r === '1-0') === playerWhite) ? 'win' : 'loss');
+  const diff = `L${autoMode ? autoLevel : level}`;
+  const s = recordGame(loadStats(), 'chess', diff, outcome);
+  saveStats(s);
+  if (dom.endStats) dom.endStats.textContent = formatRecord(totals(s, 'chess'));
 }
 
 // ——— 自動難度（連勝連敗階梯，見 adaptive-chess.js）———
