@@ -6,3 +6,5 @@ dist/
 .gstack/
 .superpowers/
 spike-photos/
+spike-photos-real/
+opencv.js

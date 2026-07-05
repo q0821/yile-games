@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Spike — 拍照數子辨識管線</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #ece2cd; color: #2c2417; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 16px; margin: 4px 0 8px; }
+  h3 { font-size: 14px; margin: 0 0 6px; }
+  p.note, p.hint { font-size: 13px; color: #5b4c33; }
+  code { background: #f7f0e0; border: 1px solid #cabd9f; border-radius: 4px; padding: 1px 5px; }
+  button { font-size: 14px; padding: 8px 14px; margin: 4px 8px 4px 0; border-radius: 8px; border: 1px solid #ab9670; background: #856219; color: #f7f0e0; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  section { background: #f7f0e0; border: 1px solid #cabd9f; border-radius: 10px; padding: 12px 14px; margin: 12px 0; }
+  #cvStatus { font-weight: 700; margin: 6px 0; }
+  textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: #fffdf7; border: 1px solid #cabd9f; border-radius: 6px; padding: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table th, table td { border: 1px solid #cabd9f; padding: 4px 8px; text-align: center; }
+  table tr.summaryRow { font-weight: 700; background: #ecdfc2; }
+  .ok { color: #1a6b1a; font-weight: 700; }
+  .fail { color: #a31d1d; font-weight: 700; }
+  .photo-card { border: 1px solid #cabd9f; border-radius: 8px; padding: 10px; margin: 10px 0; background: #fffdf7; }
+  .canvases { display: flex; flex-wrap: wrap; gap: 12px; }
+  .canvas-block { text-align: center; }
+  .canvas-block canvas { max-width: 320px; width: 100%; height: auto; border: 1px solid #cabd9f; background: #ddd; }
+  .canvas-block figcaption { font-size: 12px; color: #5b4c33; margin-top: 4px; }
+  .msg-fail { color: #a31d1d; font-weight: 600; }
+  .msg-warn { color: #8a5a00; font-weight: 600; }
+  #status { font-size: 13px; min-height: 18px; }
+  label.filePickerLabel { display: block; font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>拍照數子 Spike — OpenCV.js 透視校正＋交叉點分類</h1>
+  <p class="note">
+    路線 A 可行性驗證：盤面四角偵測 → 透視校正 → 格線定位（自動判定 13 / 19 路）→ 交叉點分類（黑/白/空）→ 與 truth 比對。
+    OpenCV.js 不進 git，需先下載到專案根目錄：<code>curl -o opencv.js https://docs.opencv.org/4.9.0/opencv.js</code>，
+    然後重新整理本頁。
+  </p>
+  <div id="cvStatus">OpenCV.js 載入中…</div>
+
+  <section id="controls">
+    <h2>載入照片</h2>
+    <button id="loadSetBtn" disabled>載入 spike-photos 全集</button>
+    <button id="loadRealSetBtn" disabled>載入 spike-photos-real 全集</button>
+    <label class="filePickerLabel">
+      或手動選擇圖片檔案（可多選，例如 spike-photos-real/ 內的實拍照片；無 truth 時只顯示辨識結果，不計分）：
+      <input type="file" id="filePicker" accept="image/*" multiple disabled>
+    </label>
+    <div id="status"></div>
+  </section>
+
+  <section id="configSection">
+    <h2>Config（可即時改，按「套用並重跑」）</h2>
+    <textarea id="configText" rows="22" spellcheck="false"></textarea>
+    <div>
+      <button id="applyConfigBtn">套用並重跑</button>
+      <button id="resetConfigBtn">還原預設值</button>
+    </div>
+  </section>
+
+  <section id="summarySection">
+    <h2>總結</h2>
+    <div id="summaryTable"><p class="hint">尚未載入照片。</p></div>
+  </section>
+
+  <section id="gallerySection">
+    <h2>逐張明細</h2>
+    <div id="gallery"></div>
+  </section>
+
+  <script async src="/opencv.js"></script>
+  <script type="module" src="/photo-spike.js"></script>
+</body>
+</html>
