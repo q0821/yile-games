@@ -5,12 +5,12 @@
 // view = { grid, selected, legalTargets, lastMove, checkRC, anim }；座標 row 0=上、col 0=左。
 //   anim = { hideRow, hideCol, piece:{char,red}, x, y }：動畫中隱藏某格、改畫浮動棋子於 (x,y)。
 import { COLUMNS, ROWS } from './xiangqi-game.js';
-import { paintWoodGrain, paintVignette } from './board-texture.js';
+import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
+import { posHash01, engraveText, paintPieceGrain } from './piece-texture.js';
 
 // 與 style.css --font-serif 同步（canvas 無法吃 CSS 變數，故重複一份系統宋體 stack）
 const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
 
-const BG = '#e9c987';
 const LINE = '#5b4423';
 const SEL = '#c0392b';
 const HINT = 'rgba(43,90,40,0.55)';
@@ -93,6 +93,14 @@ function drawPiece(ctx, x, y, r, piece, lifted) {
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fillStyle = g;
   ctx.fill();
+  // 2b) 棋面年輪（依位置定死，重繪不抖動；clip 略縮避免壓到描邊）
+  const seed = posHash01(x, y);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.97, 0, Math.PI * 2);
+  ctx.clip();
+  paintPieceGrain(ctx, 'ring', seed, { x, y, r });
+  ctx.restore();
   // 3) 外描邊 + 內圈
   ctx.lineWidth = Math.max(2, r * 0.10);
   ctx.strokeStyle = edge;
@@ -118,6 +126,18 @@ function drawPiece(ctx, x, y, r, piece, lifted) {
   ctx.fillStyle = rim;
   ctx.fillRect(x - r, y - r, r * 2, r * 2);
   ctx.restore();
+  // 3c) 底緣側面暗帶：下半弧一道低對比暗帶，模擬圓柱側面厚度
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.88, Math.PI * 0.15, Math.PI * 0.85);
+  ctx.lineWidth = r * 0.16;
+  ctx.strokeStyle = 'rgba(90,60,20,0.14)';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  ctx.restore();
   // 4) 左上高光弧
   ctx.beginPath();
   ctx.arc(x - r * 0.18, y - r * 0.20, r * 0.62, Math.PI * 1.05, Math.PI * 1.62);
@@ -126,12 +146,8 @@ function drawPiece(ctx, x, y, r, piece, lifted) {
   ctx.lineCap = 'round';
   ctx.stroke();
   ctx.lineCap = 'butt';
-  // 5) 字
-  ctx.fillStyle = edge;
-  ctx.font = `700 ${Math.round(r * 1.12)}px ${SERIF}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(piece.char, x, y + r * 0.04);
+  // 5) 字（陰刻，亮邊/刻痕用預設值）
+  engraveText(ctx, piece.char, x, y + r * 0.04, Math.round(r * 1.12), { ink: edge, font: SERIF });
 }
 
 // ——— 棋盤背景 offscreen 快取（底色＋木紋＋格線＋九宮＋標線＋河界字＋vignette，只在尺寸變動時重算） ———
@@ -147,8 +163,7 @@ function buildBackground(deps) {
   const bg = { ctx, cellSize: deps.cellSize, padding: deps.padding };
   const cell = deps.cellSize;
 
-  ctx.fillStyle = BG;
-  ctx.fillRect(0, 0, deps._w, deps._h);
+  paintBoardBase(ctx, deps._w, deps._h, { top: '#f0d194', mid: '#e9c987', bottom: '#d6ad64' });
   paintWoodGrain(ctx, deps._w, deps._h, { seed: 17, grainColor: 'rgba(80,58,26,0.10)', speckColor: 'rgba(255,244,214,0.10)' });
 
   ctx.strokeStyle = LINE;
@@ -174,14 +189,17 @@ function buildBackground(deps) {
   // 兵卒位、炮位的傳統直角標線
   drawPositionMarks(bg);
 
-  // 河界字
-  ctx.fillStyle = 'rgba(91,68,35,0.5)';
-  ctx.font = `${Math.round(cell * 0.46)}px ${SERIF}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  // 河界字（陰刻，亮/暗幅度壓低避免搶戲）
   const riverY = (iy(bg, 4) + iy(bg, 5)) / 2;
-  ctx.fillText('楚 河', ix(bg, 1.5), riverY);
-  ctx.fillText('漢 界', ix(bg, 6.5), riverY);
+  const riverOpts = {
+    ink: 'rgba(91,68,35,0.5)',
+    font: SERIF,
+    weight: 400, // 原樣式非粗體，維持原字重
+    lightColor: 'rgba(255,255,255,0.18)',
+    shadowColor: 'rgba(0,0,0,0.14)',
+  };
+  engraveText(ctx, '楚 河', ix(bg, 1.5), riverY, cell * 0.46, riverOpts);
+  engraveText(ctx, '漢 界', ix(bg, 6.5), riverY, cell * 0.46, riverOpts);
 
   paintVignette(ctx, deps._w, deps._h);
 
