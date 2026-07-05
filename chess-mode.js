@@ -195,11 +195,14 @@ function onGameOver() {
   playEndSound(r);
   // Checkmate 語音：僅在真正被將死（終局時仍處於被將軍狀態）才播；和局／無子可動（stalemate）不播。
   if (r !== '1/2-1/2' && Game.isCheck()) playVoice('voice-chess-mate');
-  showEnd();
+  // 先記戰績再 showEnd()：showEnd() 內的 maybeApplyAdaptive() 會把 autoLevel 升降成下一局的等級，
+  // 記錄須取「本局對戰時」的等級。
   recordStats(r);
+  showEnd();
 }
 
-/** 只記 pvc；pvp 結束卡片的戰績行清空。難度：自動模式取階梯當下等級（autoLevel），手動取下拉值（level）。 */
+/** 只記 pvc；pvp 結束卡片的戰績行清空。難度：自動模式取階梯等級（autoLevel，須在 maybeApplyAdaptive
+ *  升降前呼叫，記到的才是本局對戰難度），手動取下拉值（level）。 */
 function recordStats(r) {
   if (mode !== 'pvc') {
     if (dom.endStats) dom.endStats.textContent = '';
