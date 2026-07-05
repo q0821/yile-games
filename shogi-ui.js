@@ -7,7 +7,8 @@
 //   hint = { isDrop:false, from, to } 一般手箭頭 或 { isDrop:true, to } 打入目的地高亮
 //   （建議走法按鈕，見 shogi-mode.js；打入無起點，持駒列對應駒高亮另由 shogi-mode.js 的 DOM 渲染負責）。
 import { COLUMNS, ROWS } from './shogi-game.js';
-import { paintWoodGrain, paintVignette } from './board-texture.js';
+import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
+import { posHash01, engraveText, paintPieceGrain } from './piece-texture.js';
 
 const SERIF = '"Noto Serif TC","Noto Serif CJK TC","Songti TC","Songti SC","STSong","PMingLiU","MingLiU","SimSun",serif';
 
@@ -67,6 +68,7 @@ function komaPath(ctx, w, h) {
 /** 畫一顆楔形漢字駒。sente=false 時整顆（含字）180° 倒置。lifted 加重陰影。 */
 function drawPiece(ctx, x, y, size, piece, lifted) {
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(size) || size <= 0) return;
+  const seed = posHash01(x, y); // 木紋種子依盤面像素座標定死，重繪不抖（需在 translate 前算好）
   size *= 0.88; // 縮到格子約 88%，讓格與駒之間留出呼吸空隙（原尺寸太滿）
   const w = size * 0.42, h = size * 0.46;
   ctx.save();
@@ -89,9 +91,32 @@ function drawPiece(ctx, x, y, size, piece, lifted) {
   komaPath(ctx, w, h);
   ctx.fillStyle = g;
   ctx.fill();
+  // 黃楊木直紋（clip 在駒形內，避免溢出到描邊外）
+  ctx.save();
+  komaPath(ctx, w * 0.96, h * 0.96);
+  ctx.clip();
+  paintPieceGrain(ctx, 'straight', seed, { w, h });
+  ctx.restore();
   ctx.lineWidth = Math.max(1.4, size * 0.045);
   ctx.strokeStyle = PIECE_EDGE;
   ctx.stroke();
+  // 駒底厚度稜線：底邊內側亮邊 + 深色窄帶，營造側面厚度感（clip 在駒形內，只沿底邊畫）
+  ctx.save();
+  komaPath(ctx, w, h);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.9, h * 0.97);
+  ctx.lineTo(w * 0.9, h * 0.97);
+  ctx.strokeStyle = 'rgba(255,244,214,0.30)';
+  ctx.lineWidth = Math.max(0.8, size * 0.02);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-w * 0.9, h * 0.90);
+  ctx.lineTo(w * 0.9, h * 0.90);
+  ctx.strokeStyle = 'rgba(60,40,15,0.10)';
+  ctx.lineWidth = Math.max(1, size * 0.05);
+  ctx.stroke();
+  ctx.restore();
   // 內線
   komaPath(ctx, w * 0.82, h * 0.8);
   ctx.lineWidth = Math.max(0.8, size * 0.022);
@@ -112,12 +137,11 @@ function drawPiece(ctx, x, y, size, piece, lifted) {
   ctx.fillStyle = rim;
   ctx.fillRect(-w, -h, w * 2, h * 2);
   ctx.restore();
-  // 字（升變駒用紅）
-  ctx.fillStyle = piece.promoted ? PROMO_INK : PIECE_EDGE;
-  ctx.font = `700 ${Math.round(size * 0.5)}px ${SERIF}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(piece.char, 0, size * 0.06);
+  // 字（陰刻，升變駒用紅；座標系已 translate/rotate，陰刻亮暗方向會隨後手駒旋轉，屬正確行為）
+  engraveText(ctx, piece.char, 0, size * 0.06, Math.round(size * 0.5), {
+    ink: piece.promoted ? PROMO_INK : PIECE_EDGE,
+    font: SERIF,
+  });
   ctx.restore();
 }
 
@@ -147,8 +171,17 @@ function buildBackground(deps) {
 
   ctx.fillStyle = FRAME;
   ctx.fillRect(0, 0, deps._w, deps._h);
-  ctx.fillStyle = BG;
-  ctx.fillRect(gx(bg, 0), gy(bg, 0), COLUMNS * cell, ROWS * cell);
+  // 外框頂部極淡受光（畫在盤面底色之前，盤面覆蓋中央後只在外框窄邊可見，增加框的立體感）
+  const frameSheen = ctx.createLinearGradient(0, 0, 0, deps._h * 0.4);
+  frameSheen.addColorStop(0, 'rgba(255,240,210,0.08)');
+  frameSheen.addColorStop(1, 'rgba(255,240,210,0)');
+  ctx.fillStyle = frameSheen;
+  ctx.fillRect(0, 0, deps._w, deps._h * 0.4);
+  // 盤面三段暖木漸層（取代單色 BG 填色）
+  ctx.save();
+  ctx.translate(gx(bg, 0), gy(bg, 0));
+  paintBoardBase(ctx, COLUMNS * cell, ROWS * cell, { top: '#f6e0b0', mid: '#f0d9a8', bottom: '#e2c288' });
+  ctx.restore();
   paintWoodGrain(ctx, deps._w, deps._h, { seed: 21, grainColor: 'rgba(80,58,26,0.10)', speckColor: 'rgba(255,244,214,0.10)' });
 
   ctx.strokeStyle = LINE;

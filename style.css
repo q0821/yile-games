@@ -1397,9 +1397,11 @@ h1.brush-title::after { display: none; }
   padding: 5px 8px;
   margin: 4px 0;
   border-radius: 10px;
-  background: var(--bg-panel, rgba(120, 90, 45, 0.08));
-  border: 1px solid var(--border, #cabd9f);
+  background: linear-gradient(180deg, rgba(233, 201, 135, 0.20), rgba(214, 173, 100, 0.16));
+  border: 1px solid #c2ab7e;
 }
+/* 楔形木駒外觀：形狀畫在 ::before（描邊底色）/ ::after（內縮木面），button 本體不設
+   background/border/overflow，避免裁到右下角 .shogi-hand-count 徽章（它故意超出按鈕框）。 */
 .shogi-hand-piece {
   position: relative;
   display: inline-flex;
@@ -1412,24 +1414,43 @@ h1.brush-title::after { display: none; }
   font-weight: 700;
   font-size: 19px;
   color: #5b4222;
-  background: #f2dca8;
-  border: 1px solid #8a6a34;
-  border-radius: 4px 4px 6px 6px;
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: filter 0.1s ease;
+}
+.shogi-hand-piece::before,
+.shogi-hand-piece::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  /* 對應 komaPath 比例：肩點 ±0.58w、roof 0.46h 的五角楔形 */
+  clip-path: polygon(50% 0%, 79% 23%, 100% 100%, 0% 100%, 21% 23%);
+}
+.shogi-hand-piece::before {
+  inset: 0;
+  background: #8a6a34; /* 描邊底色：比 ::after 大一圈，露出的邊緣即描邊 */
+}
+.shogi-hand-piece::after {
+  inset: 1.5px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 35%),
+    linear-gradient(180deg, #fbeecb 0%, #f2dca8 55%, #e3c386 100%);
 }
 .shogi-hand-piece.gote { transform: rotate(180deg); }
-.shogi-hand-piece:hover:not(:disabled) { box-shadow: 0 2px 8px rgba(60, 40, 15, 0.3); }
-.shogi-hand-piece.sel {
-  background: #f7e9c5;
-  border-color: #c0392b;
-  box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.5);
-}
+.shogi-hand-piece:hover:not(:disabled) { filter: drop-shadow(0 2px 4px rgba(60, 40, 15, 0.35)); }
+/* 選取／提示狀態：描邊染色（::before）＋ 木面亮化（::after）＋ button 外發光，三處同時變化才夠清楚 */
+.shogi-hand-piece.sel::before { background: #c0392b; }
+.shogi-hand-piece.sel::after { background: #f7e9c5; }
+.shogi-hand-piece.sel { filter: drop-shadow(0 0 3px rgba(192, 57, 43, 0.75)); }
 .shogi-hand-piece:disabled { cursor: default; opacity: 0.92; }
-.shogi-hand-piece.hint {
-  background: #dce9f7;
-  border-color: #1e6fc0;
-  box-shadow: 0 0 0 2px rgba(30, 111, 192, 0.55);
+.shogi-hand-piece.hint::before { background: #1e6fc0; }
+.shogi-hand-piece.hint::after { background: #dce9f7; }
+.shogi-hand-piece.hint { filter: drop-shadow(0 0 3px rgba(30, 111, 192, 0.6)); }
+.shogi-hand-char {
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .shogi-hand-count {
   position: absolute;
@@ -1446,6 +1467,7 @@ h1.brush-title::after { display: none; }
   color: #fff;
   background: #8a6a34;
   border-radius: 8px;
+  z-index: 3;
 }
 .shogi-hand-piece.gote .shogi-hand-count { transform: rotate(180deg); }
 .shogi-hand-empty { font-size: 13px; color: var(--text-muted, #9a8a6a); }
