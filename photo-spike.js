@@ -41,6 +41,17 @@ const DEFAULT_CONFIG = {
   // 交叉點分類
   sampleRadiusRatio: 0.38, // 取樣半徑 = ratio * 格距
   stoneStdThreshold: 22, // 樣本標準差高於此值視為「疑似棋子表面反光/漸層」
+  // —— 局部參照分類器（classifierMode: 'local'，預設）——
+  classifierMode: 'local',      // 'local' 局部木色參照 / 'kmeans' 全域分群（對照組）
+  woodSampleRadiusRatio: 0.14,  // 格心木色採樣半徑（格距比例；格心到棋子邊緣淨空約 0.2 格）
+  stoneSatMaxRatio: 0.55,       // satR 低於此 → 是棋子（棋子近無彩、木色/紙色有彩度）
+  blackWhiteRelSplit: -0.30,    // 棋子的黑白分界（黑 rel≈−0.67、白 rel≈+0.15，中點寬裕）
+  relBlackThreshold: -0.45,     // 飽和度像木色時的黑子把關（陰影中的黑子）
+  relWhiteThreshold: 0.10,      // 飽和度像木色時的白子把關
+  projScoreCap: 80,             // 投影「非木色程度」封頂值
+  snapWindowRatio: 0.35,        // 逐線吸附搜尋窗（格距比例）
+  warpMarginRatio: 0,           // warp 前四邊形向外擴的邊距。預設 0：合成集實測擴邊對「棋子壓盤緣」
+                                // 的盤面是淨負效果（photo-06 98.9%→80.6%）；實拍照片若外圈線被切可手動調 0.03–0.05。
 };
 
 let CONFIG = cloneConfig(DEFAULT_CONFIG);
@@ -243,6 +254,7 @@ async function runPipeline(entries) {
     await new Promise((r) => setTimeout(r, 0));
   }
   renderSummary(currentResults);
+  window.__spikeResults = currentResults; // module scope 對外不可見，掛 window 供驅動端診斷
   setStatus(`完成：共處理 ${entries.length} 張。`);
 }
 
@@ -274,7 +286,7 @@ function processOnePhoto(entry, cfg) {
   result.cornersCanvas = drawCornersOverlay(origCanvas, cornerRes.corners);
 
   // 步驟 3：透視校正
-  const warped = warpBoard(srcMat, cornerRes.corners, cfg.warpSize);
+  const warped = warpBoard(srcMat, cornerRes.corners, cfg.warpSize, cfg.warpMarginRatio ?? 0.04);
   srcMat.delete();
 
   const warpedGridCanvas = document.createElement('canvas');
@@ -294,13 +306,19 @@ function processOnePhoto(entry, cfg) {
   result.warpedGridCanvas = warpedGridCanvas;
   result.boardSize = gridRes.boardSize;
 
-  // 步驟 5：交叉點分類
-  const stats = sampleIntersections(warped, gridRes.rowLines, gridRes.colLines, cfg);
+  // 步驟 5：交叉點分類（classifierMode：'local' 局部木色參照（預設）／'kmeans' 全域分群對照組）
+  const { stats, woodMap } = sampleIntersections(warped, gridRes.rowLines, gridRes.colLines, cfg);
   warped.delete();
-  const clusterInfo = clusterBoardReference(stats, cfg);
-  const predicted = classifyAll(stats, clusterInfo, cfg);
+  let predicted;
+  if (cfg.classifierMode === 'kmeans') {
+    const clusterInfo = clusterBoardReference(stats, cfg);
+    predicted = classifyAll(stats, clusterInfo, cfg);
+    result.clusterInfo = { black: clusterInfo.centersSorted[0], empty: clusterInfo.centersSorted[1], white: clusterInfo.centersSorted[2] };
+  } else {
+    predicted = classifyLocal(stats, woodMap, cfg);
+  }
   result.predicted = predicted;
-  result.clusterInfo = { black: clusterInfo.centersSorted[0], empty: clusterInfo.centersSorted[1], white: clusterInfo.centersSorted[2] };
+  result._debug = { stats, woodMap }; // 供 Playwright 驅動端量化診斷（spike 專用，不在意記憶體）
 
   // 步驟 6：與 truth 比對（若有）
   let scoring = null;
@@ -443,12 +461,21 @@ function orderCorners(pts) {
 // ————————————————————————————————————————————————————————————————
 // 步驟 3：透視校正
 // ————————————————————————————————————————————————————————————————
-function warpBoard(srcMat, corners, warpSize) {
+function warpBoard(srcMat, corners, warpSize, marginRatio = 0) {
+  // 四邊形向外擴 marginRatio（以質心為中心放大）：四角常貼著棋盤/棋子外緣，
+  // 不擴邊的話最外圈格線壓在 warp 影像邊界上，逐線吸附與棋子取樣都會被切掉。
+  let { tl, tr, br, bl } = corners;
+  if (marginRatio > 0) {
+    const cx = (tl.x + tr.x + br.x + bl.x) / 4;
+    const cy = (tl.y + tr.y + br.y + bl.y) / 4;
+    const grow = (p) => ({ x: cx + (p.x - cx) * (1 + marginRatio), y: cy + (p.y - cy) * (1 + marginRatio) });
+    tl = grow(tl); tr = grow(tr); br = grow(br); bl = grow(bl);
+  }
   const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-    corners.tl.x, corners.tl.y,
-    corners.tr.x, corners.tr.y,
-    corners.br.x, corners.br.y,
-    corners.bl.x, corners.bl.y,
+    tl.x, tl.y,
+    tr.x, tr.y,
+    br.x, br.y,
+    bl.x, bl.y,
   ]);
   const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
     0, 0,
@@ -468,6 +495,39 @@ function warpBoard(srcMat, corners, warpSize) {
 // ————————————————————————————————————————————————————————————————
 // 步驟 4：格線定位（投影法，自動判定路數）
 // ————————————————————————————————————————————————————————————————
+/** 全圖灰階直方圖 1D 三群分聚（黑子/木色/白子），回傳中間群中心＝木色基準。
+ *  比全圖中位數穩健：終局盤面黑或白可能過半，中位數會落進棋子群。 */
+function estimateWoodGray(data, w, h) {
+  const hist = new Float64Array(256);
+  const step = 2; // 降採樣，夠用且快
+  for (let y = 0; y < h; y += step) {
+    const base = y * w;
+    for (let x = 0; x < w; x += step) hist[data[base + x]]++;
+  }
+  const pct = (p) => {
+    let acc = 0;
+    const total = hist.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc >= total * p) return i; }
+    return 255;
+  };
+  let centers = [pct(0.1), pct(0.5), pct(0.9)];
+  for (let iter = 0; iter < 12; iter++) {
+    const sum = [0, 0, 0];
+    const cnt = [0, 0, 0];
+    for (let v = 0; v < 256; v++) {
+      if (!hist[v]) continue;
+      let bi = 0;
+      let bd = Infinity;
+      for (let k = 0; k < 3; k++) { const dd = Math.abs(v - centers[k]); if (dd < bd) { bd = dd; bi = k; } }
+      sum[bi] += v * hist[v];
+      cnt[bi] += hist[v];
+    }
+    centers = centers.map((c, k) => (cnt[k] ? sum[k] / cnt[k] : c));
+    centers.sort((a, b) => a - b);
+  }
+  return centers[1];
+}
+
 function detectGridLinesBothAxes(warpedMat, cfg) {
   const gray = new cv.Mat();
   cv.cvtColor(warpedMat, gray, cv.COLOR_RGBA2GRAY);
@@ -481,26 +541,51 @@ function detectGridLinesBothAxes(warpedMat, cfg) {
   const y0 = Math.round((h * (1 - cropRatio)) / 2);
   const y1 = h - y0;
 
+  // 投影分數＝「非木色程度」|gray − 木色|（封頂抑制極值）：黑子、白子、格線都是正訊號且
+  // 相位一致（棋子中心在線上）；白子排之間的縫是木色、歸零——避免「黑子排在線上、白縫在
+  // 線間」兩套相位互打（曾把格距拉歪 5%，盤緣取樣整排偏掉）。
+  const woodV = estimateWoodGray(data, w, h);
+  const cap = cfg.projScoreCap || 80;
+  const score = (v) => Math.min(Math.abs(v - woodV), cap);
+
   const rowProfile = new Float64Array(y1 - y0);
   for (let y = y0; y < y1; y++) {
     let s = 0;
     const base = y * w;
-    for (let x = x0; x < x1; x++) s += 255 - data[base + x];
+    for (let x = x0; x < x1; x++) s += score(data[base + x]);
     rowProfile[y - y0] = s;
   }
   const colProfile = new Float64Array(x1 - x0);
   for (let x = x0; x < x1; x++) {
     let s = 0;
-    for (let y = y0; y < y1; y++) s += 255 - data[y * w + x];
+    for (let y = y0; y < y1; y++) s += score(data[y * w + x]);
     colProfile[x - x0] = s;
   }
-  gray.delete();
 
   const rowFit = fitGridAxis(rowProfile, y0, h, cfg);
   const colFit = fitGridAxis(colProfile, x0, w, cfg);
 
   if (!rowFit.ok) return { ok: false, reason: '水平格線定位失敗：' + rowFit.reason };
   if (!colFit.ok) return { ok: false, reason: '垂直格線定位失敗：' + colFit.reason };
+
+  // 逐線微調：四角誤差殘留的輕微透視讓線「保直線、破等距」，等距格會在某側邊漂掉。
+  // 每條線在 ±snapWindowRatio×格距窗內向投影峰吸附（用全長 profile；窗小，不會被盤緣文字拉走）。
+  const fullRowProfile = new Float64Array(h);
+  for (let y = 0; y < h; y++) {
+    let s = 0;
+    const base = y * w;
+    for (let x = x0; x < x1; x++) s += score(data[base + x]);
+    fullRowProfile[y] = s;
+  }
+  const fullColProfile = new Float64Array(w);
+  for (let x = 0; x < w; x++) {
+    let s = 0;
+    for (let y = y0; y < y1; y++) s += score(data[y * w + x]);
+    fullColProfile[x] = s;
+  }
+  gray.delete();
+  rowFit.positions = snapLinesToPeaks(rowFit.positions, fullRowProfile, rowFit.spacing, cfg);
+  colFit.positions = snapLinesToPeaks(colFit.positions, fullColProfile, colFit.spacing, cfg);
   if (rowFit.boardSize !== colFit.boardSize) {
     return {
       ok: false,
@@ -519,6 +604,26 @@ function detectGridLinesBothAxes(warpedMat, cfg) {
 }
 
 /** 對一條投影曲線（已限縮於中央裁切區）擬合等距格線，回傳判定路數與外插後的完整線位置。 */
+/** 每條格線在 ±snapWindowRatio×格距窗內向 profile 局部峰值吸附；窗內無明顯峰則保持原位。
+ *  吸附後仍夾住與鄰線的最小間距（0.5 格距），避免兩條線吸到同一個峰。 */
+function snapLinesToPeaks(positions, profile, spacing, cfg) {
+  const smoothed = movingAverage(profile, cfg.projSmoothWindow);
+  const win = Math.max(2, Math.round(spacing * (cfg.snapWindowRatio ?? 0.35)));
+  const snapped = positions.map((p) => {
+    const c = Math.round(p);
+    let bestI = c;
+    let bestV = -Infinity;
+    for (let i = Math.max(0, c - win); i <= Math.min(smoothed.length - 1, c + win); i++) {
+      if (smoothed[i] > bestV) { bestV = smoothed[i]; bestI = i; }
+    }
+    return bestI;
+  });
+  for (let i = 1; i < snapped.length; i++) {
+    if (snapped[i] - snapped[i - 1] < spacing * 0.5) snapped[i] = snapped[i - 1] + spacing * 0.5;
+  }
+  return snapped;
+}
+
 function fitGridAxis(profile, offset, fullLength, cfg) {
   const smoothed = movingAverage(profile, cfg.projSmoothWindow);
   const mean = average(smoothed);
@@ -547,28 +652,66 @@ function fitGridAxis(profile, offset, fullLength, cfg) {
   }
 
   const positions = accepted.map((a) => a.idx + offset);
-  const diffs = [];
-  for (let i = 1; i < positions.length; i++) diffs.push(positions[i] - positions[i - 1]);
-  diffs.sort((a, b) => a - b);
-  const d0 = diffs[Math.floor(diffs.length / 2)];
-  if (!(d0 > 0)) return { ok: false, reason: '無法估計格距' };
 
-  // 以第一個峰值為錨點指派整數格線索引，最小平方擬合 pos = a + idx * d
-  const idxGuess = positions.map((p) => Math.round((p - positions[0]) / d0));
+  // ——— RANSAC 式格距擬合 ———
+  // 動機：盤面被棋子蓋住的線沒有峰（峰間距混入 2d/3d）、雜訊峰會污染中位數與「以第一個峰
+  // 為錨」的整數索引指派，格距估錯 5% 就足以讓盤緣取樣點偏離棋子中心（實測 photo-01/05 病因）。
+  // 做法：所有峰值對枚舉候選格距（gap/k）→ 每個峰當錨點數內點 → 內點最多者勝（同分取較大
+  // 格距，避免 d/2 諧波）→ 內點做最小平方精修。峰值數 ~20，全枚舉成本可忽略。
+  const minS = fullLength / 24; // 19 路下限（含餘裕）
+  const maxS = fullLength / 11; // 13 路上限（含餘裕）
+  const candSet = new Set();
+  for (let i = 0; i < positions.length; i++) {
+    for (let j = i + 1; j < positions.length; j++) {
+      const gap = positions[j] - positions[i];
+      for (let k = 1; k <= 6; k++) {
+        const s = gap / k;
+        if (s >= minS && s <= maxS) candSet.add(Math.round(s * 4) / 4); // 0.25px 去重
+      }
+    }
+  }
+  if (candSet.size === 0) return { ok: false, reason: '無合理格距候選' };
+
+  let best = null;
+  for (const s of candSet) {
+    const tol = Math.max(2, s * 0.15);
+    for (const anchor of positions) {
+      let inliers = 0;
+      let rss = 0;
+      for (const p of positions) {
+        const m = Math.abs(p - anchor) % s;
+        const res = Math.min(m, s - m);
+        if (res <= tol) { inliers++; rss += res * res; }
+      }
+      if (!best || inliers > best.inliers ||
+          (inliers === best.inliers && (s > best.s + 0.5 || (Math.abs(s - best.s) <= 0.5 && rss < best.rss)))) {
+        best = { s, anchor, inliers, rss };
+      }
+    }
+  }
+  if (!best || best.inliers < 3) return { ok: false, reason: 'RANSAC 內點不足' };
+
+  // 內點做最小平方精修 pos = a + idx * d
+  const tolB = Math.max(2, best.s * 0.15);
+  const inPts = positions.filter((p) => {
+    const m = Math.abs(p - best.anchor) % best.s;
+    return Math.min(m, best.s - m) <= tolB;
+  });
+  const idxGuess = inPts.map((p) => Math.round((p - best.anchor) / best.s));
   let sumI = 0;
   let sumP = 0;
   let sumII = 0;
   let sumIP = 0;
-  const n = positions.length;
+  const n = inPts.length;
   for (let i = 0; i < n; i++) {
     sumI += idxGuess[i];
-    sumP += positions[i];
+    sumP += inPts[i];
     sumII += idxGuess[i] * idxGuess[i];
-    sumIP += idxGuess[i] * positions[i];
+    sumIP += idxGuess[i] * inPts[i];
   }
   const denom = n * sumII - sumI * sumI;
-  let d = d0;
-  let a = positions[0] - idxGuess[0] * d0;
+  let d = best.s;
+  let a = best.anchor;
   if (Math.abs(denom) > 1e-6) {
     d = (n * sumIP - sumI * sumP) / denom;
     a = (sumP - d * sumI) / n;
@@ -591,9 +734,8 @@ function fitGridAxis(profile, offset, fullLength, cfg) {
     return { ok: false, reason: `偵測到約 ${rawCount} 條線，非 ${cfg.gridSizes.join('/')} 附近`, rawCount };
   }
 
-  // 以判定路數重新置中產生正好 boardSize 條等距線
-  const idxCenter = Math.round((fullLength / 2 - a) / d);
-  const start = idxCenter - Math.floor((boardSize - 1) / 2);
+  // 以外插窗（kMin..kMax）對齊 boardSize 條等距線（比「對影像中心置中」少半格級偏移）
+  const start = kMin + Math.round((rawCount - boardSize) / 2);
   const finalPositions = [];
   for (let kk = 0; kk < boardSize; kk++) finalPositions.push(a + d * (start + kk));
 
@@ -657,8 +799,22 @@ function sampleIntersections(warpedMat, rowLines, colLines, cfg) {
     }
     stats.push(row);
   }
+
+  // 木色光照圖：格子中心永遠是露出的木色（交叉點到格心距離 0.707 格 > 棋子半徑 0.5 格），
+  // 對 (N-1)×(N-1) 個格心小半徑採樣，供局部分類器抵銷 vignette / 光照漸層。
+  const woodRadius = Math.max(2, cellSize * (cfg.woodSampleRadiusRatio || 0.14));
+  const woodMap = [];
+  for (let r = 0; r < rowLines.length - 1; r++) {
+    const row = [];
+    for (let c = 0; c < colLines.length - 1; c++) {
+      const cy = (rowLines[r] + rowLines[r + 1]) / 2;
+      const cx = (colLines[c] + colLines[c + 1]) / 2;
+      row.push(sampleCircle(data, w, h, cx, cy, woodRadius));
+    }
+    woodMap.push(row);
+  }
   hsv.delete();
-  return stats;
+  return { stats, woodMap };
 }
 
 function sampleCircle(hsvData, w, h, cx, cy, radius) {
@@ -728,6 +884,51 @@ function clusterBoardReference(stats, cfg) {
 }
 
 const CLASS_NAMES = ['black', 'empty', 'white'];
+
+/** 交叉點 (r,c) 的局部木色參照：鄰接（最多 4 個）格心木色樣本取中位數。
+ *  中位數而非平均：鄰格若有棋子投影（陰影偏暗）或反光，單一離群格心不會拖偏參照值。 */
+function localWoodRef(woodMap, r, c) {
+  const cands = [];
+  for (const [wr, wc] of [[r - 1, c - 1], [r - 1, c], [r, c - 1], [r, c]]) {
+    if (wr >= 0 && wr < woodMap.length && wc >= 0 && wc < woodMap[0].length) cands.push(woodMap[wr][wc]);
+  }
+  cands.sort((a, b) => a.mean - b.mean);
+  const mid = cands[Math.floor(cands.length / 2)];
+  return { v: mid.mean, sat: mid.sat };
+}
+
+/** 局部參照分類器：每個交叉點跟「自己附近的木色」比相對亮度差，光照不均直接被抵銷。
+ *  黑子相對木色暗很多（rel ≈ −0.6 以下）、白子亮一截（rel ≈ +0.1 以上）、空點 ≈ 0。
+ *  邊界帶再用飽和度輔助（白子近無彩、木色有黃彩）。 */
+function classifyLocal(stats, woodMap, cfg) {
+  const N = stats.length;
+  const grid = [];
+  for (let r = 0; r < N; r++) {
+    const row = [];
+    for (let c = 0; c < N; c++) {
+      const s = stats[r][c];
+      const wood = localWoodRef(woodMap, r, c);
+      const rel = wood.v > 1 ? (s.mean - wood.v) / wood.v : 0;
+      const satR = wood.sat > 1 ? s.sat / wood.sat : 1;
+      // 判定樹：飽和度比為主判（棋子近無彩 satR≈0.2、木色≈1.0），黑白再以相對亮度差分；
+      // 飽和度像木色時以亮度差把守極端值（陰影中的黑子）。不用樣本標準差當後備——
+      // 空點的木紋＋格線交叉 std 與棋子重疊，曾造成大量「空→黑」誤判。
+      let cls;
+      if (satR < cfg.stoneSatMaxRatio) {
+        cls = rel < cfg.blackWhiteRelSplit ? 'black' : 'white';
+      } else if (rel < cfg.relBlackThreshold) {
+        cls = 'black';
+      } else if (rel > cfg.relWhiteThreshold) {
+        cls = 'white';
+      } else {
+        cls = 'empty';
+      }
+      row.push(cls);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
 
 /** rank(0/1/2) → 分類名稱；並用標準差做「疑似棋子反光」的二次修正。 */
 function classifyAll(stats, clusterInfo, cfg) {
