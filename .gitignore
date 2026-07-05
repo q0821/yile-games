@@ -3,3 +3,5 @@
 node_modules/
 dist/
 .playwright-mcp/
+.gstack/
+.superpowers/
