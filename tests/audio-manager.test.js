@@ -529,6 +529,25 @@ describe('initAudio 解鎖流程', () => {
     expect(mock.backend.createAudio).toHaveBeenCalled();
   });
 
+  test('initAudio 宣告頁面 audio session 為 ambient（iOS 音訊跟隨實體靜音鍵）', () => {
+    // WebKit（iOS Safari／WKWebView）才有 navigator.audioSession；模擬其存在
+    ctx.navigator.audioSession = { type: 'auto' };
+    ctx._setBackendForTest(mock.backend); // 重置 initDone，讓 initAudio 重跑
+    ctx.initAudio();
+    expect(ctx.navigator.audioSession.type).toBe('ambient');
+  });
+
+  test('navigator.audioSession.type 賦值拋錯時 fail-soft，解鎖監聽仍正常掛上', () => {
+    ctx.navigator.audioSession = {};
+    Object.defineProperty(ctx.navigator.audioSession, 'type', {
+      set() { throw new Error('audioSession not configurable'); }
+    });
+    ctx._setBackendForTest(mock.backend);
+    expect(() => ctx.initAudio()).not.toThrow();
+    unlock(ctx);
+    expect(mock.audioContexts.length).toBeGreaterThan(0); // 解鎖流程未被中斷
+  });
+
   test('initAudio 是冪等的：重複呼叫不重複掛多組監聽', () => {
     ctx.initAudio();
     ctx.initAudio();

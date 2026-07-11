@@ -275,9 +275,23 @@ function handlePageHide() {
   handleVisibilityHidden();
 }
 
+/** iOS 上 <audio>/<video> 元素預設走 playback audio session——無視實體靜音鍵，且 WKWebView
+ *  的音訊跑在獨立行程，App 層的 AVAudioSession 設定管不到它（AppDelegate 設的 ambient 只對
+ *  純 WebAudio 生效）。BGM 一經 <audio> 播放，整頁 session 被切成 playback，連 WebAudio 音效
+ *  也跟著無視靜音鍵。以 Audio Session Web API 將整頁音訊宣告為 ambient：跟隨靜音鍵、與使用者
+ *  自己在聽的音樂混音。目前僅 WebKit 實作 navigator.audioSession，其他瀏覽器略過即可。 */
+function declareAmbientAudioSession() {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.audioSession) {
+      navigator.audioSession.type = 'ambient';
+    }
+  } catch (_) { /* fail-soft：宣告失敗維持平台預設行為 */ }
+}
+
 export function initAudio() {
   if (initDone) return;
   initDone = true;
+  declareAmbientAudioSession();
   getAssetVersion(); // 預先解析資產版本，讓 BGM 的同步 URL 組合也能帶上版本 query
   document.addEventListener('pointerdown', handleUnlockGesture, { once: true });
   document.addEventListener('touchstart', handleUnlockGesture, { once: true });
