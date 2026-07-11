@@ -27,9 +27,9 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capgo/native-purchases"
 
 SPEC CHECKSUMS:
-  Capacitor: ee608ffbcf73b0030813d77ce8b10142f26cad4a
+  Capacitor: 8ef25ba872436d2c5ac2a4791f7255529bdcd93b
   CapacitorCordova: 139e2ed3d91c54b5aeae7941135c9f9aefc6da1d
-  CapgoNativePurchases: b27183e75ca1b241a746069e3508b4c9720e65db
+  CapgoNativePurchases: d7414b594b3dd0c5871c165ebcedf59029e383b4
   GCDWebServer: 2c156a56c8226e2d5c0c3f208a3621ccffbe3ce4
 
 PODFILE CHECKSUM: 088f4abe9b5080045c0eae7880dc149763656ff6
