@@ -306,6 +306,7 @@ async function buyFullVersion() {
   if (btn) btn.disabled = false;
   if (r.ok) {
     if (el) el.textContent = '已解鎖完整版，感謝支持！';
+    updateHomePremiumEntry();
     setTimeout(() => closePremiumModal(), 1200);
   } else if (el) {
     el.textContent = r.cancelled ? '已取消購買' : `購買失敗：${r.message}`;
@@ -318,6 +319,14 @@ async function restorePurchase() {
   const r = await Store.restoreFullVersion();
   if (el) el.textContent = r.message;
   if (r.owned) setTimeout(() => closePremiumModal(), 1200);
+  updateHomePremiumEntry();
+}
+
+// 首頁「完整版」入口：只在原生 App（可購買）且尚未解鎖時顯示。
+// Web 版全功能免費、已購買者都不需要看到購買入口。
+function updateHomePremiumEntry() {
+  const btn = document.getElementById('homePremiumEntry');
+  if (btn) btn.style.display = (Store.storeAvailable() && !hasPremium()) ? '' : 'none';
 }
 
 // 形勢判斷：對局中隨時評估目前盤面。顯示黑方視角勝率＋領先目數，並以領地覆蓋層
@@ -1387,6 +1396,7 @@ Object.assign(window, {
   onWinrateGraphClick,
   toggleReviewOwnership,
   exportSGF,
+  openPremiumModal,
   closePremiumModal,
   buyFullVersion,
   restorePurchase,
@@ -1422,8 +1432,10 @@ Object.defineProperty(window, 'moveHistory', {
 registerEventHandlers(app);
 updateAiLevelDisplay();
 initAiLevelControls();
-// IAP 權益啟動校正（原生 App 內才有動作；失敗不影響啟動）
-Store.syncEntitlements();
+// IAP 權益啟動校正（原生 App 內才有動作；失敗不影響啟動）；
+// 首頁完整版入口先依 localStorage 快取顯示，權益校正完再更新一次
+updateHomePremiumEntry();
+Store.syncEntitlements().then(updateHomePremiumEntry);
 
 // 全域音訊：掛一次性解鎖手勢＋背景/前景生命週期監聽；設定 UI 容器在頁面載入時就存在
 // （各棋畫面雖隱藏但 DOM 已渲染），可一次性渲染，靠 audio-settings-ui.js 的
