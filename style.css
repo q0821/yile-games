@@ -1806,7 +1806,7 @@ h1.brush-title::after { display: none; }
 .learn-caption { text-align: center; font-size: 13px; }
 .learn-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .learn-choices button, .learn-actions button { min-height: 44px; }
-.learn-feedback { min-height: 64px; padding: 12px; border-left: 3px solid #b77b21; background: #f2eadb; color: #493b2b; }
+.learn-feedback { min-height: 3.4em; margin: 20px 0 24px; color: #493b2b; }
 .learn-footer { text-align: center; line-height: 1.8; }
 .go-beginner-links { align-items: center; padding: 4px 0 10px; }
 .go-beginner-links a, .learn-footer a { color: #66451d; text-decoration: underline; text-underline-offset: 3px; }
