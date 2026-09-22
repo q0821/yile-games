@@ -9,6 +9,7 @@ export function mountLearnBoard(root, board, targets, answers, disabled, submit)
   stage.append(canvas, points); root.append(stage);
   const markers = [];
   const cells = [];
+  let entrySet = false;
   for (let row=0; row<boardSize; row++) for (let col=0; col<boardSize; col++) {
     const color = board[row][col];
     const target = targets.has(`${row},${col}`) && color !== 0;
@@ -19,6 +20,17 @@ export function mountLearnBoard(root, board, targets, answers, disabled, submit)
     cell.dataset.row = row; cell.dataset.col = col;
     cell.setAttribute('aria-label', `${'ABCDEFGHJKLMNOPQRST'[col]}${boardSize-row}，${color===1?'黑棋':color===2?'白棋':'空點'}${target?'，目標棋串':''}${answer?'，解答標記':''}`);
     cell.disabled = disabled;
+    cell.tabIndex = !disabled && !entrySet && color === 0 ? 0 : -1;
+    if (cell.tabIndex === 0) entrySet = true;
+    cell.addEventListener('focus', () => { for (const item of cells) item.cell.tabIndex = item.cell === cell ? 0 : -1; });
+    cell.addEventListener('keydown', event => {
+      const delta = {ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[event.key];
+      if (!delta) return;
+      event.preventDefault();
+      const r = Math.max(0,Math.min(boardSize-1,row+delta[0]));
+      const c = Math.max(0,Math.min(boardSize-1,col+delta[1]));
+      cells[r*boardSize+c].cell.focus();
+    });
     cell.addEventListener('click', () => submit([row,col]));
     points.append(cell); cells.push({cell,row,col});
   }

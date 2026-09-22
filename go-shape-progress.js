@@ -20,6 +20,10 @@ export function readShapeProgress(storage) {
       if(a) {
         if(typeof a.assisted!=='boolean'||typeof a.mistaken!=='boolean'||typeof a.finished!=='boolean') throw new Error('attempt');
         progress.attempts[id]={assisted:a.assisted,mistaken:a.mistaken,finished:a.finished};
+        if(a.point!==undefined){
+          if(!Array.isArray(a.point)||a.point.length!==2||!a.point.every(n=>Number.isInteger(n)&&n>=0&&n<19))throw new Error('point');
+          progress.attempts[id].point=[...a.point];
+        }
       }
     }
     return {progress,writable:true,error:''};
@@ -38,7 +42,7 @@ export function beginShapeAttempt(progress,id) {
   if(progress.attempts[id]&&!progress.attempts[id].finished) return progress;
   return {...progress,attempts:{...progress.attempts,[id]:{assisted:false,mistaken:false,finished:false}}};
 }
-export function answerShape(progress,id,outcome) {
+export function answerShape(progress,id,outcome,point) {
   if(!ids.has(id)||!['correct','wrong','reveal','study'].includes(outcome)) throw new Error('未知作答結果');
   const a={...(progress.attempts[id]||{assisted:false,mistaken:false,finished:false})};
   if(a.finished) return progress;
@@ -46,6 +50,7 @@ export function answerShape(progress,id,outcome) {
   if(outcome==='wrong') a.mistaken=true;
   if(outcome==='reveal'||outcome==='study') a.assisted=true;
   if(outcome==='correct'||outcome==='reveal') a.finished=true;
+  if(point&&(outcome==='correct'||outcome==='reveal'))a.point=[...point];
   const clean=outcome==='correct'&&!a.assisted&&!a.mistaken;
   return {...progress,attempts:{...progress.attempts,[id]:a},records:{...progress.records,[id]:{
     solved:old.solved||(outcome==='correct'&&!a.assisted),

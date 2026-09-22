@@ -19,3 +19,12 @@ test.each(['invalid','{"version":9}',JSON.stringify({version:1,records:{[id]:{so
 test('封鎖儲存可見錯誤，未知題目與結果拒絕',()=>{
  expect(readShapeProgress(null).error).not.toBe('');expect(saveShapeProgress(null,newShapeProgress())).not.toBe('');expect(()=>beginShapeAttempt(newShapeProgress(),'bad')).toThrow();expect(()=>answerShape(newShapeProgress(),id,'bad')).toThrow();
 });
+test('保存實際落點，重整保留非示範答案，重做清除落點',()=>{
+ const s=storage(),qid='knight-name';let p=beginShapeAttempt(newShapeProgress(),qid);
+ p=answerShape(p,qid,'correct',[2,0]);saveShapeProgress(s,p);const loaded=readShapeProgress(s).progress;
+ expect(loaded.attempts[qid].point).toEqual([2,0]);expect(beginShapeAttempt(loaded,qid).attempts[qid].point).toBeUndefined();
+});
+test('舊版無落點的完成紀錄可讀，損壞的落點不覆寫原資料',()=>{
+ const s=storage();let p=beginShapeAttempt(newShapeProgress(),id);p=answerShape(p,id,'correct');saveShapeProgress(s,p);expect(readShapeProgress(s).writable).toBe(true);
+ p.attempts[id].point=[-1,0];saveShapeProgress(s,p);expect(readShapeProgress(s).writable).toBe(false);
+});

@@ -124,6 +124,28 @@ export function topicFrames(topic) {
   }
   return result;
 }
+// 落點題接受棋盤操作；保留既有 ID 與一個示範答案，實際正解由棋形規則判定。
+const pointPrompts = {
+  hoshi:'請在左下角的星位下黑棋。',tengen:'請在 19 路棋盤的天元下黑棋。','san-san':'請在左下角的三三下黑棋。',
+  extend:'黑先，緊接原有黑棋，下一手「長」。',stand:'黑先，向下方盤邊緊接一子，下一手「立」。',
+  jump:'黑先，從原有黑棋下一手「一間跳」，方向不限。',diagonal:'黑先，從原有黑棋下一手「尖」，方向不限。',
+  knight:'黑先，從原有黑棋下一手「小飛」，方向不限。',tiger:'黑先，補一顆棋，讓三顆黑棋圍出一個虎口，方向不限。',
+  net:'黑先，在目標白棋右下方的斜鄰空點，罩住逃路。',eye:'請點選黑棋圍出的內部眼位，不必落子。',
+};
+const shapeExplanations={
+  extend:'新子與原有黑棋上下或左右相鄰，已連成同一串，共用氣。',
+  stand:'向下方盤邊緊接一子，和原有黑棋連成同一串。',
+  jump:'兩子沿同一直線，中間空一點；規則上還沒有直接相連。',
+  diagonal:'橫向與直向各差一格，形成尖；斜角相鄰不等於直接連接。',
+  knight:'橫向與直向分別差兩格與一格，形成小飛；規則上還沒有直接相連。',
+  tiger:'三顆黑棋圍住同一空點的三個方向，形成虎口；仍要注意外面的氣與斷點。',
+};
+for(const t of SHAPE_TOPICS) if(['board','shape','capture'].includes(t.unit)||t.id==='eye') {
+  const q=t.questions[0];q.input=t.id==='eye'?'identify':'move';
+  q.prompt=pointPrompts[t.id]||`黑先。${q.prompt}`;
+  if(t.unit==='board')q.frame=0;
+  if(shapeExplanations[t.id])q.explanation=shapeExplanations[t.id];
+}
 // 固定輪替選項順序，避免每題正解都落在同一位置，也避免重整造成選項跳動。
 for (const [index,topic] of SHAPE_TOPICS.entries()) for (const [i,q] of topic.questions.entries()) {
   const shift=(index+i)%q.options.length;

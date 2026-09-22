@@ -51,3 +51,26 @@ test('非法圖解及非法手順不能默默顯示假盤面',()=>{
   expect(()=>frameBoard({size:5,black:[[0,0]],white:[[0,0]]})).toThrow();
   expect(()=>topicFrames({...topic('snapback'),moves:[{color:1,point:[0,2]}]})).toThrow();
 });
+
+const {judgeShapePoint,examplePoint}=r.localRequire('./go-shape-answer.js');
+test('落子題接受完整棋形方向，並拒絕不符棋形的合法手',()=>{
+ for(const [id,count]of[['extend',4],['stand',1],['jump',4],['diagonal',4],['knight',8],['tiger',4]]){
+  const t=topic(id),q=t.questions[0],answers=[];
+  for(let x=0;x<7;x++)for(let y=0;y<7;y++)if(judgeShapePoint(t,q,[x,y]).correct)answers.push([x,y]);
+  expect(answers).toHaveLength(count);expect(judgeShapePoint(t,q,[0,6]).correct).toBe(false);
+ }
+ const t=topic('knight'),q=t.questions[0];for(const point of [[1,1],[1,3],[2,0],[2,4],[4,0],[4,4],[5,1],[5,3]]){
+  const result=judgeShapePoint(t,q,point);expect(result.correct).toBe(true);expect(result.board[point[0]][point[1]]).toBe(1);
+ }
+ expect(judgeShapePoint(t,q,[2,2]).correct).toBe(false);
+ expect(judgeShapePoint(t,q,[3,2]).reason).toMatch(/已經有棋子/);
+ expect(judgeShapePoint(t,q,[-1,0]).correct).toBe(false);
+});
+test('每個直接作答題的示範合法，錯誤落子不改原盤面，眼位只標記',()=>{
+ for(const t of SHAPE_TOPICS){const q=t.questions[0];if(!q.input)continue;
+  const frame=topicFrames(t)[q.frame],point=examplePoint(q,frame.size),before=JSON.stringify(frame.board);
+  const result=judgeShapePoint(t,q,point);expect(result.correct).toBe(true);
+  expect(result.board[point[0]][point[1]]).toBe(q.input==='identify'?0:1);
+  expect(JSON.stringify(topicFrames(t)[q.frame].board)).toBe(before);
+ }
+});

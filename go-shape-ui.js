@@ -1,5 +1,6 @@
 import { SHAPE_UNITS, SHAPE_TOPICS, SHAPE_QUESTIONS, topicFrames } from './go-shape-lessons.js';
 import { readShapeProgress, saveShapeProgress, beginShapeAttempt, answerShape, shapeReviewIds } from './go-shape-progress.js';
+import { judgeShapePoint, examplePoint } from './go-shape-answer.js';
 import { mountLearnBoard } from './go-learn-board.js';
 
 export function mountShapeClassroom(root,back) {
@@ -28,9 +29,10 @@ export function mountShapeClassroom(root,back) {
   }
   function answer(choice) {
     const q=currentQuestion();if(!q||progress.attempts[q.id]?.finished)return;
-    const correct=choice===q.correct;
-    progress=answerShape(progress,q.id,correct?'correct':'wrong');
-    feedback=correct?`${progress.attempts[q.id].assisted?'已跟著解說完成。':'答對了！'}${q.explanation}`:'還不對，請再觀察棋盤與題目。也可以按「看解答」了解原因。';
+    const result=q.input?judgeShapePoint(topic(),q,choice):null;
+    const correct=result?result.correct:choice===q.correct;
+    progress=answerShape(progress,q.id,correct?'correct':'wrong',correct&&q.input?choice:undefined);
+    feedback=correct?`${progress.attempts[q.id].assisted?'已跟著解說完成。':'答對了！'}${result?.explanation||q.explanation}`:result?`${result.reason} 原盤面已保留，請再試一次。`:'還不對，請再觀察棋盤與題目。也可以按「看解答」了解原因。';
     if(correct&&progress.records[q.id].review)feedback+=' 本題保留在待複習，下次不看解答、第一次答對才會移除。';
     save();redraw('shapeFeedback');
   }
@@ -68,27 +70,40 @@ export function mountShapeClassroom(root,back) {
     $('shapeTopic').addEventListener('change',e=>openTopic(e.target.value));
     $('shapeStorage').textContent=error;$('shapeStorage').hidden=!error;
     $('shapeTitle').textContent=q?q.prompt:t.title;
-    $('shapeIntro').textContent=q?'觀察下圖，從選項作答。座標可對照棋盤四邊。':t.intro;
+    $('shapeIntro').textContent=q?(q.input?(q.input==='identify'?'直接點選棋盤上的眼位。':'直接點棋盤的空交叉點下黑棋。'):'觀察下圖，從選項作答。座標可對照棋盤四邊。'):t.intro;
     $('shapePosition').textContent=q?`${t.title}：練習 ${t.questions.indexOf(q)+1}／2${reviewQueue?`，複習 ${reviewIndex+1}／${reviewQueue.length}`:''}`:`${SHAPE_UNITS.find(u=>u.id===t.unit).title}：${t.title}`;
     let frames;
     try{frames=topicFrames(t);}catch(e){console.error('[go-shape] 教學圖解載入失敗。',e.message);$('shapeFeedback').textContent='這個主題暫時無法顯示，請選其他主題或重新整理。';return;}
     const frame=frames[q?q.frame:step];
-    $('shapeBoard').setAttribute('aria-label',`${frame.size} 路教學棋盤，金色圓點標示觀察位置`);
-    disposeBoard=mountLearnBoard($('shapeBoard'),frame.board,new Set(),new Set(frame.marks.map(p=>p.join(','))),true,()=>{});
-    $('shapeCaption').textContent=`${frame.size} 路示意棋盤。金色圓點標示觀察位置，請搭配文字與座標閱讀。`;
+    const attempt=q?progress.attempts[q.id]:null,done=attempt?.finished;
+    let board=frame.board,marks=q?.input?[]:frame.marks,answerText=q?.explanation;
+    if(q?.input&&done) {
+      const point=attempt.point||examplePoint(q,frame.size);
+      let result=judgeShapePoint(t,q,point);
+      if(!result.correct) {
+        console.warn('[go-shape] 無法還原作答落點，改顯示解答示意。');
+        result=judgeShapePoint(t,q,examplePoint(q,frame.size));
+        feedback='原落點無法還原，以下顯示解答示意。';
+      }
+      board=result.board;marks=[result.point];answerText=result.explanation;
+      if(!attempt.point)answerText=`解答示意：${answerText}`;
+    }
+    $('shapeBoard').setAttribute('aria-label',`${frame.size} 路${q?.input&&!done?'作答':'教學'}棋盤`);
+    disposeBoard=mountLearnBoard($('shapeBoard'),board,new Set(),new Set(marks.map(p=>p.join(','))),!q?.input||done,answer);
+    $('shapeCaption').textContent=q?.input&&!done?'點選交叉點作答，也可用方向鍵移動、Enter 確認。':`${frame.size} 路示意棋盤。${marks.length?'金色圓點標示觀察位置。':''}`;
     const actions=$('shapeActions');
     if(!q) {
       $('shapeSteps').append(button('上一步',()=>{step--;redraw('shapeFeedback');},step===0),button('下一步',()=>{step++;redraw('shapeFeedback');},step===frames.length-1));
       $('shapeFeedback').textContent=feedback||`${t.moves?'步驟':'圖解'} ${step+1}／${frames.length}：${frame.text}`;
       actions.append(button('開始練習',()=>openQuestion(t.questions[0].id),false,true));
     }else {
-      const attempt=progress.attempts[q.id];const done=attempt?.finished;
-      q.options.forEach((option,index)=>$('shapeOptions').append(button(option,()=>answer(index),done)));
-      $('shapeFeedback').textContent=feedback||(done?`${attempt.assisted?'已看過解答。':'已完成本輪。'}${q.explanation}`:'先想一想，再選答案。');
+      if(!q.input)q.options.forEach((option,index)=>$('shapeOptions').append(button(option,()=>answer(index),done)));
+      $('shapeFeedback').textContent=feedback||(done?`${attempt.assisted?'已看過解答。':'已完成本輪。'}${answerText}`:(q.input?'先觀察棋形，再點選棋盤作答。':'先想一想，再選答案。'));
       actions.append(button('返回介紹',()=>{study();progress={...progress,question:null};step=0;feedback='';save();redraw();}));
       actions.append(button(done?'再練一次':'看解答',()=>{
         if(done){openQuestion(q.id,true);return;}
-        progress=answerShape(progress,q.id,'reveal');feedback=`解答：${q.options[q.correct]}。${q.explanation}`;save();redraw('shapeFeedback');
+        const point=q.input?examplePoint(q,frame.size):undefined;
+        progress=answerShape(progress,q.id,'reveal',point);feedback=q.input?`解答示範：${judgeShapePoint(t,q,point).explanation}${t.unit==='shape'&&t.id!=='stand'?'這是其中一個可行落點。':''}`:`解答：${q.options[q.correct]}。${q.explanation}`;save();redraw('shapeFeedback');
       }));
       const next=()=>{
         if(reviewQueue){reviewIndex++;if(reviewIndex<reviewQueue.length){openQuestion(reviewQueue[reviewIndex],true);return;}reviewQueue=null;feedback='本輪複習完成。仍待複習的題目可稍後再練。';redraw('shapeFeedback');return;}
