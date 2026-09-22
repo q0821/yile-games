@@ -2,6 +2,9 @@ import { LESSONS, PROBLEM_IDS, lessonBoard, lessonAnswer, lessonSolutions } from
 import { getGroup } from './rules.js';
 import { readProgress, writeProgress, beginProblem, recordAnswer, reviewIds } from './go-learn-progress.js';
 import { mountLearnBoard } from './go-learn-board.js';
+import { mountShapeClassroom } from './go-shape-ui.js';
+
+let classroom = false;
 
 let disposeBoard;
 let lessonIndex = 0;
@@ -86,10 +89,15 @@ function submit(answer) {
 function render() {
   disposeBoard?.(); disposeBoard = null;
   const root = $('goLearnScreen');
+  if (classroom) {
+    disposeBoard = mountShapeClassroom(root, () => { classroom = false; render(); $('learnTitle')?.focus(); });
+    return;
+  }
   const lesson = LESSONS[lessonIndex];
   const problem = lesson.problems[problemIndex];
   // 固定模板，題目與訊息都透過 textContent 填入。
   root.innerHTML = `<header class="mode-header"><a class="mode-back" href="#home">回首頁</a><h2 class="mode-title">圍棋入門</h2></header>
+    <div id="learnSections" class="learn-actions" aria-label="入門內容"></div>
     <p class="learn-lead">先學會照顧一串棋，再開始一盤棋。</p>
     <div id="learnPractice" class="learn-actions" aria-label="練習方式"></div>
     <p id="learnStorage" role="status"></p>
@@ -101,6 +109,11 @@ function render() {
     <p id="learnFeedback" class="learn-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
     <div id="learnActions" class="learn-actions"></div></div>
     <footer class="learn-footer"><p id="learnSummary"></p><a href="#play">到圍棋對弈，試試「新手設定」</a><p class="learn-caption">進度保存在這個瀏覽器，不會跨裝置同步。錯答或看解說的題目會加入待複習。</p></footer>`;
+  const basic = button('基礎練習', () => {});
+  basic.setAttribute('aria-pressed', 'true');
+  const shapes = button('棋形教室', () => { classroom = true; render(); $('goLearnScreen').querySelector('#shapeTitle')?.focus(); });
+  shapes.setAttribute('aria-pressed', 'false');
+  $('learnSections').append(basic, shapes);
   $('learnStorage').textContent = storageMessage;
   $('learnStorage').hidden = !storageMessage;
   const all = button('全部練習', () => {

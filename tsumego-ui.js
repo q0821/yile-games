@@ -39,7 +39,7 @@ export function resizeTsumegoCanvas(deps, view) {
 
   // 邊線上的棋子半徑為格距的 0.44 倍；外圍另留座標文字空間，避免互相遮住。
   const padding = Math.max(32, Math.ceil((maxSize * 0.44 / span + 24) / (1 + 0.88 / span)));
-  const cellSize = Math.max(12, Math.floor((maxSize - padding * 2) / span));
+  const cellSize = Math.max(1, Math.floor((maxSize - padding * 2) / span));
   const w = cellSize * cols + padding * 2;
   const h = cellSize * rows + padding * 2;
 

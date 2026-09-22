@@ -1851,3 +1851,15 @@ h1.brush-title::after { display: none; }
 .ggg-screen .ggg-point:focus-visible { outline-offset: -3px; }
 .ggg-warning { color: var(--danger); }
 @media (max-width: 600px) { .ggg-screen { padding: 8px 10px 20px; } .ggg-screen .mode-title { font-size: 20px; letter-spacing: 2px; } .ggg-actions button { flex-basis: calc(50% - 8px); } }
+
+/* 棋形教室沿用入門卡片與回饋留白，選項不依賴小尺寸棋盤點擊。 */
+.shape-topic-label { display: flex; align-items: center; gap: 12px; }
+.shape-topic-label select { flex: 1; min-width: 0; min-height: 44px; width: auto; margin: 0; }
+.shape-board { width: min(100%, 560px); }
+.shape-options { display: grid; gap: 10px; margin-top: 18px; }
+.shape-options button { width: 100%; min-height: 44px; white-space: normal; line-height: 1.6; }
+#shapeUnits button { flex-basis: 120px; }
+#learnSections button[aria-pressed="true"], #shapeSections button[aria-pressed="true"] { background: #514330; color: #fff; }
+#shapeActions { row-gap: 12px; }
+#shapeActions button { min-width: 90px; }
+#shapeCaption { margin: 0 0 20px; }
