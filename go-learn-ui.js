@@ -1,7 +1,9 @@
 import { LESSONS, PROBLEM_IDS, lessonBoard, lessonAnswer, lessonSolutions } from './go-lessons.js';
 import { getGroup } from './rules.js';
 import { readProgress, writeProgress, beginProblem, recordAnswer, reviewIds } from './go-learn-progress.js';
+import { mountLearnBoard } from './go-learn-board.js';
 
+let disposeBoard;
 let lessonIndex = 0;
 let problemIndex = 0;
 let finished = false;
@@ -82,6 +84,7 @@ function submit(answer) {
 }
 
 function render() {
+  disposeBoard?.(); disposeBoard = null;
   const root = $('goLearnScreen');
   const lesson = LESSONS[lessonIndex];
   const problem = lesson.problems[problemIndex];
@@ -136,25 +139,7 @@ function render() {
   $('learnIntro').textContent = lesson.intro;
   const target = new Set([problem.target, ...(problem.other ? [problem.other] : [])].flatMap(point => getGroup(lessonBoard(problem), 5, ...point).stones.map(([r,c]) => `${r},${c}`)));
   const marked = new Set(markers.map(([r,c]) => `${r},${c}`));
-  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
-    const color = board[r][c];
-    const cell = button('', () => submit([r,c]), 'learn-point');
-    cell.dataset.row = r; cell.dataset.col = c;
-    const coord = `${'ABCDE'[c]}${5-r}`;
-    const isTarget = target.has(`${r},${c}`) && color !== 0;
-    cell.setAttribute('aria-label', `${coord}，${color === 1 ? '黑棋' : color === 2 ? '白棋' : '空點'}${isTarget ? '，目標棋串' : ''}${marked.has(`${r},${c}`) ? '，解答標記' : ''}`);
-    // 數氣題的棋盤僅供觀察，保留可讀的棋子標籤。
-    cell.disabled = finished || lesson.id === 'liberties';
-    if (color) {
-      const stone = document.createElement('span');
-      stone.className = `learn-stone ${color === 1 ? 'black' : 'white'}${isTarget ? ' target' : ''}`;
-      cell.append(stone);
-    }
-    if (marked.has(`${r},${c}`)) {
-      const dot = document.createElement('span'); dot.className = 'learn-mark'; dot.textContent = '●'; cell.append(dot);
-    }
-    $('learnBoard').append(cell);
-  }
+  disposeBoard = mountLearnBoard($('learnBoard'), board, target, marked, finished || lesson.id === 'liberties', submit);
   if (lesson.id === 'liberties') for (let n = 1; n <= 8; n++) {
     const choice = button(`${n} 口氣`, () => submit(n)); choice.disabled = finished;
     $('learnChoices').append(choice);

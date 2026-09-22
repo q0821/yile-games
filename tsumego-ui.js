@@ -194,6 +194,13 @@ export function drawTsumego(deps, view) {
         if (m.type === 'cross') { ctx.moveTo(x-a, y-a); ctx.lineTo(x+a, y+a); ctx.moveTo(x+a, y-a); ctx.lineTo(x-a, y+a); }
         ctx.stroke();
       }
+    } else if (m.type === 'target') {
+      ctx.strokeStyle = '#b77b21';
+      ctx.lineWidth = Math.max(2, cs * 0.055);
+      ctx.beginPath(); ctx.arc(x, y, cs * 0.34, 0, Math.PI * 2); ctx.stroke();
+    } else if (m.type === 'practice-answer') {
+      ctx.fillStyle = '#94520b'; ctx.strokeStyle = '#fff8e8'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, cs * 0.12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     } else if (m.type === 'correct') {
       ctx.strokeStyle = '#27c93f';
       ctx.lineWidth = 3;
