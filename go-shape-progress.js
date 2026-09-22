@@ -1,14 +1,14 @@
 import { SHAPE_TOPICS, SHAPE_QUESTIONS } from './go-shape-lessons.js';
-export const SHAPE_PROGRESS_KEY='gogame_shape_progress_v1';
+export const SHAPE_PROGRESS_KEY='gogame_shape_progress_v2';
 const ids=new Set(SHAPE_QUESTIONS.map(q=>q.id));
 const topics=new Set(SHAPE_TOPICS.map(t=>t.id));
-export const newShapeProgress=()=>({version:1,topic:SHAPE_TOPICS[0].id,question:null,records:{},attempts:{}});
+export const newShapeProgress=()=>({version:2,topic:SHAPE_TOPICS[0].id,question:null,records:{},attempts:{}});
 export function readShapeProgress(storage) {
   try {
     const raw=storage.getItem(SHAPE_PROGRESS_KEY);
     if(raw===null) return {progress:newShapeProgress(),writable:true,error:''};
     const data=JSON.parse(raw), progress=newShapeProgress();
-    if(data?.version!==1||!data.records||typeof data.records!=='object'||Array.isArray(data.records)||!data.attempts||typeof data.attempts!=='object'||Array.isArray(data.attempts)) throw new Error('schema');
+    if(data?.version!==2||!data.records||typeof data.records!=='object'||Array.isArray(data.records)||!data.attempts||typeof data.attempts!=='object'||Array.isArray(data.attempts)) throw new Error('schema');
     if(topics.has(data.topic)) progress.topic=data.topic;
     if(SHAPE_TOPICS.find(t=>t.id===progress.topic).questions.some(q=>q.id===data.question)) progress.question=data.question;
     for(const id of ids) {

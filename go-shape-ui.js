@@ -1,4 +1,4 @@
-import { SHAPE_UNITS, SHAPE_TOPICS, SHAPE_QUESTIONS, topicFrames } from './go-shape-lessons.js';
+import { SHAPE_UNITS, SHAPE_TOPICS, SHAPE_QUESTIONS, topicFrames, questionFrame } from './go-shape-lessons.js';
 import { readShapeProgress, saveShapeProgress, beginShapeAttempt, answerShape, shapeReviewIds } from './go-shape-progress.js';
 import { judgeShapePoint, examplePoint } from './go-shape-answer.js';
 import { mountLearnBoard } from './go-learn-board.js';
@@ -57,7 +57,7 @@ export function mountShapeClassroom(root,back) {
       <p id="shapeFeedback" class="learn-feedback" tabindex="-1" role="status" aria-live="polite"></p>
       <div id="shapeActions" class="learn-actions"></div></article>
       <footer class="learn-footer"><p id="shapeSummary"></p><div id="shapeReview" class="learn-actions"></div>
-      <p class="learn-caption">教室進度獨立保存在這個瀏覽器。看解答不計入自行完成。</p>
+      <p class="learn-caption">新局面進度另行記錄，舊版紀錄保留。看解答不計入自行完成。</p>
       <details><summary>教材與參考資料</summary><p>圖解、練習與解說由本專案自行編寫。吃子示範呈現指定變化，練習檢查題目所問的概念，不代表已掌握所有實戰變化。</p>
       <p><a href="https://www.nihonkiin.or.jp/teach/lesson/school/yogo.html" target="_blank" rel="noopener noreferrer">日本棋院基本用語</a></p>
       <p><a href="https://www.nihonkiin.or.jp/teach/lesson/school/tyuban02.html" target="_blank" rel="noopener noreferrer">日本棋院吃子技巧</a></p>
@@ -72,9 +72,8 @@ export function mountShapeClassroom(root,back) {
     $('shapeTitle').textContent=q?q.prompt:t.title;
     $('shapeIntro').textContent=q?(q.input?(q.input==='identify'?'直接點選棋盤上的眼位。':'直接點棋盤的空交叉點下黑棋。'):'觀察下圖，從選項作答。座標可對照棋盤四邊。'):t.intro;
     $('shapePosition').textContent=q?`${t.title}：練習 ${t.questions.indexOf(q)+1}／2${reviewQueue?`，複習 ${reviewIndex+1}／${reviewQueue.length}`:''}`:`${SHAPE_UNITS.find(u=>u.id===t.unit).title}：${t.title}`;
-    let frames;
-    try{frames=topicFrames(t);}catch(e){console.error('[go-shape] 教學圖解載入失敗。',e.message);$('shapeFeedback').textContent='這個主題暫時無法顯示，請選其他主題或重新整理。';return;}
-    const frame=frames[q?q.frame:step];
+    let frames,frame;
+    try{frames=topicFrames(t);frame=q?questionFrame(t,q):frames[step];}catch(e){console.error('[go-shape] 教學圖解載入失敗。',e.message);$('shapeFeedback').textContent='這個主題暫時無法顯示，請選其他主題或重新整理。';return;}
     const attempt=q?progress.attempts[q.id]:null,done=attempt?.finished;
     let board=frame.board,marks=q?.input?[]:frame.marks,answerText=q?.explanation;
     if(q?.input&&done) {
@@ -103,7 +102,7 @@ export function mountShapeClassroom(root,back) {
       actions.append(button(done?'再練一次':'看解答',()=>{
         if(done){openQuestion(q.id,true);return;}
         const point=q.input?examplePoint(q,frame.size):undefined;
-        progress=answerShape(progress,q.id,'reveal',point);feedback=q.input?`解答示範：${judgeShapePoint(t,q,point).explanation}${t.unit==='shape'&&t.id!=='stand'?'這是其中一個可行落點。':''}`:`解答：${q.options[q.correct]}。${q.explanation}`;save();redraw('shapeFeedback');
+        progress=answerShape(progress,q.id,'reveal',point);feedback=q.input?`解答示範：${judgeShapePoint(t,q,point).explanation}`:`解答：${q.options[q.correct]}。${q.explanation}`;save();redraw('shapeFeedback');
       }));
       const next=()=>{
         if(reviewQueue){reviewIndex++;if(reviewIndex<reviewQueue.length){openQuestion(reviewQueue[reviewIndex],true);return;}reviewQueue=null;feedback='本輪複習完成。仍待複習的題目可稍後再練。';redraw('shapeFeedback');return;}
