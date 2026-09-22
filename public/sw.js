@@ -1,4 +1,4 @@
-const VERSION = 'v2026.09.22-1984422';
+const VERSION = 'v2026.09.22-e788a3e';
 const CACHE_NAME = `gogame-${VERSION}`;
 // 預快取只列「build 產物中必定存在的穩定路徑」。
 // ⚠️ 歷史教訓（2026-07）：舊清單列了 rules.js/game-state.js/ui.js 等原始檔路徑，
@@ -55,6 +55,16 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+
+  // 在查快取前攔截，避免已快取的舊題庫繼續由新版網頁提供。
+  let pathname = url.pathname;
+  try { pathname = decodeURIComponent(pathname); } catch { /* 非法編碼交由伺服器處理 */ }
+  if (isSameOrigin(url) && /(^|\/)tsumego(?:\/|$)/.test(pathname)) {
+    event.respondWith(Promise.resolve(new Response('死活題庫暫停提供', {
+      status: 410, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+    })));
+    return;
+  }
 
   if (shouldBypassCache(url)) {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));

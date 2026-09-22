@@ -1,6 +1,6 @@
 {
   "source": "sanderland/tsumego",
-  "license": "MIT",
+  "license": null,
   "levels": [
     {
       "id": "beginner",
@@ -20,5 +20,8 @@
       "file": "advanced.json",
       "count": 1230
     }
-  ]
+  ],
+  "contentLicenseStatus": "unverified",
+  "distributionStatus": "withheld",
+  "upstreamCodeLicense": "MIT"
 }

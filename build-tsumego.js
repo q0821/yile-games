@@ -87,7 +87,7 @@ function main() {
   }
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  const index = { source: 'sanderland/tsumego', license: 'MIT', levels: [] };
+  const index = { source: 'sanderland/tsumego', license: null, contentLicenseStatus: 'unverified', distributionStatus: 'withheld', upstreamCodeLicense: 'MIT', levels: [] };
 
   for (const level of LEVELS) {
     const folderDir = path.join(SRC, level.folder);
@@ -111,13 +111,13 @@ function main() {
 
   fs.writeFileSync(path.join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2));
 
-  // MIT 署名義務：複製題庫 LICENSE
+  // 保留上游程式授權，不代表原題內容已獲授權
   const srcLicense = path.join(SRC_ROOT, 'LICENSE');
   if (fs.existsSync(srcLicense)) {
     fs.copyFileSync(srcLicense, path.join(OUT_DIR, 'LICENSE'));
-    console.log('[build-tsumego] 已複製題庫 LICENSE（MIT 署名）');
+    console.log('[build-tsumego] 已複製上游程式 LICENSE（不代表題目授權）');
   } else {
-    console.warn(`[build-tsumego] ⚠ 找不到題庫 LICENSE：${srcLicense}（MIT 署名義務，請手動補上）`);
+    console.warn(`[build-tsumego] ⚠ 找不到題庫 LICENSE：${srcLicense}（需保留上游程式授權）`);
   }
 
   const total = index.levels.reduce((s, l) => s + l.count, 0);

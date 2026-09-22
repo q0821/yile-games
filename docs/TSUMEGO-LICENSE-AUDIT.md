@@ -54,12 +54,12 @@ CC 條件依 [Creative Commons 官方說明](https://creativecommons.org/license
 
 ## 既有標示的缺口
 
-`public/tsumego/index.json` 與 `build-tsumego.js` 目前直接寫入 `license: MIT`，無法區分程式與題目內容。這次盤點未改寫原題庫或該標示；後續在取得授權或替換題庫時，應同步改為逐來源授權紀錄，避免再次由 repo 的授權名稱推論題目授權。
+`public/tsumego/index.json` 與 `build-tsumego.js` 初次盤點時直接寫入 `license: MIT`，無法區分程式與題目內容。初次盤點未改寫原題庫或該標示；第二階段已修正索引，後續取得授權或替換題庫時，仍應建立逐來源授權紀錄，避免再次由 repo 的授權名稱推論題目授權。
 
 ## 建議與待辦
 
 - 本次新增基礎練習採自行編寫題目，來源、目標及解答依據記在程式資料中。
-- 現有題庫尚未刪除、替換、下架或修改線上狀態。發布下一版前，由專案負責人決定暫停散布、取得原權利人許可或替換。
+- 初次盤點未刪除、替換或下架題庫。第二階段已依使用者同意在本機暫停提供，正式站尚未部署。
 - 若選 Go Game Guru，先釐清實際商業用途並取得必要許可，再支援完整解答樹；不能直接把其多手解答當並列第一手答案。
 - 若選古典題集，先指定原典與可用版本，補來源檔、權利狀態、數位轉錄條件與答案校驗後才匯入。
 - 發信或公開詢問作者尚未執行，需要另行授權。
@@ -72,3 +72,49 @@ CC 條件依 [Creative Commons 官方說明](https://creativecommons.org/license
 - `public/tsumego/beginner.json`：`7cc0572b7b2cdb22b8808bfd59d07e4c47fc98933d0ddd36257ab2a61c580b3e`
 - `public/tsumego/intermediate.json`：`7c567d04198a17ac4af0efd71aab345c2fafaf9de254392cfc89106e022bec4b`
 - `public/tsumego/advanced.json`：`fa252217f17d3b11ed5411d4e0eaa8baa2091fedfac70fd5675ec0614e11b9ab`
+
+## 第二次網路搜尋（2026-09-22）
+
+依使用者要求重新搜尋 CC0、CC BY、CC BY-SA、原創題庫、作者官方 repo 與網站使用條款。搜尋結果中的「免費下載」及第三方重新標示的 MIT 均未視為內容授權。本輪未匯入任何外部題目或生成器。
+
+| 候選 | 第一手證據 | 採用判斷與整合成本 |
+|---|---|---|
+| Go Game Guru | 再查 [作者 repo](https://github.com/gogameguru/go-problems) 與 [CC BY-NC-SA 4.0 全文](https://raw.githubusercontent.com/gogameguru/go-problems/master/LICENSE)，提供分級及詳細解答 | 完整題庫候選中優先考慮；需確認非商業用途符合條件，或另取許可。工程需解析 SGF 變化樹、翻譯解說與保留署名，不能沿用只判第一手的匯入方式 |
+| Learn to Play Go Already! | [作者網站](https://www.learn-go.net/) 明示整個專案 CC BY-NC 4.0，有規則、切斷、征子、倒撲等互動課程 | 新找到的入門教材候選，仍受非商業限制；屬完整課程，需挑出題目、核對格式並翻譯，不是可直接替換的 JSON 題庫 |
+| Reasoning Gym | 再查 [生成器原始碼](https://raw.githubusercontent.com/open-thought/reasoning-gym/main/reasoning_gym/games/tsumego.py) 與 [Apache 2.0 授權](https://raw.githubusercontent.com/open-thought/reasoning-gym/main/LICENSE) | 可評估依授權改作一手吃子生成程式；程式仍列多步題為待辦。工程需獨立驗證局面、答案與教學難度，不能當完整死活題庫 |
+| Zero Problem | [作者使用說明](https://colonq.github.io/zero-problem/Htmls/user_guide.html) 明示原始碼 CC0，從棋譜透過 Leela Zero 產生題目；相依工具有各自授權 | 新找到的自有棋譜出題工具候選。輸入棋譜仍須有權使用，不會自動解除來源內容權利。輸出是 HTML 與 AI 估計變化，需人工挑題及轉換；不直接導入目前瀏覽器架構 |
+| Wikibooks 法文死活頁 | [題目頁](https://fr.wikibooks.org/wiki/Jeu_de_go/Tsumego_1) 頁尾標示 CC BY-SA；圖像與模板可能另有條件 | 新找到的小量教材候選，待逐頁核對修訂作者、圖像授權及解答。頁面表格抽取未呈現完整棋盤，尚不能確認可匯入題數或完整解答，不當現成大題庫 |
+| 101 圍棋 | [官方使用者協議](https://doc.101weiqi.com/jianjie/yonghuxieyi/) 第三節要求站外轉載取得原作者授權，另限制未獲許可的抓取與複製 | 不抓取匯入；需取得對應授權，平台免費使用不代表可搬到自己的網站 |
+| GoTools | 再查 [作者條款](https://lie.math.brocku.ca/GoTools/index.php?content=extra_probs)，40,000 題供研究，限制轉交與公開傳輸 | 不作公開網頁題庫替代品，除非取得作者另行書面許可 |
+| frank_go、baduk-study-material 等整理庫 | [frank_go 來源表](https://github.com/akitaonrails/frank_go/blob/main/data/SOURCES.md) 仍引用 Tasuki 與 Go Game Guru；[baduk-study-material 授權說明](https://raw.githubusercontent.com/benjaminmantle/baduk-study-material/master/LICENSE.md) 有不同來源權利狀態 | 可當搜尋索引，不能因另一個專案已收錄，就推定本專案獲授權。原上游問題並未因此消失 |
+
+本輪 u-go.net 與 Sensei's Library 授權頁無法透過查詢工具讀取，不對其授權下結論。Wikimedia Commons 個別圖檔頁亦未成功讀取，不以搜尋摘要當授權證據。
+
+建議仍是先用自行編寫且可驗證的入門課程。若要快速補完整死活解答，優先釐清 Go Game Guru 的使用條件；若需要大量可控難度的吃子題，可另評估生成器。這次沒有找到已完成來源與解答驗證、可直接整包商用匯入的大型題庫；不表示網路上不存在。
+
+## 第二階段本機處理
+
+使用者同意繼續後，舊入口改為暫停說明，Vite 建置移除本次產生的題庫副本，開發與預覽伺服器、新版 Service Worker 阻擋題庫請求。原題 JSON 不刪除、舊進度不修改。索引與轉檔腳本改為內容授權未確認，不再直接標示題庫 MIT；上游程式授權另記。
+
+此狀態只代表本機與後續新版建置。尚未推送或部署，不能宣稱正式站已下架；舊 Git 紀錄、既有部署預覽網址及未更新的離線版本仍可能保有副本，並非本次本機變更可以回收。
+
+
+## 非商業用途確認與優先候選
+
+2026-09-22 使用者明確確認：網頁死活練習維持免費、無廣告，定位為獨立的學習功能，不以推廣付費 App 或其他付費服務為目的。iOS App 不含死活題目。
+
+依 [CC BY-NC-SA 4.0 第 1(k) 節](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en) 所定義的用途判準，以這項營運前提採用 Go Game Guru 是合理方向，不再把「另有付費 iOS App」當成排除理由。此為依使用者提供用途與條款作出的判斷，不是對未來任何營運方式的保證，也不適用於原本授權未確認的 3,908 題。
+
+已即時取得 [作者官方 Git tree](https://api.github.com/repos/gogameguru/go-problems/git/trees/eee12b2e39d59dbe81a8b9eaa7d4f103978d9224?recursive=1)，回應未截斷，樹 SHA 為 `eee12b2e39d59dbe81a8b9eaa7d4f103978d9224`：
+
+- easy：140 個 SGF。
+- intermediate：140 個 SGF。
+- hard：140 個 SGF。
+- other：2 個 SGF。
+- templates：1 個 SGF，不算練習題。
+
+因此可先以正式分級的 420 題為替代候選，不把「全部 423 個 SGF 檔」誤報成題數。只下載一題到系統暫存目錄檢查格式，未加入網站題庫。[第一題](https://raw.githubusercontent.com/gogameguru/go-problems/eee12b2e39d59dbe81a8b9eaa7d4f103978d9224/weekly-go-problems/easy/ggg-easy-01.sgf) 已包含多手、錯誤分支、兩種正確終點與解說；將所有 B 節點當作第一手正解會錯判。
+
+後續匯入應保留作者與來源連結、授權全文及免責聲明，標示轉檔、翻譯等修改，翻譯／改作內容採相容的相同授權，不額外限制讀者依授權再利用。SA 適用於改作內容，不在此推論整個網站程式必須改授權。若未來開始收費、放廣告或改成商業導購，重新評估用途或取得另行許可。
+
+建議下一批先整合 easy 的 140 題，驗證完整 SGF 變化樹與題目目標，再擴充剩餘 280 題。此整合尚未實作，本輪先完成原創課程、進度與舊題庫暫停提供。

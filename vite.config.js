@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { withholdTsumego } from './scripts/withhold-tsumego.mjs';
 
 // 象棋引擎（fairy-stockfish-nnue.wasm）是 pthread 多執行緒 build，需頁面 cross-origin
 // isolated 才能用 SharedArrayBuffer。已移除所有跨來源子資源（改用系統內建宋體），
@@ -17,6 +18,7 @@ export default defineConfig(({ mode }) => {
   const isIOS = mode === 'ios';
   return {
     publicDir: 'public',
+    plugins: [withholdTsumego()],
     define: {
       __IOS_STORE__: JSON.stringify(isIOS),
     },

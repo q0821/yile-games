@@ -309,7 +309,8 @@ function hasPremium() {
 }
 
 // 完整版判定：付費只存在於原生 App（商店可購買）；Web 版全功能免費——
-// 它是導流與 SEO 入口、也沒有購買管道，鎖了只會做出「永遠解不開的鎖」。
+// 網頁死活練習定位為獨立、免費、無廣告的學習功能，不以推廣付費 App 為目的。
+// Web 沒有購買管道，不顯示無法解鎖的付費限制。
 function premiumUnlocked() {
   return !Store.storeAvailable() || hasPremium();
 }
@@ -1884,7 +1885,7 @@ applyAppVersion().then((version) => {
 const HOME_ITEMS = [
   { id: 'play',    title: '圍棋對弈', desc: '黑白手談，方圓論天地', hash: '#play',    img: 'img/cards/play.webp' },
   { id: 'learn', title: '圍棋入門', desc: '從一口氣開始，練習吃子與救棋', hash: '#learn', img: 'img/cards/play.webp', webOnly: true },
-  { id: 'tsumego', title: '死活練習', desc: '方寸之間，一子定生死', hash: '#tsumego', img: 'img/cards/tsumego.webp', webOnly: true },
+  { id: 'tsumego', title: '死活練習', desc: '題庫暫停提供，原有進度保留', hash: '#tsumego', img: 'img/cards/tsumego.webp', webOnly: true },
   { id: 'xiangqi', title: '象棋對弈', desc: '楚河漢界，車馬論英雄', hash: '#xiangqi', img: 'img/cards/xiangqi.webp', webOnly: true },
   { id: 'xqpuzzle',title: '象棋殘局', desc: '古譜殘局，絕處覓殺機', hash: '#xqpuzzle', img: 'img/cards/xqpuzzle.webp', webOnly: true },
   { id: 'shogi',   title: '日本將棋', desc: '升變打入，俘子再成軍', hash: '#shogi',   img: 'img/cards/shogi.webp', webOnly: true },
@@ -2062,7 +2063,8 @@ function showScreen(name) {
   _activeScreen = name;
   document.getElementById('homeScreen').style.display = name === 'home' ? 'flex' : 'none';
   document.getElementById('goScreen').style.display = name === 'play' ? 'flex' : 'none';
-  document.getElementById('tsumegoScreen').style.display = name === 'tsumego' ? 'flex' : 'none';
+  const tsumegoScreen = document.getElementById('tsumegoScreen');
+  if (tsumegoScreen) tsumegoScreen.style.display = name === 'tsumego' ? 'flex' : 'none';
   document.getElementById('gomokuScreen').style.display = name === 'gomoku' ? 'flex' : 'none';
   document.getElementById('connect6Screen').style.display = name === 'connect6' ? 'flex' : 'none';
   document.getElementById('xiangqiScreen').style.display = name === 'xiangqi' ? 'flex' : 'none';
@@ -2151,7 +2153,7 @@ function applyRoute(animateTitle) {
   } else if (hash === '#tsumego') {
     showScreen('tsumego');
     if (title) title.style.visibility = 'visible';
-    if (!__IOS_STORE__) import('./tsumego-mode.js').then(m => m.enterTsumegoMode()).catch(err => { console.error('模式載入失敗', err); location.hash = '#home'; });
+    // 授權待確認，舊路由只顯示說明；不載入題庫模組或碰既有進度。
   } else if (hash === '#gomoku') {
     showScreen('gomoku');
     if (title) title.style.visibility = 'visible';

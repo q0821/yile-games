@@ -12,27 +12,52 @@ const assert = require('node:assert/strict');
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => { if (request.url().includes('katago-small')) modelRequests.push(request.url()); });
     const base = process.argv[2] || 'http://127.0.0.1:5173';
-    await page.goto(`${base}/#learn`);
+    const legacy = '{"legacy":"preserve-me"}';
+    await page.goto(`${base}/#tsumego`);
+    await page.getByRole('heading', { name: '題庫暫停提供', exact: true }).waitFor();
+    await page.evaluate(value => localStorage.setItem('gogame_tsumego_progress', value), legacy);
+    await page.getByRole('link', { name: '前往圍棋入門練習' }).click();
     await page.getByRole('button', { name: '1 口氣', exact: true }).click();
     assert.match(await page.locator('#learnFeedback').innerText(), /再數一次/);
     await page.getByRole('button', { name: '看解說', exact: true }).click();
-    assert.match(await page.locator('#learnSummary').innerText(), /0／12/);
-    await page.getByRole('button', { name: '再做一次', exact: true }).click();
+    assert.match(await page.locator('#learnSummary').innerText(), /0／21/);
+    await page.reload();
+    await page.getByRole('button', { name: '4 口氣', exact: true }).click();
+    assert.match(await page.locator('#learnFeedback').innerText(), /跟著解答完成/);
+    assert.match(await page.locator('#learnSummary').innerText(), /0／21/);
+    await page.getByRole('button', { name: '1. 數氣', exact: true }).click();
     for (const [i, answer] of [4, 3, 2, 6].entries()) {
       const choice = page.getByRole('button', { name: `${answer} 口氣`, exact: true });
       await choice.focus(); await page.keyboard.press('Enter');
       assert.match(await page.locator('#learnFeedback').innerText(), /答對了/);
       await page.getByRole('button', { name: i === 3 ? '下一個主題' : '下一題', exact: true }).click();
     }
-    for (const kind of ['capture', 'escape']) {
-      for (const [i, coord] of ['D3', 'B5', 'D4', 'D5'].entries()) {
+    const sequences = [
+      ['D3', 'B5', 'D4', 'D5'], ['D3', 'B5', 'D4', 'D5'],
+      ['C3', 'B3', 'B5'], ['C3', 'B3', 'B5'], ['D4', 'A4', 'A4'],
+    ];
+    // 吃子題先答錯再答對，確認已解與待複習分開。
+    await page.locator('#learnBoard').getByRole('button', { name: /^E1，/ }).click();
+    for (const [kind, answers] of sequences.entries()) {
+      for (const [i, coord] of answers.entries()) {
         await page.locator('#learnBoard').getByRole('button', { name: new RegExp(`^${coord}，`) }).click();
         assert.match(await page.locator('#learnFeedback').innerText(), /答對了/);
-        if (kind === 'escape' && i === 3) break;
-        await page.getByRole('button', { name: i === 3 ? '下一個主題' : '下一題', exact: true }).click();
+        if (kind === sequences.length - 1 && i === answers.length - 1) break;
+        await page.getByRole('button', { name: i === answers.length - 1 ? '下一個主題' : '下一題', exact: true }).click();
       }
     }
-    assert.match(await page.locator('#learnSummary').innerText(), /十二題/);
+    assert.match(await page.locator('#learnSummary').innerText(), /21／21 題，待複習 1 題/);
+    await page.reload();
+    await page.getByRole('heading', { name: '黑先，用吃子救出目標黑棋' }).waitFor();
+    assert.match(await page.locator('#learnProgress').innerText(), /第 3 題/);
+    assert.match(await page.locator('#learnSummary').innerText(), /21／21 題，待複習 1 題/);
+    await page.getByRole('button', { name: '複習錯題（1）', exact: true }).click();
+    await page.locator('#learnBoard').getByRole('button', { name: /^D3，/ }).click();
+    await page.getByRole('button', { name: '完成本輪複習', exact: true }).click();
+    await page.getByRole('heading', { name: '目前沒有待複習的題目' }).waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem('gogame_tsumego_progress')), legacy);
+    await page.getByRole('button', { name: '全部練習', exact: true }).click();
+    await page.getByRole('button', { name: '5. 阻止直接連接', exact: true }).click();
     for (const width of [390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
@@ -77,7 +102,7 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('gogame_state'))?.moveHistory.length === 2);
     assert.equal(modelRequests.length, 0);
     assert.deepEqual(errors, []);
-    console.log('PASS：12 題、錯答／解說、鍵盤、三種寬度、新手設定、AI 落子、存檔還原、讓子覆盤分支；無模型下載或頁面例外。');
+    console.log('PASS：21 題、暫停入口、進度還原、錯題複習、提示不計分、舊進度保留、鍵盤、三種寬度、新手設定、AI 落子、存檔還原、讓子覆盤分支；無模型下載或頁面例外。');
   } finally {
     await browser.close();
   }
