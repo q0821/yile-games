@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { sandboxWithMainLifecycle } = require('./helpers');
 
-test('舊路由顯示暫停畫面，既有死活進度不變', () => {
+test('死活路由顯示練習畫面，既有舊題庫進度不變', () => {
   const original = '{"legacy":"preserve"}';
   const app = sandboxWithMainLifecycle({ hash: '#tsumego', storage: { gogame_tsumego_progress: original } });
   expect(app.elements.tsumegoScreen.style.display).toBe('flex');

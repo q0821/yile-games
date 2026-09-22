@@ -105,7 +105,7 @@ CC 條件依 [Creative Commons 官方說明](https://creativecommons.org/license
 
 依 [CC BY-NC-SA 4.0 第 1(k) 節](https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.en) 所定義的用途判準，以這項營運前提採用 Go Game Guru 是合理方向，不再把「另有付費 iOS App」當成排除理由。此為依使用者提供用途與條款作出的判斷，不是對未來任何營運方式的保證，也不適用於原本授權未確認的 3,908 題。
 
-已即時取得 [作者官方 Git tree](https://api.github.com/repos/gogameguru/go-problems/git/trees/eee12b2e39d59dbe81a8b9eaa7d4f103978d9224?recursive=1)，回應未截斷，樹 SHA 為 `eee12b2e39d59dbe81a8b9eaa7d4f103978d9224`：
+已即時取得 [作者官方 Git tree](https://api.github.com/repos/gogameguru/go-problems/git/trees/eee12b2e39d59dbe81a8b9eaa7d4f103978d9224?recursive=1)，回應未截斷。固定提交 SHA 為 `eee12b2e39d59dbe81a8b9eaa7d4f103978d9224`，對應樹 SHA 為 `56a6b8810c76cc620eb056d6c2906d9859c62815`（第三階段核對提交資料後更正，前版誤將提交 SHA 寫成樹 SHA）：
 
 - easy：140 個 SGF。
 - intermediate：140 個 SGF。
@@ -118,3 +118,13 @@ CC 條件依 [Creative Commons 官方說明](https://creativecommons.org/license
 後續匯入應保留作者與來源連結、授權全文及免責聲明，標示轉檔、翻譯等修改，翻譯／改作內容採相容的相同授權，不額外限制讀者依授權再利用。SA 適用於改作內容，不在此推論整個網站程式必須改授權。若未來開始收費、放廣告或改成商業導購，重新評估用途或取得另行許可。
 
 建議下一批先整合 easy 的 140 題，驗證完整 SGF 變化樹與題目目標，再擴充剩餘 280 題。此整合尚未實作，本輪先完成原創課程、進度與舊題庫暫停提供。
+
+## 第三階段：Go Game Guru 入門題整合（2026-09-22）
+
+已將上述固定提交的 easy 140 題匯入 `public/go-problems/ggg/`，原始 SGF、LICENSE 與 README 保持原樣；`index.json` 保存每題上游路徑及 SHA-256，`NOTICE.md` 說明作者、用途、修改範圍與授權。前述「尚未匯入」為第二階段時間點，第三階段以本節為準。
+
+完整解析 5,566 個節點並驗證全部分支落子合法。原譜含沒有正解標記的參考分支，不能據此宣稱錯誤；畫面只在走到作者 Correct／Also correct 標記時計為「本次解答變化完成」。自動應手優先使用通往該標記的分支，其餘原譜均可逐手查看，不宣稱已涵蓋所有可能應手或經職業棋手重新審題。
+
+英文解說尚未翻譯，避免把未校對譯文當成作者說明。iOS 網頁建置不包含這批題庫資料與程式。舊 3,908 題維持停用，來源 JSON 與舊本機進度保留。中高階 280 題不在本次整合範圍。
+
+本機驗證及後續限制見 [整合驗收紀錄](PRD-go-game-guru.md)。第二階段已提交推送 `eeda78e7cec1d0c28cef845be01f9c27d6cd2789`；第三階段完成後依使用者授權提交推送。推送與正式部署須分開查核。

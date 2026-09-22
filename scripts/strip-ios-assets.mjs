@@ -31,6 +31,7 @@ const TARGETS = [
   'engine',
   'xiangqi-puzzles',
   'tsumego',
+  'go-problems',
   'licenses/gpl-3.0.txt',
   'licenses/tsumego-LICENSE.txt',
   'img/cards/tsumego.webp',

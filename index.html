@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="弈樂">
-<link rel="manifest" href="manifest.json?v=v2026.09.22-e788a3e">
+<link rel="manifest" href="manifest.json?v=v2026.09.22-eeda78e">
 <link rel="icon" href="favicon.ico?v=icons20260704a" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=icons20260704a">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=icons20260704a">
@@ -35,7 +35,7 @@
 <meta name="twitter:image" content="https://yile.jackie-yeh.com/icon-512.png">
 <!-- 改用系統內建宋體（見 style.css --font-serif）：移除跨來源 Google Fonts，
      讓象棋引擎可用 COEP require-corp 全瀏覽器開啟 cross-origin isolation。 -->
-<link rel="stylesheet" href="style.css?v=v2026.09.22-e788a3e">
+<link rel="stylesheet" href="style.css?v=v2026.09.22-eeda78e">
 </head>
 <body>
   <h1 class="brush-title">弈樂</h1>
@@ -300,14 +300,9 @@
 
 <!-- Tsumego (Life & Death) practice screen -->
 <section id="goLearnScreen" class="go-learn-screen" data-web-only style="display:none" aria-label="圍棋入門練習"></section>
-<section class="tsumego-screen" id="tsumegoScreen" data-web-only style="display:none" aria-label="死活練習暫停提供">
-  <header class="mode-header"><a class="mode-back" href="#home">回首頁</a><h2 class="mode-title">死活練習</h2></header>
-  <div class="learn-card">
-    <h3>題庫暫停提供</h3>
-    <p>我們正在確認既有題目的使用授權，確認前暫停提供這批題目。</p>
-    <p>你在這個瀏覽器的原有解題進度會保留。現在可以先練習自行編寫的圍棋入門題。</p>
-    <a href="#learn">前往圍棋入門練習</a>
-  </div>
+<section class="tsumego-screen ggg-screen" id="tsumegoScreen" data-web-only style="display:none" aria-label="圍棋死活與手筋練習">
+  <header class="mode-header"><a class="mode-back" href="#home">回首頁</a><h2 class="mode-title">圍棋死活與手筋</h2></header>
+  <p>正在載入 Go Game Guru 入門題…</p>
 </section>
 
 <!-- Gomoku (Five-in-a-row) screen -->
@@ -1050,7 +1045,7 @@
       <div data-web-only>
       <h3>圍棋練習</h3>
       <p>入門練習的棋形與解說由本專案自行編寫，答案依圍棋規則驗證。</p>
-      <p>舊死活題庫曾取自 sanderland/tsumego；其程式授權不能直接視為所有題目的內容授權，因此目前暫停提供。</p>
+      <p>死活與手筋採用 Go Game Guru 的 140 題入門題，作者為 An Younggil、David Ormerod，依 <a href="go-problems/ggg/LICENSE">CC BY-NC-SA 4.0</a> 供非商業學習。<a href="go-problems/ggg/NOTICE.md">來源與改作說明</a>。舊 sanderland 題庫授權未確認，維持停用。</p>
 
       <h3>象棋殘局題庫</h3>
       <p>古典殘局題目（基本殺法、江湖殘局、夢入神機、適情雅趣）取自

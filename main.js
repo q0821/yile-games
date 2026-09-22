@@ -15,10 +15,9 @@ import { registerEventHandlers } from './event-handlers.js';
 import { enterGomokuMode } from './gomoku-mode.js';
 import { enterConnect6Mode } from './connect6-mode.js';
 import { enterOthelloMode } from './othello-mode.js';
-// 死活的已解題數用薄薄的 progress 模組同步取得（不牽動 tsumego-mode 全模組）；
 // 死活/象棋/將棋/西洋棋/象棋殘局的進入點改為 applyRoute 內動態 import（見下），
-// 讓 iOS build（__IOS_STORE__）能 DCE 掉 GPL 模組。tsumego-progress 無 GPL，靜態引入無妨。
-import { loadProgress as loadTsumegoProgress, totalSolved as tsumegoTotalSolved } from './tsumego-progress.js';
+// 讓 iOS build（__IOS_STORE__）能排除未收錄功能與 GPL 模組。
+// 舊死活進度保留在瀏覽器，不混入新來源的完成數。
 import { playTitleReveal, startAmbient, playTransition } from './ink-fx.js';
 import * as KataGo from './katago-service.js';
 import { nextLevelForMode, kyuLabel, levelConfig, MIN_LEVEL, MAX_LEVEL } from './adaptive-difficulty.js';
@@ -1885,7 +1884,7 @@ applyAppVersion().then((version) => {
 const HOME_ITEMS = [
   { id: 'play',    title: '圍棋對弈', desc: '黑白手談，方圓論天地', hash: '#play',    img: 'img/cards/play.webp' },
   { id: 'learn', title: '圍棋入門', desc: '從一口氣開始，練習吃子與救棋', hash: '#learn', img: 'img/cards/play.webp', webOnly: true },
-  { id: 'tsumego', title: '死活練習', desc: '題庫暫停提供，原有進度保留', hash: '#tsumego', img: 'img/cards/tsumego.webp', webOnly: true },
+  { id: 'tsumego', title: '死活練習', desc: '循著解答讀棋，逐手練習攻防', hash: '#tsumego', img: 'img/cards/tsumego.webp', webOnly: true },
   { id: 'xiangqi', title: '象棋對弈', desc: '楚河漢界，車馬論英雄', hash: '#xiangqi', img: 'img/cards/xiangqi.webp', webOnly: true },
   { id: 'xqpuzzle',title: '象棋殘局', desc: '古譜殘局，絕處覓殺機', hash: '#xqpuzzle', img: 'img/cards/xqpuzzle.webp', webOnly: true },
   { id: 'shogi',   title: '日本將棋', desc: '升變打入，俘子再成軍', hash: '#shogi',   img: 'img/cards/shogi.webp', webOnly: true },
@@ -1909,8 +1908,7 @@ function hasUnfinishedGame() {
 function homeItemHint(id) {
   if (id === 'play') return hasUnfinishedGame() ? '有對局可續弈' : '';
   if (id === 'tsumego') {
-    const n = tsumegoTotalSolved(loadTsumegoProgress());
-    return n > 0 ? `已解 ${n} 題` : '';
+    return 'Go Game Guru 入門 140 題';
   }
   return '';
 }
@@ -2153,7 +2151,16 @@ function applyRoute(animateTitle) {
   } else if (hash === '#tsumego') {
     showScreen('tsumego');
     if (title) title.style.visibility = 'visible';
-    // 授權待確認，舊路由只顯示說明；不載入題庫模組或碰既有進度。
+    if (!__IOS_STORE__) import('./ggg-mode.js').then(m => {
+      if (_activeScreen === 'tsumego' && location.hash === '#tsumego') m.enterGggMode();
+    }).catch(() => {
+      console.error('死活練習模組載入失敗');
+      if (_activeScreen === 'tsumego') {
+        const screen = document.getElementById('tsumegoScreen');
+        const message = document.createElement('p'); message.textContent = '練習模組載入失敗，請重新整理頁面再試。';
+        screen.append(message);
+      }
+    });
   } else if (hash === '#gomoku') {
     showScreen('gomoku');
     if (title) title.style.visibility = 'visible';

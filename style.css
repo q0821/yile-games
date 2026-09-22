@@ -1821,3 +1821,28 @@ h1.brush-title::after { display: none; }
 #goBeginnerBadge { text-align: center; color: #66451d; font-size: 14px; }
 .go-learn-screen button:focus-visible, .go-learn-screen a:focus-visible { outline: 3px solid #226960; outline-offset: 3px; z-index: 1; }
 @media (max-width: 420px) { .go-learn-screen { padding: 8px 10px 24px; } .learn-card { padding: 14px; } .learn-tabs { gap: 5px; } .learn-tabs button { padding: 8px 4px; font-size: 14px; } }
+
+/* Go Game Guru：原譜保留完整座標，寬棋形在容器內捲動。 */
+.ggg-screen { width: min(100%, 720px); padding: 12px 18px 32px; box-sizing: border-box; gap: 16px; }
+#gggContent { width: 100%; min-width: 0; }
+#gggContent h3 { font-size: 22px; }
+#gggContent select { max-width: 100%; min-height: 44px; }
+.ggg-screen p { line-height: 1.7; }
+.ggg-screen a { color: #66451d; text-decoration: underline; text-underline-offset: 3px; }
+.ggg-board-wrap { max-width: 100%; overflow: auto; margin: 16px 0; border: 1px solid #b68d50; border-radius: 5px; background: linear-gradient(135deg, #e9c88b, #d6ae70); }
+.ggg-board { display: grid; grid-template-columns: repeat(var(--cols), 38px); width: max-content; padding: 18px; margin: auto; }
+.ggg-board .ggg-point { --v: 100%; --h: 100%; --vy: center; --hx: center; position: relative; display: grid; place-items: center; width: 38px; height: 38px; margin: 0; padding: 0; border: 0; border-radius: 0; opacity: 1; background: linear-gradient(#705732,#705732) center var(--vy)/1px var(--v) no-repeat, linear-gradient(#705732,#705732) var(--hx) center/var(--h) 1px no-repeat; box-shadow: none; }
+.ggg-point.edge-top { --v: 50%; --vy: bottom; }
+.ggg-point.edge-bottom { --v: 50%; --vy: top; }
+.ggg-point.edge-left { --h: 50%; --hx: right; }
+.ggg-point.edge-right { --h: 50%; --hx: left; }
+.ggg-board .ggg-point:hover, .ggg-board .ggg-point:active { transform: none; }
+.ggg-mark { position: absolute; color: #733900; font-size: 17px; font-weight: bold; background: #f2d7a3d9; border-radius: 50%; padding: 0 3px; }
+.ggg-mark.on-black { color: white; background: #382b1bb0; }
+.ggg-comment { white-space: pre-wrap; overflow-wrap: anywhere; background: #fcf8ef; padding: 12px; border-radius: 6px; }
+.ggg-credit { font-size: 13px; border-top: 1px solid #d9c9af; padding-top: 12px; overflow-wrap: anywhere; }
+.ggg-screen .learn-actions { margin: 14px 0; }
+.ggg-screen .learn-actions button { flex: 1 1 120px; }
+.ggg-screen button[aria-pressed="true"] { background: #514330; color: #fff; }
+.ggg-screen button:focus-visible, .ggg-screen a:focus-visible, .ggg-screen select:focus-visible { outline: 3px solid #226960; outline-offset: 2px; }
+.ggg-warning { color: #8b271d; }

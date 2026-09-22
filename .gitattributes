@@ -1,0 +1,5 @@
+# 上游授權原檔必須逐位元組保留，不能自動轉換換行或修剪原有空白。
+# SHA-256 由 scripts/verify-ggg.mjs 檢查，其他專案檔案沿用原有規則。
+public/go-problems/ggg/*.sgf -text -whitespace
+public/go-problems/ggg/LICENSE -text -whitespace
+public/go-problems/ggg/README.md -text -whitespace

@@ -13,10 +13,9 @@ const assert = require('node:assert/strict');
     page.on('request', request => { if (request.url().includes('katago-small')) modelRequests.push(request.url()); });
     const base = process.argv[2] || 'http://127.0.0.1:5173';
     const legacy = '{"legacy":"preserve-me"}';
-    await page.goto(`${base}/#tsumego`);
-    await page.getByRole('heading', { name: '題庫暫停提供', exact: true }).waitFor();
+    await page.goto(`${base}/#home`);
     await page.evaluate(value => localStorage.setItem('gogame_tsumego_progress', value), legacy);
-    await page.getByRole('link', { name: '前往圍棋入門練習' }).click();
+    await page.goto(`${base}/#learn`);
     await page.getByRole('button', { name: '1 口氣', exact: true }).click();
     assert.match(await page.locator('#learnFeedback').innerText(), /再數一次/);
     await page.getByRole('button', { name: '看解說', exact: true }).click();
@@ -102,7 +101,7 @@ const assert = require('node:assert/strict');
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('gogame_state'))?.moveHistory.length === 2);
     assert.equal(modelRequests.length, 0);
     assert.deepEqual(errors, []);
-    console.log('PASS：21 題、暫停入口、進度還原、錯題複習、提示不計分、舊進度保留、鍵盤、三種寬度、新手設定、AI 落子、存檔還原、讓子覆盤分支；無模型下載或頁面例外。');
+    console.log('PASS：21 題、進度還原、錯題複習、提示不計分、舊進度保留、鍵盤、三種寬度、新手設定、AI 落子、存檔還原、讓子覆盤分支；無模型下載或頁面例外。');
   } finally {
     await browser.close();
   }

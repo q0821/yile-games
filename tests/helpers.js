@@ -580,6 +580,7 @@ function sandboxWithMainLifecycle({
     './connect6-mode.js': { enterConnect6Mode: noop },
     './othello-mode.js': { enterOthelloMode: noop },
     './tsumego-progress.js': { loadProgress: () => ({}), totalSolved: () => 0 },
+    './ggg-mode.js': { enterGggMode: noop },
     './ink-fx.js': { playTitleReveal: noop, startAmbient: noop, playTransition: (fn) => fn() },
     './katago-service.js': {
       ensureReady: async () => {},

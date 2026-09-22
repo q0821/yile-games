@@ -1,0 +1,853 @@
+{
+  "source": "Go Game Guru",
+  "authors": [
+    "An Younggil",
+    "David Ormerod"
+  ],
+  "license": "CC-BY-NC-SA-4.0",
+  "commit": "eee12b2e39d59dbe81a8b9eaa7d4f103978d9224",
+  "sourceUrl": "https://github.com/gogameguru/go-problems",
+  "modifications": "原始 SGF 未修改；網站將原檔解析為互動棋盤，介面為本專案新增，英文解說保留原文。",
+  "problems": [
+    {
+      "id": "ggg-easy-01",
+      "file": "ggg-easy-01.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-01.sgf",
+      "sha256": "a2139e7389b44ff0766602c97299cc96f8636c9c7f85c5afde78743f61ff0b40"
+    },
+    {
+      "id": "ggg-easy-02",
+      "file": "ggg-easy-02.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-02.sgf",
+      "sha256": "921eb2da36a224f7bbe9435a76903cea4719c64d73ebb078218f7d11f53a636e"
+    },
+    {
+      "id": "ggg-easy-03",
+      "file": "ggg-easy-03.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-03.sgf",
+      "sha256": "75e38fec20ebe407b1f052bf743c65963fe1b76252bb02d3dffe8aa3dd4bc343"
+    },
+    {
+      "id": "ggg-easy-04",
+      "file": "ggg-easy-04.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-04.sgf",
+      "sha256": "ce998a021cad28910b8744ec5c0106ad1e84ba0459b7733420c38b648d981391"
+    },
+    {
+      "id": "ggg-easy-05",
+      "file": "ggg-easy-05.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-05.sgf",
+      "sha256": "1c21f1716ad2a8ed4763e103382367d76b707d2749719637dd8c3825dc0baa1b"
+    },
+    {
+      "id": "ggg-easy-06",
+      "file": "ggg-easy-06.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-06.sgf",
+      "sha256": "6503cbb5f39545cce5148d5cb563016dcbc223dc6f1995c0a5d4fb7ea17cf631"
+    },
+    {
+      "id": "ggg-easy-07",
+      "file": "ggg-easy-07.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-07.sgf",
+      "sha256": "066c3bf198f1d9770be1581b1ce73e49e154cbdd3ff8e773d9e7c9fcf0e41d72"
+    },
+    {
+      "id": "ggg-easy-08",
+      "file": "ggg-easy-08.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-08.sgf",
+      "sha256": "2455db843dffe29923cde5d1139cb73a179c486c2ec04a3695eaf091d0e3746e"
+    },
+    {
+      "id": "ggg-easy-09",
+      "file": "ggg-easy-09.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-09.sgf",
+      "sha256": "61347104b3174a82e34fbc10db0e154fe3e12569d6a21f5bf6edfa07b578e1f0"
+    },
+    {
+      "id": "ggg-easy-10",
+      "file": "ggg-easy-10.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-10.sgf",
+      "sha256": "d2244e1ee6abeb79f7396aebc941e2494c612b6b52da51404ec899cbe15e6159"
+    },
+    {
+      "id": "ggg-easy-11",
+      "file": "ggg-easy-11.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-11.sgf",
+      "sha256": "180b0b94aea24b23a7bcdeb147dde89c9c28197df7d726cac615307f8634f308"
+    },
+    {
+      "id": "ggg-easy-12",
+      "file": "ggg-easy-12.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-12.sgf",
+      "sha256": "009ba5c25da4057f9ff709015ccbd60207f8ae87c4cf2e87f0582960d24ffdb5"
+    },
+    {
+      "id": "ggg-easy-13",
+      "file": "ggg-easy-13.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-13.sgf",
+      "sha256": "e93ad8f048e98c12c52e40cff93df0425f20c4ef1fc638f1c8b3fb3e3ede4e42"
+    },
+    {
+      "id": "ggg-easy-14",
+      "file": "ggg-easy-14.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-14.sgf",
+      "sha256": "54699e92be387a17b15e052525528eff29f6bf8caefa6a7254d1345f71d1c996"
+    },
+    {
+      "id": "ggg-easy-15",
+      "file": "ggg-easy-15.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-15.sgf",
+      "sha256": "a7dea68588a23510af56824c034781c21ff14b5d45ae1b1edce50558ff3ae22d"
+    },
+    {
+      "id": "ggg-easy-16",
+      "file": "ggg-easy-16.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-16.sgf",
+      "sha256": "c08a710b803c5abdc7c0a592bca0fd5e91372270010162bbcf43de7a9764e33d"
+    },
+    {
+      "id": "ggg-easy-17",
+      "file": "ggg-easy-17.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-17.sgf",
+      "sha256": "80dc514faf0e24672de8e12f1cfda12d54aca98f52b8c736375fb3a02adb220d"
+    },
+    {
+      "id": "ggg-easy-18",
+      "file": "ggg-easy-18.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-18.sgf",
+      "sha256": "d599de1c33eb7e5cded2fefd65d98251b8fc6bb1610177406ccabc499191afdd"
+    },
+    {
+      "id": "ggg-easy-19",
+      "file": "ggg-easy-19.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-19.sgf",
+      "sha256": "8100da51e5c878e110e84c60db70305a62dabd0915dc2605dc05686dd73dc774"
+    },
+    {
+      "id": "ggg-easy-20",
+      "file": "ggg-easy-20.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-20.sgf",
+      "sha256": "484f46647811dc1a91ea04d04d2101db50ff5b9a39b967623dcb2d18a8189cdc"
+    },
+    {
+      "id": "ggg-easy-21",
+      "file": "ggg-easy-21.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-21.sgf",
+      "sha256": "721b7d2104fa581302f41093dbc6583561b48587bf7b633798f6d332eafb251c"
+    },
+    {
+      "id": "ggg-easy-22",
+      "file": "ggg-easy-22.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-22.sgf",
+      "sha256": "0531a3a3c54e6b00582c6acf1164429dda1ad3978ed346d9ccfe0affc0bb4d79"
+    },
+    {
+      "id": "ggg-easy-23",
+      "file": "ggg-easy-23.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-23.sgf",
+      "sha256": "d4899858af595e8daa36c6af83b352d6daa1d49b087bda1aa60bd54622dcb07d"
+    },
+    {
+      "id": "ggg-easy-24",
+      "file": "ggg-easy-24.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-24.sgf",
+      "sha256": "742020eca2ac316026d3f502fe23e3b29da88645b060fb37136178a7fab09cba"
+    },
+    {
+      "id": "ggg-easy-25",
+      "file": "ggg-easy-25.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-25.sgf",
+      "sha256": "6fd6879f5ef346af202258f2ef2ceb22806fb46ad2ca481fd3cf6878feb7eb43"
+    },
+    {
+      "id": "ggg-easy-26",
+      "file": "ggg-easy-26.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-26.sgf",
+      "sha256": "3d7a01f2a2fd9beb01417e0dd9e4d350630e79c17eeac98561b4bdfb2082d0e3"
+    },
+    {
+      "id": "ggg-easy-27",
+      "file": "ggg-easy-27.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-27.sgf",
+      "sha256": "0d4d10e4c0de88d369a5850de55e132c07e68d39584a4cb2baeeee9fd4e25f9a"
+    },
+    {
+      "id": "ggg-easy-28",
+      "file": "ggg-easy-28.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-28.sgf",
+      "sha256": "2364552de513d86c33ee799bea97a22f0e4ad158c3cbb858297d037575c82053"
+    },
+    {
+      "id": "ggg-easy-29",
+      "file": "ggg-easy-29.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-29.sgf",
+      "sha256": "95d23820317cc1c08d85c8f3cc5e98ddbe10e80f06269d172650ead5bf250672"
+    },
+    {
+      "id": "ggg-easy-30",
+      "file": "ggg-easy-30.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-30.sgf",
+      "sha256": "3540b5cdef56e5797db918c5a11bef8437b6433ca737c3dc31c2ea49f9eb51e1"
+    },
+    {
+      "id": "ggg-easy-31",
+      "file": "ggg-easy-31.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-31.sgf",
+      "sha256": "13f83bc0fd0f638cc937837e1bad15ba90c36867b5b42445e457a05e2f8f725e"
+    },
+    {
+      "id": "ggg-easy-32",
+      "file": "ggg-easy-32.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-32.sgf",
+      "sha256": "7632c825cfb7f5aa845a0a9a3879d7cf235076e55e9d716ce89e9e25567bbaee"
+    },
+    {
+      "id": "ggg-easy-33",
+      "file": "ggg-easy-33.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-33.sgf",
+      "sha256": "753a920e5eb1ba88868440f01efeed6e6e8f91b3de6afeec967fe970cfc26169"
+    },
+    {
+      "id": "ggg-easy-34",
+      "file": "ggg-easy-34.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-34.sgf",
+      "sha256": "08ca2063b58a468d2fe55d13a93c4010e1f77600778496b4412699f66368d175"
+    },
+    {
+      "id": "ggg-easy-35",
+      "file": "ggg-easy-35.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-35.sgf",
+      "sha256": "4a3c01d3dfdb15881ca5bf104dc4becb178bf7bd6ee9dac82c689c66e7a2558c"
+    },
+    {
+      "id": "ggg-easy-36",
+      "file": "ggg-easy-36.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-36.sgf",
+      "sha256": "2f0e403db1fb21bb9947b4c8a7eecdb4fb5ad578c026947e9eddbb629fd6101d"
+    },
+    {
+      "id": "ggg-easy-37",
+      "file": "ggg-easy-37.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-37.sgf",
+      "sha256": "8bc0c9a66f23aedc2b4bdade57dbe168a2489f18258f888eeb60dd43635aa7be"
+    },
+    {
+      "id": "ggg-easy-38",
+      "file": "ggg-easy-38.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-38.sgf",
+      "sha256": "f053a1156a453ebcd21825d3221a6ccf292bc661c4e952d1e259372e0a40e536"
+    },
+    {
+      "id": "ggg-easy-39",
+      "file": "ggg-easy-39.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-39.sgf",
+      "sha256": "063b97c908c8f38f7a2d85c130a559c765651ca06ccd891bd53220d3c01c9012"
+    },
+    {
+      "id": "ggg-easy-40",
+      "file": "ggg-easy-40.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-40.sgf",
+      "sha256": "399b589c1b37302e07f40ea8e84e12d1d930587edaa850ddc0f555a957a5f1c1"
+    },
+    {
+      "id": "ggg-easy-41",
+      "file": "ggg-easy-41.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-41.sgf",
+      "sha256": "8f23b01488f49611f4f3d3f4c0902640417bb55f524cb172d2845291fc6f383f"
+    },
+    {
+      "id": "ggg-easy-42",
+      "file": "ggg-easy-42.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-42.sgf",
+      "sha256": "e94ac0cab221da67ecbbecfa5bcb2267c6812cb0456f0b0d50a8e724e7d403d3"
+    },
+    {
+      "id": "ggg-easy-43",
+      "file": "ggg-easy-43.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-43.sgf",
+      "sha256": "70747f44013340582db2fee4b3093564e2343204ac5e2987ce8e283d70062e71"
+    },
+    {
+      "id": "ggg-easy-44",
+      "file": "ggg-easy-44.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-44.sgf",
+      "sha256": "ac4797765700c63d64ea8f4e4b7309ecaf34d741f937b1ba44a9c8f4df974ee8"
+    },
+    {
+      "id": "ggg-easy-45",
+      "file": "ggg-easy-45.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-45.sgf",
+      "sha256": "479c4dda175fdce1b2bf93ae135c304239f31a8862b1c7a951b5abb67ba23d1f"
+    },
+    {
+      "id": "ggg-easy-46",
+      "file": "ggg-easy-46.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-46.sgf",
+      "sha256": "f5034530184ec2fb707af89fd556e56cf2641230ae9c3cb91a321d02e2414f0c"
+    },
+    {
+      "id": "ggg-easy-47",
+      "file": "ggg-easy-47.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-47.sgf",
+      "sha256": "b9f090576c49ea9a5f87a11d9887e8672b727107aea80f6933337c42e2bac922"
+    },
+    {
+      "id": "ggg-easy-48",
+      "file": "ggg-easy-48.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-48.sgf",
+      "sha256": "79885473be8846caaeb8991d2f5452d6baeb3dce519cacf9aaf00e931618cd29"
+    },
+    {
+      "id": "ggg-easy-49",
+      "file": "ggg-easy-49.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-49.sgf",
+      "sha256": "8c304ac2a3f1abda61d27a79c5c99b7ac2e3cc12fa22d2ddf60d39af1fa8752e"
+    },
+    {
+      "id": "ggg-easy-50",
+      "file": "ggg-easy-50.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-50.sgf",
+      "sha256": "a76fffb7d2a8fafe9af6756b9cf00720542eaa97f715d0dda86fbbe8ad5ff453"
+    },
+    {
+      "id": "ggg-easy-51",
+      "file": "ggg-easy-51.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-51.sgf",
+      "sha256": "a7df4f313feb12500b8edb2cc5f39018eeee224fa8bcc6829dc7c730ed5b3323"
+    },
+    {
+      "id": "ggg-easy-52",
+      "file": "ggg-easy-52.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-52.sgf",
+      "sha256": "f4118f1b720b35d7d4aafbca9393a9482b8ccc8553922201f85f55acab2b3c2e"
+    },
+    {
+      "id": "ggg-easy-53",
+      "file": "ggg-easy-53.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-53.sgf",
+      "sha256": "241da5db889a91083c00bf1e395bf8db27751471a7442133e3de2140caeddc78"
+    },
+    {
+      "id": "ggg-easy-54",
+      "file": "ggg-easy-54.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-54.sgf",
+      "sha256": "421cb032e3f1104666ef8246a8c764b8512699a169a1fef07bc4ae2343932cc7"
+    },
+    {
+      "id": "ggg-easy-55",
+      "file": "ggg-easy-55.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-55.sgf",
+      "sha256": "97f000dc97c3a33c335b09c832ebd5c39d11d3402f2495916483ab731ea8e75a"
+    },
+    {
+      "id": "ggg-easy-56",
+      "file": "ggg-easy-56.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-56.sgf",
+      "sha256": "05513eaa3f1929deb2cbd7993825e8226aa73c0f2cab0fe55a9192d2c2e08785"
+    },
+    {
+      "id": "ggg-easy-57",
+      "file": "ggg-easy-57.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-57.sgf",
+      "sha256": "ec40dde62afb3e969ee8a301a4d620a4c706ccd0d7c90d97e256d1aba6ba7606"
+    },
+    {
+      "id": "ggg-easy-58",
+      "file": "ggg-easy-58.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-58.sgf",
+      "sha256": "46e4146cf293bc9e8bbcf5aa8a75c22a68cf3d42acbef20f541a75d4b4cfb247"
+    },
+    {
+      "id": "ggg-easy-59",
+      "file": "ggg-easy-59.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-59.sgf",
+      "sha256": "78b04fd98569a023d134406eab945a46abe49463bbaeb9d9d5ff60e1ac66b243"
+    },
+    {
+      "id": "ggg-easy-60",
+      "file": "ggg-easy-60.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-60.sgf",
+      "sha256": "e0fdaa8d020a5d85754c9e644a2833046a54663f37139969d87a9569df03cfb6"
+    },
+    {
+      "id": "ggg-easy-61",
+      "file": "ggg-easy-61.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-61.sgf",
+      "sha256": "010f28a68c5391e7efd0cc9817a515342c88673b4d850fd0cc55435c1da3eded"
+    },
+    {
+      "id": "ggg-easy-62",
+      "file": "ggg-easy-62.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-62.sgf",
+      "sha256": "e11d22e87232cbac65fcf852d619cebf6139ba1d40ba6d94adafad8122771317"
+    },
+    {
+      "id": "ggg-easy-63",
+      "file": "ggg-easy-63.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-63.sgf",
+      "sha256": "ff1a9d3cdcc2b8e5a2b457b5093043fb508a2cc687846b5b8b529b0cc2be5673"
+    },
+    {
+      "id": "ggg-easy-64",
+      "file": "ggg-easy-64.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-64.sgf",
+      "sha256": "a4f1b3053d8caac3483cab3c15178e41f510b50815ac4ff83199f299479ba0d6"
+    },
+    {
+      "id": "ggg-easy-65",
+      "file": "ggg-easy-65.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-65.sgf",
+      "sha256": "865a6cb3532c6f04227a68982b5b68adaa37999619571141bd09a2d9215374d0"
+    },
+    {
+      "id": "ggg-easy-66",
+      "file": "ggg-easy-66.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-66.sgf",
+      "sha256": "efb59640f775739bc76579c4f88f614f3a62aca67c3ae375807eac02ded399b9"
+    },
+    {
+      "id": "ggg-easy-67",
+      "file": "ggg-easy-67.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-67.sgf",
+      "sha256": "d6f2b7eb22bc114344e6d40e51103f93dca918e6262de963b54960c14c7b6214"
+    },
+    {
+      "id": "ggg-easy-68",
+      "file": "ggg-easy-68.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-68.sgf",
+      "sha256": "428b413d94b4be857e52917cbd2caa048f49ec4da02f97b09523b857623eab33"
+    },
+    {
+      "id": "ggg-easy-69",
+      "file": "ggg-easy-69.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-69.sgf",
+      "sha256": "920d540977caaeb99c460c8c3c87f8886c6cb8dae972453f04ad0fd77c7cb177"
+    },
+    {
+      "id": "ggg-easy-70",
+      "file": "ggg-easy-70.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-70.sgf",
+      "sha256": "6684b783791e114362687e4222d07d02deb8e4a491eb22a3ea294cf91ba3f6bc"
+    },
+    {
+      "id": "ggg-easy-71",
+      "file": "ggg-easy-71.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-71.sgf",
+      "sha256": "43ae6c30762824a61f0d6d3819acd73613063207cfc7e2a1a18c3a18210346f8"
+    },
+    {
+      "id": "ggg-easy-72",
+      "file": "ggg-easy-72.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-72.sgf",
+      "sha256": "3d378c910da62938eb0d7d78ac5e1733de4f0956a21c1f97c4d826235b667977"
+    },
+    {
+      "id": "ggg-easy-73",
+      "file": "ggg-easy-73.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-73.sgf",
+      "sha256": "e7dd36f7914c2a5a92e1f894a8774d573710290bb058556a42a4e0d02ad674d0"
+    },
+    {
+      "id": "ggg-easy-74",
+      "file": "ggg-easy-74.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-74.sgf",
+      "sha256": "468d773f5e0444531d3fddbe816e1d1a6fde51239a8c2d4de116f2118173d05f"
+    },
+    {
+      "id": "ggg-easy-75",
+      "file": "ggg-easy-75.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-75.sgf",
+      "sha256": "917ddd717fe2238226ffb04b7df15ccf9ad7f69b97e475bff68e31f7545553cf"
+    },
+    {
+      "id": "ggg-easy-76",
+      "file": "ggg-easy-76.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-76.sgf",
+      "sha256": "0f55a5630289a9f12d3cebf1e15cb4425f1c69e4c2e7b2207e41038f7c4a1d89"
+    },
+    {
+      "id": "ggg-easy-77",
+      "file": "ggg-easy-77.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-77.sgf",
+      "sha256": "d8fbbbf3c698c4ba37fc443478fc710d10a622041d941dd661897a3a9f469965"
+    },
+    {
+      "id": "ggg-easy-78",
+      "file": "ggg-easy-78.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-78.sgf",
+      "sha256": "d47b2f24d13cbb19126db5b847b237cf12c80c8da2627e72908e837f19c96ea3"
+    },
+    {
+      "id": "ggg-easy-79",
+      "file": "ggg-easy-79.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-79.sgf",
+      "sha256": "ebc0bba0f1757fd054c424eaf53026a4f264e4eab52c98cb6c70ff0fc6686961"
+    },
+    {
+      "id": "ggg-easy-80",
+      "file": "ggg-easy-80.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-80.sgf",
+      "sha256": "7217fcae911bcfdcc8bbd669b5dbcbeb10f8792fe697f29d0666c5484a5f21f0"
+    },
+    {
+      "id": "ggg-easy-81",
+      "file": "ggg-easy-81.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-81.sgf",
+      "sha256": "d35bcc0ef8680135bbab6420ce75bc443534d667ec8d5a26b1f101b89fedaf9a"
+    },
+    {
+      "id": "ggg-easy-82",
+      "file": "ggg-easy-82.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-82.sgf",
+      "sha256": "3df9d13ceac049ce848e9cae33709b3a5dcd0059946e92fdbacd97e1463dcd84"
+    },
+    {
+      "id": "ggg-easy-83",
+      "file": "ggg-easy-83.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-83.sgf",
+      "sha256": "b3b29b59b8aa26757eb053ecb6b3aacf706aed53fce676cd80b6e11eb0bc6f48"
+    },
+    {
+      "id": "ggg-easy-84",
+      "file": "ggg-easy-84.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-84.sgf",
+      "sha256": "11fd099bcf6b57b363c1d8cc48bddbce2abab8a51cf02807f2f40cc5f1f4650c"
+    },
+    {
+      "id": "ggg-easy-85",
+      "file": "ggg-easy-85.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-85.sgf",
+      "sha256": "9f1cef00833e2448cd9e816266a86b0bc085d87ccc06ae7f0a3c52d8bda554ad"
+    },
+    {
+      "id": "ggg-easy-86",
+      "file": "ggg-easy-86.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-86.sgf",
+      "sha256": "b9f9b0f483cf3751d2c807f91c7439fb8f50869f76ad64ee7ef954b98833ae56"
+    },
+    {
+      "id": "ggg-easy-87",
+      "file": "ggg-easy-87.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-87.sgf",
+      "sha256": "43dbb7cdb2b4098c0221dd8b4d645fff8c45ae5a58a045ec0377c10e3f7318bc"
+    },
+    {
+      "id": "ggg-easy-88",
+      "file": "ggg-easy-88.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-88.sgf",
+      "sha256": "e4e564feb5bda72682a71ebb80f61bd254266296bcd4536dc28dcb41a851bc48"
+    },
+    {
+      "id": "ggg-easy-89",
+      "file": "ggg-easy-89.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-89.sgf",
+      "sha256": "1c8525c906f01f411c86b17dd65f51ca498f797e86d7f50b41daf22908a89d7c"
+    },
+    {
+      "id": "ggg-easy-90",
+      "file": "ggg-easy-90.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-90.sgf",
+      "sha256": "a0e1f0dc9cb09e7367f3c0650b6c29795e3e6a672803e20d5140f57ebeb0670a"
+    },
+    {
+      "id": "ggg-easy-91",
+      "file": "ggg-easy-91.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-91.sgf",
+      "sha256": "4ce205e76862be62d9bdaf1e6aaa3ac4957efd3fc064538552fc4710f1b69412"
+    },
+    {
+      "id": "ggg-easy-92",
+      "file": "ggg-easy-92.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-92.sgf",
+      "sha256": "a63be464f06f748a81c1db9cac4184e28d6e096c5202e5c647a65a6ae7bc0f29"
+    },
+    {
+      "id": "ggg-easy-93",
+      "file": "ggg-easy-93.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-93.sgf",
+      "sha256": "e8c5afbda1019d3cfdf01524a2c074cd6a332f7ae022dcd35eecaeb3583aad7e"
+    },
+    {
+      "id": "ggg-easy-94",
+      "file": "ggg-easy-94.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-94.sgf",
+      "sha256": "a2611b465b0cf49b7ebd6ba46da22cd8a5b90a9d06281a7875d43e7fb97b3c62"
+    },
+    {
+      "id": "ggg-easy-95",
+      "file": "ggg-easy-95.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-95.sgf",
+      "sha256": "3badda2c905fbea0e47e9d63833702191444c183510e8975340423759d1f2e36"
+    },
+    {
+      "id": "ggg-easy-96",
+      "file": "ggg-easy-96.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-96.sgf",
+      "sha256": "20dad6f3575dd44ee3d79fd4c85d7d55a3199e48d15b8e4ef06183d184182ee0"
+    },
+    {
+      "id": "ggg-easy-97",
+      "file": "ggg-easy-97.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-97.sgf",
+      "sha256": "50091bf7282f5008d417f961cd440fe1c623e3598d891043f023f8054f652562"
+    },
+    {
+      "id": "ggg-easy-98",
+      "file": "ggg-easy-98.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-98.sgf",
+      "sha256": "535c5f3d79784beff2a613ef2d069ffb24c1d34183897222dcc70a33ca699958"
+    },
+    {
+      "id": "ggg-easy-99",
+      "file": "ggg-easy-99.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-99.sgf",
+      "sha256": "aa36f252cd81a96fc0c625826e8c4a4529c5fe8cf3d9816653b2974d87f54a5c"
+    },
+    {
+      "id": "ggg-easy-100",
+      "file": "ggg-easy-100.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-100.sgf",
+      "sha256": "50b168b3315af9507b5c23e5608c9d2798a43a244ffbc55372fc792ded433bd2"
+    },
+    {
+      "id": "ggg-easy-101",
+      "file": "ggg-easy-101.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-101.sgf",
+      "sha256": "dfdf5b27b4d64acc5f701535692d1ba142ed649757ae502053957de5ae2922fb"
+    },
+    {
+      "id": "ggg-easy-102",
+      "file": "ggg-easy-102.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-102.sgf",
+      "sha256": "8486bce5b76ad2410f3564594a3f4d6a6f5f0324c9284df40f0cd036e53929bb"
+    },
+    {
+      "id": "ggg-easy-103",
+      "file": "ggg-easy-103.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-103.sgf",
+      "sha256": "1a728d0c4e3864ea208c291290f968ffe59dacf1ff1fdd4a3c7be77cfb73a717"
+    },
+    {
+      "id": "ggg-easy-104",
+      "file": "ggg-easy-104.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-104.sgf",
+      "sha256": "8f1e0ac04b327a2b190afcadd118ab0b0f3db56eb717efee7f6931832089eea0"
+    },
+    {
+      "id": "ggg-easy-105",
+      "file": "ggg-easy-105.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-105.sgf",
+      "sha256": "97085d6a9fa6c2e993b1a8d541837efe98b0473d20a5ce0415c497098fca118e"
+    },
+    {
+      "id": "ggg-easy-106",
+      "file": "ggg-easy-106.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-106.sgf",
+      "sha256": "10599292bcc3a84c93d9ef53742c6f5ff98c55007709f86572d9e3c8420c0e22"
+    },
+    {
+      "id": "ggg-easy-107",
+      "file": "ggg-easy-107.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-107.sgf",
+      "sha256": "76108cd95fec6dfb7b35f87009f558865e0d1fe73ec42902990aa6fd0f883874"
+    },
+    {
+      "id": "ggg-easy-108",
+      "file": "ggg-easy-108.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-108.sgf",
+      "sha256": "80a42dd73666abed3f217a781ed985f09765d467ae1d76657743de72b9be3570"
+    },
+    {
+      "id": "ggg-easy-109",
+      "file": "ggg-easy-109.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-109.sgf",
+      "sha256": "413a2922f07b8ca1a75da1df0f270735ee2fab5d1781c1a00a41499bc0cddb37"
+    },
+    {
+      "id": "ggg-easy-110",
+      "file": "ggg-easy-110.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-110.sgf",
+      "sha256": "fb2d0ce8cd2b0a08cec0a28ef9842475fdbfb8dec3090bd85cf463d1493decb3"
+    },
+    {
+      "id": "ggg-easy-111",
+      "file": "ggg-easy-111.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-111.sgf",
+      "sha256": "e56634e998dae2c8ed5c0087f47c0f67203ffce0bb35f0bd45a3588fceacb075"
+    },
+    {
+      "id": "ggg-easy-112",
+      "file": "ggg-easy-112.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-112.sgf",
+      "sha256": "d31aad4826d899417fa0b1224a07f5faffb71d40ff851e1c5a5a095b2d14503d"
+    },
+    {
+      "id": "ggg-easy-113",
+      "file": "ggg-easy-113.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-113.sgf",
+      "sha256": "6c36ca2b65e29fbaff48548d053addbf260aab59b87dd8679c2b1d1a1094424a"
+    },
+    {
+      "id": "ggg-easy-114",
+      "file": "ggg-easy-114.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-114.sgf",
+      "sha256": "f6b9c979457015deca902ca907f927d0c1f92b376d9a35df2064451b4419c0e1"
+    },
+    {
+      "id": "ggg-easy-115",
+      "file": "ggg-easy-115.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-115.sgf",
+      "sha256": "488be40023c753ea5cbf95ab099c8127537a3af99be107990823c80a8d4742c6"
+    },
+    {
+      "id": "ggg-easy-116",
+      "file": "ggg-easy-116.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-116.sgf",
+      "sha256": "3ad06b149ea19dc7554f1589e93f0e58e1e2a1ebfeb5fd6784dc3e929ed0e43d"
+    },
+    {
+      "id": "ggg-easy-117",
+      "file": "ggg-easy-117.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-117.sgf",
+      "sha256": "c635283a6cbd5e1e23a31cc0bfd62b30e2731e5738aaee02a495414aba015f70"
+    },
+    {
+      "id": "ggg-easy-118",
+      "file": "ggg-easy-118.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-118.sgf",
+      "sha256": "db50b13aa5d65028fd92d0354831876acf757d9aeff9f2c1345c02ee123e6bdf"
+    },
+    {
+      "id": "ggg-easy-119",
+      "file": "ggg-easy-119.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-119.sgf",
+      "sha256": "162f102f8cacaa0b9430ea2e4092ff6464a9d1ed0021149634446801028c4f39"
+    },
+    {
+      "id": "ggg-easy-120",
+      "file": "ggg-easy-120.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-120.sgf",
+      "sha256": "43cff24321e3ae30ba46c1527e160e55df25e9a2a2ac34562d8e1577f47bcb7f"
+    },
+    {
+      "id": "ggg-easy-121",
+      "file": "ggg-easy-121.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-121.sgf",
+      "sha256": "32cb595715d070333946348ccf0639f897e03600ced549d9c507de2979bdaa08"
+    },
+    {
+      "id": "ggg-easy-122",
+      "file": "ggg-easy-122.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-122.sgf",
+      "sha256": "a9f44c637f62a0b2d989352e52d3302a570dac78d3aec43c19079cd40a6ac4df"
+    },
+    {
+      "id": "ggg-easy-123",
+      "file": "ggg-easy-123.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-123.sgf",
+      "sha256": "bf3078c40027a81c3b6d2cc77ae5ada9b0258cbd603bb80873369c29277a26b0"
+    },
+    {
+      "id": "ggg-easy-124",
+      "file": "ggg-easy-124.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-124.sgf",
+      "sha256": "4da21986c8c760a0b51235cda9ea9af6129317d91a43b13404796d1c42340749"
+    },
+    {
+      "id": "ggg-easy-125",
+      "file": "ggg-easy-125.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-125.sgf",
+      "sha256": "266f4dbc3304fb924f181678d4ff9b139f084a0809791f2d38a17b57eabfc06c"
+    },
+    {
+      "id": "ggg-easy-126",
+      "file": "ggg-easy-126.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-126.sgf",
+      "sha256": "8ef7a307439d5ce8c34eeb09ab20072a136f54228352ea17c3e39da8c0b8e814"
+    },
+    {
+      "id": "ggg-easy-127",
+      "file": "ggg-easy-127.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-127.sgf",
+      "sha256": "1e64759ade3e4731dc0ec95ed86265a605a0d928d79f309b4c068af037e22904"
+    },
+    {
+      "id": "ggg-easy-128",
+      "file": "ggg-easy-128.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-128.sgf",
+      "sha256": "191177107df128519f3038b11e86dda9d0377016cf264c77a763a068d974dc8a"
+    },
+    {
+      "id": "ggg-easy-129",
+      "file": "ggg-easy-129.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-129.sgf",
+      "sha256": "35d6ee47f92f01d43144caad0e754ff26e102f7e1f1ffb506d5ac2ef3840a069"
+    },
+    {
+      "id": "ggg-easy-130",
+      "file": "ggg-easy-130.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-130.sgf",
+      "sha256": "01df9dac7909b0ec0278ab990a320660678aaaad0d2b1249a55e9936ba990445"
+    },
+    {
+      "id": "ggg-easy-131",
+      "file": "ggg-easy-131.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-131.sgf",
+      "sha256": "9a227a677890904573ad4613371d001d69233ecbc371b6760feaf94b9ac364e6"
+    },
+    {
+      "id": "ggg-easy-132",
+      "file": "ggg-easy-132.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-132.sgf",
+      "sha256": "604aaa17a8348cbb3a645ebf340daa53526373daa688831a7e683b94fb61267b"
+    },
+    {
+      "id": "ggg-easy-133",
+      "file": "ggg-easy-133.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-133.sgf",
+      "sha256": "6637c51b6458e123eeb92bcd1d313ebd450d95989faba38155352287664ef89d"
+    },
+    {
+      "id": "ggg-easy-134",
+      "file": "ggg-easy-134.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-134.sgf",
+      "sha256": "f077d691d877fbdb11fcfbc7d3b698457c49e7146faee06b33d172b4fbe232d8"
+    },
+    {
+      "id": "ggg-easy-135",
+      "file": "ggg-easy-135.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-135.sgf",
+      "sha256": "3eaa68982c03e765a6ec3861b728e3a805688da2334442f438ae58e05c31b2ce"
+    },
+    {
+      "id": "ggg-easy-136",
+      "file": "ggg-easy-136.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-136.sgf",
+      "sha256": "a5754b854bebb631953257a49a43c03fa010f26981e15888931d913972c94345"
+    },
+    {
+      "id": "ggg-easy-137",
+      "file": "ggg-easy-137.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-137.sgf",
+      "sha256": "21b46c32a83fc3397171fd10c8e63e3b40f431b242daed25c950728cb271c1d3"
+    },
+    {
+      "id": "ggg-easy-138",
+      "file": "ggg-easy-138.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-138.sgf",
+      "sha256": "4a28a5c9e1b3245dc2af9ca7cca20b3599fc1c7ce13491fcf9e18708e95fafaf"
+    },
+    {
+      "id": "ggg-easy-139",
+      "file": "ggg-easy-139.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-139.sgf",
+      "sha256": "e18612c9b03f2cd5ebe289a6ef49a735a0d6bf76d8e5dc7bfd9b7472064711a0"
+    },
+    {
+      "id": "ggg-easy-140",
+      "file": "ggg-easy-140.sgf",
+      "upstreamPath": "weekly-go-problems/easy/ggg-easy-140.sgf",
+      "sha256": "c63b85d16d683a4bd0e8d2a3357fbbfe04260b9a59c39c0ed18c521d640736f8"
+    }
+  ]
+}
