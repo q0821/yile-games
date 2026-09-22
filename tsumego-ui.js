@@ -10,7 +10,7 @@
 import { EMPTY, WHITE } from './rules.js';
 import { drawStone } from './ui.js';
 import { setupHiDPICanvas } from './canvas-dpr.js';
-import { paintBoardBase } from './board-texture.js';
+import { paintBoardBase, paintWoodGrain, paintVignette } from './board-texture.js';
 
 const STAR_19 = [
   [3, 3], [3, 9], [3, 15],
@@ -34,6 +34,8 @@ export function resizeTsumegoCanvas(deps, view) {
   } else {
     maxSize = Math.max(360, Math.min(window.innerWidth - 80, window.innerHeight - 220, 620));
   }
+  // 嵌入練習面板時，以實際容器寬度為上限。
+  if (Number.isFinite(deps.maxSize)) maxSize = Math.min(maxSize, deps.maxSize);
 
   const padding = Math.max(24, Math.round(maxSize * 0.06));
   const cellSize = Math.max(12, Math.floor((maxSize - padding * 2) / span));
@@ -64,6 +66,7 @@ export function drawTsumego(deps, view) {
 
   // ——— 木紋底 ———
   paintBoardBase(ctx, w, h);
+  paintWoodGrain(ctx, w, h, { seed: 5, grainColor: 'rgba(90,64,24,0.12)', speckColor: 'rgba(255,244,214,0.10)' });
 
   // ——— 格線（真實盤邊 vs 內部裁切邊）———
   const leftEdge = vp.minCol === 0;
@@ -113,6 +116,8 @@ export function drawTsumego(deps, view) {
     }
   }
 
+  paintVignette(ctx, w, h);
+
   // ——— KataGo 領地覆蓋層（後續手 play-out，重用 2c-2 配色）：畫在棋子下方 ———
   // ownership index = row*size+col（+1 黑、-1 白），與 ui.js / katago-service 一致。
   if (view.ownership) {
@@ -153,7 +158,26 @@ export function drawTsumego(deps, view) {
   for (const m of view.markers || []) {
     const x = sx(m.col);
     const y = sy(m.row);
-    if (m.type === 'correct') {
+    if (['label', 'triangle', 'square', 'circle', 'cross'].includes(m.type)) {
+      const stone = view.board[m.row]?.[m.col];
+      ctx.fillStyle = stone === 1 ? '#fff8e8' : '#342819';
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.lineWidth = Math.max(1.5, cs * 0.045);
+      const a = cs * 0.23;
+      if (m.type === 'label') {
+        if (!stone) { ctx.fillStyle = '#dfbb7b'; ctx.fillRect(x-a, y-a, a*2, a*2); ctx.fillStyle = '#342819'; }
+        ctx.font = `600 ${Math.round(cs * 0.43)}px serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(m.text, x, y, cs * 0.7);
+      } else {
+        ctx.beginPath();
+        if (m.type === 'triangle') { ctx.moveTo(x, y-a); ctx.lineTo(x+a, y+a); ctx.lineTo(x-a, y+a); ctx.closePath(); }
+        if (m.type === 'square') ctx.rect(x-a, y-a, a*2, a*2);
+        if (m.type === 'circle') ctx.arc(x, y, a, 0, Math.PI*2);
+        if (m.type === 'cross') { ctx.moveTo(x-a, y-a); ctx.lineTo(x+a, y+a); ctx.moveTo(x+a, y-a); ctx.lineTo(x-a, y+a); }
+        ctx.stroke();
+      }
+    } else if (m.type === 'correct') {
       ctx.strokeStyle = '#27c93f';
       ctx.lineWidth = 3;
       ctx.beginPath();

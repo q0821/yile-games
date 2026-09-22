@@ -9,6 +9,24 @@ const dir = 'public/go-problems/ggg/';
 const manifest = JSON.parse(fs.readFileSync(dir+'index.json'));
 const read = id => game.loadProblem(fs.readFileSync(dir+id+'.sgf','utf8'),id);
 
+test('繁中翻譯完整覆蓋註解，保留棋盤標記、來源網址與同授權', () => {
+  const translations = JSON.parse(fs.readFileSync(dir+'zh-Hant.json','utf8'));
+  const sources = manifest.problems.flatMap(p => read(p.id).nodes.flatMap(n => n.props.C || []));
+  const unique = new Set(sources);
+  expect(sources).toHaveLength(676);
+  expect(Object.keys(translations.entries).sort()).toEqual([...unique].sort());
+  expect(unique.size).toBe(151);
+  expect(translations.license).toBe(manifest.license);
+  expect(translations.sourceCommit).toBe(manifest.commit);
+  for (const source of unique) {
+    const zh = translations.entries[source];
+    expect(zh).toMatch(/[\u4e00-\u9fff]/);
+    const marks = s => [...new Set(s.match(/\b[A-Z]\b/g) || [])].sort();
+    expect(marks(zh)).toEqual(marks(source));
+    expect(zh.match(/https?:\/\/\S+/g) || []).toEqual(source.match(/https?:\/\/\S+/g) || []);
+  }
+});
+
 test('SGF 序列、分支、多值、跳脫右括號及續行不會互相混淆', () => {
   const tree = sgf.parseSgf('(;SZ[5]AB[aa][bb]C[a\\]b\\\nnext](;B[cc];W[dd])(;B[ee]C[Correct]))');
   expect(tree.nodes[0].props.C).toEqual(['a]bnext']);

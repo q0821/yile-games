@@ -1,7 +1,11 @@
 import { loadProblem, startAttempt, playMove, coordinate } from './ggg-problem.js';
-import { sgfMove, sgfPoint } from './sgf-tree.js';
+import { sgfMove } from './sgf-tree.js';
 import { loadGggProgress, saveGggProgress, recordGgg } from './ggg-progress.js';
 
+import { mountGggBoard } from './ggg-board.js';
+import translations from './public/go-problems/ggg/zh-Hant.json';
+
+let disposeBoard;
 const BASE = 'go-problems/ggg/';
 let manifest, progress, storage, writable, storageError = '';
 let problem, attempt, browse = null, reviewOnly = false;
@@ -18,13 +22,18 @@ function paragraph(text, className = '') {
 }
 function persist() { if (writable) storageError = saveGggProgress(storage, progress); }
 function frame() {
-  $('tsumegoScreen').innerHTML = `<header class="mode-header"><a class="mode-back" href="#home">回首頁</a><h2 class="mode-title">圍棋死活與手筋</h2></header>
-    <p>Go Game Guru 入門題，沿著原譜練習多手攻防。若還沒學過規則，可先做<a href="#learn">圍棋入門練習</a>。</p>
-    <div id="gggContent" aria-live="polite"></div>
-    <footer class="ggg-credit"><p>題目與原文解說：Go Game Guru（An Younggil、David Ormerod）。免費、非商業學習用途。</p>
-    <p><a href="https://github.com/gogameguru/go-problems" target="_blank" rel="noopener noreferrer">原始來源</a> · <a href="go-problems/ggg/LICENSE" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0 授權全文</a> · <a href="go-problems/ggg/NOTICE.md" target="_blank" rel="noopener noreferrer">署名與改作說明</a></p>
-    <p>原始 SGF 未修改；互動介面為本專案新增，英文解說保留原文。舊題庫已停用，原有解題進度保留且分開記錄。</p></footer>`;
+  disposeBoard?.(); disposeBoard = null;
+  $('tsumegoScreen').innerHTML = `<header class="mode-header"><button class="mode-back" type="button" id="gggHome">回首頁</button><h2 class="mode-title">死活與手筋</h2></header>
+    <div id="gggContent"></div>
+    <footer class="ggg-credit"><p>Go Game Guru · An Younggil、David Ormerod · <a href="go-problems/ggg/LICENSE" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a></p>
+    <details><summary>題庫來源與使用說明</summary>
+    <p>獨立、免費、無廣告的學習功能。<a href="#learn">先做圍棋入門練習</a></p>
+    <p><a href="https://github.com/gogameguru/go-problems" target="_blank" rel="noopener noreferrer">原始來源</a> · <a href="go-problems/ggg/NOTICE.md" target="_blank" rel="noopener noreferrer">署名與改作說明</a></p>
+    <p>原始 SGF 未修改。繁體中文翻譯由弈樂專案提供，依相同授權分享；英文原文可展開比對。舊題庫停用，原有進度分開保留。</p>
+    <p>電腦依原譜應手，完成表示走到本次變化的作者正解標記；不代表已走完所有應手。進度保存在這個瀏覽器。</p></details></footer>`;
+  $('gggHome').addEventListener('click', () => { location.hash = '#home'; });
 }
+
 function fail(retry) {
   console.error('[ggg] 題庫載入或解析失敗。');
   frame(); $('gggContent').append(paragraph('題目載入失敗，請確認網路後重試。'), button('重新載入', retry));
@@ -78,7 +87,7 @@ function queue() { return manifest.problems.filter(p => !reviewOnly || progress.
 function render() {
   frame(); const root = $('gggContent');
   if (storageError) root.append(paragraph(storageError, 'ggg-warning'));
-  const modes = document.createElement('div'); modes.className = 'learn-actions';
+  const modes = document.createElement('div'); modes.className = 'tsumego-practice ggg-modes';
   const all = button('全部題目', () => { reviewOnly = false; selectProblem(progress.current); });
   all.setAttribute('aria-pressed', String(!reviewOnly));
   const review = button('複習錯題', () => {
@@ -89,8 +98,8 @@ function render() {
   review.setAttribute('aria-pressed', String(reviewOnly)); modes.append(all, review); root.append(modes);
   const solved = Object.values(progress.records).filter(r => r.solved).length;
   const pending = Object.values(progress.records).filter(r => r.review).length;
-  const stats = paragraph(`已自行完成 ${solved}／${manifest.problems.length} 題，待複習 ${pending} 題。`); stats.id = 'gggStats'; root.append(stats);
-  const chooser = document.createElement('label'); chooser.textContent = '選擇題目 ';
+  const stats = paragraph(`已自行完成 ${solved}／${manifest.problems.length} 題，待複習 ${pending} 題。`); stats.id = 'gggStats'; stats.className = 'ggg-stats'; root.append(stats);
+  const chooser = document.createElement('label'); chooser.className = 'ggg-chooser'; chooser.textContent = '選擇題目 ';
   const select = document.createElement('select'); select.id = 'gggSelect';
   // 本輪答對後仍保留目前題目，按下一題才離開，避免畫面與選單不同步。
   const options = manifest.problems.filter(p => !reviewOnly || progress.records[p.id]?.review || p.id === problem.id);
@@ -104,22 +113,34 @@ function render() {
   heading.textContent = `${problem.player === 1 ? '黑' : '白'}先，第 ${Number(problem.id.split('-').at(-1))} 題${browse ? '，查看原譜' : ''}`; root.append(heading);
   const nodeId = browse ? browse.at(-1) : attempt.node;
   const node = problem.nodes[nodeId];
-  renderBoard(root, nodeId);
-  const feedback = paragraph(statusText(), 'learn-feedback'); feedback.id = 'gggFeedback'; feedback.role = 'status'; feedback.tabIndex = -1; root.append(feedback);
+  disposeBoard = mountGggBoard(root, problem, nodeId, !!browse || attempt.done, submit);
+  const feedback = paragraph(statusText(), 'ggg-feedback'); feedback.id = 'gggFeedback'; feedback.role = 'status'; feedback.tabIndex = -1; root.append(feedback);
   const comment = node.props.C?.[0];
+  const explanation = document.createElement('section'); explanation.className = 'ggg-explanation';
+  explanation.setAttribute('aria-label', '解說');
   if (comment) {
-    const label = paragraph('作者原文解說（英文）'); label.className = 'learn-caption';
-    const text = paragraph(comment, 'ggg-comment'); text.id = 'gggComment'; text.lang = 'en'; root.append(label, text);
+    const translated = Object.hasOwn(translations.entries, comment) ? translations.entries[comment] : null;
+    if (!translated) console.warn('[ggg] 缺少對應繁體中文翻譯，保留英文原文。');
+    // 題目開頭重複的作者網址已統一列於署名區，原文與下載譯文仍完整保留。
+    const displayTranslation = translated?.replace(/\n\nhttps:\/\/gogameguru\.com\/$/, '');
+    const text = paragraph(displayTranslation || '此段中文翻譯尚未提供，請參考英文原文。', 'ggg-comment');
+    text.id = 'gggCommentZh'; text.lang = 'zh-Hant'; explanation.append(text);
+    const original = document.createElement('details'); original.className = 'ggg-original';
+    original.open = !translated;
+    const summary = document.createElement('summary'); summary.textContent = '查看英文原文';
+    const english = paragraph(comment, 'ggg-comment'); english.id = 'gggComment'; english.lang = 'en';
+    original.append(summary, english); explanation.append(original);
+    explanation.append(paragraph('中文翻譯：弈樂專案', 'ggg-translation-credit'));
   }
   if (browse) {
-    const branches = document.createElement('div'); branches.className = 'learn-actions'; branches.id = 'gggBranches';
+    const branches = document.createElement('div'); branches.className = 'ggg-actions ggg-branches'; branches.id = 'gggBranches';
     for (const [i,id] of node.children.entries()) {
       const move = sgfMove(problem.nodes[id], problem.size);
       branches.append(button(`變化 ${i+1}：${move.color === 1 ? '黑' : '白'} ${coordinate(move.point, problem.size)}`, () => { browse.push(id); render(); $('gggFeedback').focus(); }));
     }
     root.append(branches);
   }
-  const actions = document.createElement('div'); actions.className = 'learn-actions';
+  const actions = document.createElement('div'); actions.className = 'ggg-actions';
   const reset = button('重新挑戰', () => {
     // 保留本題已看解答／答錯紀錄，需另一次選題才視為新挑戰。
     attempt = { ...startAttempt(problem), assisted: progress.assisted, mistaken: progress.mistaken };
@@ -152,8 +173,8 @@ function render() {
     const next = eligible.find(p => manifest.problems.indexOf(p) > manifest.problems.findIndex(p => p.id === problem.id)) || eligible[0];
     if (next) selectProblem(next.id); else renderEmpty();
   }); actions.append(nextProblem); root.append(actions);
-  const source = document.createElement('a'); source.href = BASE + `${problem.id}.sgf`; source.download = `${problem.id}.sgf`; source.textContent = '下載本題原始 SGF'; root.append(source);
-  root.append(paragraph('電腦應手來自原譜；完成表示走到本次變化的作者正解標記，其他應手可在原譜中查看。進度僅保存在這個瀏覽器。', 'learn-caption'));
+  if (comment) root.append(explanation);
+  const source = document.createElement('a'); source.href = BASE + `${problem.id}.sgf`; source.download = `${problem.id}.sgf`; source.textContent = '下載本題原始 SGF'; source.className = 'ggg-download'; root.append(source);
 }
 function renderEmpty() {
   frame(); $('gggContent').append(paragraph('目前沒有待複習的題目。'), button('返回全部題目', () => { reviewOnly = false; selectProblem(progress.current); }));
@@ -169,30 +190,4 @@ function submit(point) {
   if (browse || attempt.done) return;
   attempt = playMove(problem, attempt, point); progress = recordGgg(progress, attempt); persist();
   render(); $('gggFeedback').focus();
-}
-function renderBoard(root, nodeId) {
-  const { minRow, maxRow, minCol, maxCol } = problem.viewport;
-  const wrapper = document.createElement('div'); wrapper.className = 'ggg-board-wrap';
-  const grid = document.createElement('div'); grid.id = 'gggBoard'; grid.className = 'ggg-board'; grid.role = 'group';
-  grid.setAttribute('aria-label', `${problem.size} 路棋盤的局部視窗`);
-  const cols = maxCol-minCol+1; grid.style.setProperty('--cols', cols);
-  const board = problem.positions.get(nodeId).board;
-  const props = problem.nodes[nodeId].props;
-  const labels = new Map((props.LB || []).map(value => [sgfPoint(value.slice(0,2), problem.size).join(','), value.slice(3)]));
-  for (const value of props.TR || []) labels.set(sgfPoint(value, problem.size).join(','), '△');
-  const last = sgfMove(problem.nodes[nodeId], problem.size)?.point;
-  for (let r = minRow; r <= maxRow; r++) for (let c = minCol; c <= maxCol; c++) {
-    const color = board[r][c]; const coord = coordinate([r,c],problem.size);
-    const label = labels.get(`${r},${c}`) || (last?.[0] === r && last?.[1] === c ? '●' : '');
-    const cell = button('', () => submit([r,c])); cell.className = 'ggg-point';
-    cell.setAttribute('aria-label', `${coord}，${color === 1 ? '黑棋' : color === 2 ? '白棋' : '空點'}${label ? `，標記 ${label}` : ''}`);
-    cell.disabled = !!browse || attempt.done;
-    if (r === 0) cell.classList.add('edge-top'); if (r === problem.size-1) cell.classList.add('edge-bottom');
-    if (c === 0) cell.classList.add('edge-left'); if (c === problem.size-1) cell.classList.add('edge-right');
-    if (color) { const stone = document.createElement('span'); stone.className = `learn-stone ${color === 1 ? 'black' : 'white'}`; cell.append(stone); }
-    if (label) { const mark = document.createElement('span'); mark.className = `ggg-mark ${color === 1 ? 'on-black' : ''}`; mark.textContent = label; cell.append(mark); }
-    grid.append(cell);
-  }
-  wrapper.append(grid); root.append(wrapper);
-  root.append(paragraph(`局部視窗：${coordinate([maxRow,minCol],problem.size)} 至 ${coordinate([minRow,maxCol],problem.size)}。寬棋形可左右捲動。`, 'learn-caption'));
 }
