@@ -3,7 +3,7 @@
  *
  * 與對弈的 drawBoard 不同：只畫 viewport（含棋子的角落／邊區），並區分
  *   - 真實盤邊（row/col == 0 或 size-1）：格線停在盤邊，並加粗強調。
- *   - 內部裁切邊：格線延伸到 canvas 邊緣（bleed），暗示棋盤往外延續。
+ *   - 內部裁切邊：格線延伸到座標留白前，暗示棋盤往外延續。
  *
  * 棋子沿用 ui.js 的 drawStone（透過 deps.originRow/originCol 偏移），保持視覺一致。
  */
@@ -37,7 +37,8 @@ export function resizeTsumegoCanvas(deps, view) {
   // 嵌入練習面板時，以實際容器寬度為上限。
   if (Number.isFinite(deps.maxSize)) maxSize = Math.min(maxSize, deps.maxSize);
 
-  const padding = Math.max(24, Math.round(maxSize * 0.06));
+  // 邊線上的棋子半徑為格距的 0.44 倍；外圍另留座標文字空間，避免互相遮住。
+  const padding = Math.max(32, Math.ceil((maxSize * 0.44 / span + 24) / (1 + 0.88 / span)));
   const cellSize = Math.max(12, Math.floor((maxSize - padding * 2) / span));
   const w = cellSize * cols + padding * 2;
   const h = cellSize * rows + padding * 2;
@@ -63,6 +64,7 @@ export function drawTsumego(deps, view) {
 
   const sx = (col) => pad + (col - vp.minCol) * cs;
   const sy = (row) => pad + (row - vp.minRow) * cs;
+  const coordinateBand = 22;
 
   // ——— 木紋底 ———
   paintBoardBase(ctx, w, h);
@@ -74,10 +76,10 @@ export function drawTsumego(deps, view) {
   const topEdge = vp.minRow === 0;
   const botEdge = vp.maxRow === size - 1;
 
-  const xLeft = leftEdge ? sx(vp.minCol) : 0;
-  const xRight = rightEdge ? sx(vp.maxCol) : w;
-  const yTop = topEdge ? sy(vp.minRow) : 0;
-  const yBot = botEdge ? sy(vp.maxRow) : h;
+  const xLeft = leftEdge ? sx(vp.minCol) : coordinateBand;
+  const xRight = rightEdge ? sx(vp.maxCol) : w - coordinateBand;
+  const yTop = topEdge ? sy(vp.minRow) : coordinateBand;
+  const yBot = botEdge ? sy(vp.maxRow) : h - coordinateBand;
 
   ctx.strokeStyle = '#5a4420';
   ctx.lineWidth = 1;
@@ -114,6 +116,21 @@ export function drawTsumego(deps, view) {
         ctx.fill();
       }
     }
+  }
+
+  // 使用完整棋盤的座標，局部裁切不能從 A 或 1 重新編號；字母略過 I。
+  ctx.fillStyle = '#3a2010';
+  ctx.font = `bold ${Math.max(10, Math.min(14, cs * 0.42))}px sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const letters = 'ABCDEFGHJKLMNOPQRST';
+  const labelOffset = coordinateBand / 2;
+  for (let c = vp.minCol; c <= vp.maxCol; c++) {
+    ctx.fillText(letters[c], sx(c), labelOffset);
+    ctx.fillText(letters[c], sx(c), h - labelOffset);
+  }
+  for (let r = vp.minRow; r <= vp.maxRow; r++) {
+    ctx.fillText(String(size - r), labelOffset, sy(r));
+    ctx.fillText(String(size - r), w - labelOffset, sy(r));
   }
 
   paintVignette(ctx, w, h);
