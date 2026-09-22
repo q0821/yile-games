@@ -31,6 +31,7 @@ import { recordGame, totals, formatRecord, loadStats, saveStats } from './stats.
 
 // ==================== CONSTANTS ====================
 const AI_MOVE_DELAY_MS       = 100;
+const IOS_STORE = typeof __IOS_STORE__ !== 'undefined' ? __IOS_STORE__ : false;
 const AI_INIT_DELAY_MS       = 300;
 const COORD_LETTERS = 'ABCDEFGHJKLMNOPQRST';
 
@@ -115,6 +116,7 @@ const app = {
   get gameMode()          { return getGoState().gameMode; },
   get playerColor()       { return getGoState().playerColor; },
   get aiLevel()           { return getGoState().aiLevel; },
+  get beginnerMode()      { return !IOS_STORE && getGoState().beginnerMode; },
   get isAIThinking()      { return getGoState().isAIThinking; },
   get timerEnabled()      { return getGoState().timerEnabled; },
   get timerSeconds()      { return getGoState().timerSeconds; },
@@ -439,7 +441,7 @@ function getCaptureHints(board, player) {
 function buildBoardViewState() {
   const state = getGoState();
   const displayBoard = state.isReviewing
-    ? GoReview.getReviewBoard(state.moveHistory, state.currentReviewMove, state.size)
+    ? GoReview.getReviewBoard(state.moveHistory, state.currentReviewMove, state.size, state.handicap)
     : state.board;
   const scoreData = state.isScoring
     ? calculateScore(
@@ -709,7 +711,10 @@ function saveAiLevelMode() {
 function updateAiLevelDisplay() {
   const level = getGoState().aiLevel;
   const el = document.getElementById('aiLevelDisplay');
-  if (el) el.textContent = `第 ${level} 級（${kyuLabel(level)}）`;
+  if (el) el.textContent = !IOS_STORE && getGoState().beginnerMode
+    ? '入門陪練（不升降等級）' : `第 ${level} 級（${kyuLabel(level)}）`;
+  const badge = document.getElementById('goBeginnerBadge');
+  if (badge) badge.hidden = IOS_STORE || !getGoState().beginnerMode;
 }
 
 // 初始化「電腦等級」設定控件：填手動選級下拉（1..MAX 級＋約當級位）、還原持久化的
@@ -753,6 +758,10 @@ let _pendingLevelMsg = null; // 升降訊息，於結束彈窗顯示
 function applyResultToLevel(humanMargin) {
   const state = getGoState();
   if (state.gameMode !== 'pvc') return; // 只在人機對局調整
+  if (!IOS_STORE && state.beginnerMode) {
+    _pendingLevelMsg = '入門陪練完成，一般對弈等級維持不變';
+    return;
+  }
   const result = nextLevelForMode(state.aiLevel, humanMargin, aiLevelMode);
   GameState.setAiLevel(result.level);
   saveAiLevel(result.level);
@@ -1019,7 +1028,7 @@ function endGame(title, detail, outcome) {
   // 客觀對局摘要（純規則，不做形勢/勝率臆測）
   const sm = document.getElementById('modalSummary');
   if (sm) {
-    const s = GoReview.summarizeGame(state.moveHistory, state.size);
+    const s = GoReview.summarizeGame(state.moveHistory, state.size, state.handicap);
     let txt = `全 ${s.totalMoves} 手・黑提 ${s.blackCaptured} 子、白提 ${s.whiteCaptured} 子`;
     if (s.biggest) {
       txt += `・最大一次：第 ${s.biggest.moveNumber} 手${s.biggest.byPlayer === BLACK ? '黑' : '白'}提 ${s.biggest.count} 子`;
@@ -1225,8 +1234,9 @@ async function analyzeReview() {
       const analysisState = getGoState();
       if (!analysisState.isReviewing) return;
       setStatus(`分析中… ${k}/${N}`);
-      const b = GoReview.getReviewBoard(analysisState.moveHistory, k, analysisState.size);
-      const player = (k % 2 === 0) ? BLACK : WHITE; // 第 k 手後輪到誰
+      const b = GoReview.getReviewBoard(analysisState.moveHistory, k, analysisState.size, analysisState.handicap);
+      const firstPlayer = analysisState.handicap >= 2 ? WHITE : BLACK;
+      const player = k % 2 === 0 ? firstPlayer : opponent(firstPlayer);
       const a = await KataGo.evaluate({
         board: b,
         size: analysisState.size,
@@ -1277,7 +1287,8 @@ function replayFromHere() {
   savedOriginalGame = GameState.getSnapshot();
   const original = savedOriginalGame;
   const movesToReplay = original.moveHistory.slice(0, cut);
-  const sideToMove = (cut % 2 === 0) ? BLACK : WHITE;
+  const firstPlayer = original.handicap >= 2 ? WHITE : BLACK;
+  const sideToMove = cut % 2 === 0 ? firstPlayer : opponent(firstPlayer);
 
   GameState.exitReview();
   cancelScheduledAIMove();   // 換局：清掉舊局殘留排程，見 cancelScheduledAIMove()
@@ -1286,6 +1297,10 @@ function replayFromHere() {
     gameMode: 'pvc',
     playerColor: sideToMove,
     aiLevel: original.aiLevel,
+    beginnerMode: !IOS_STORE && original.beginnerMode,
+    handicap: original.handicap,
+    board: original.handicap >= 2 ? placeHandicap(original.size, original.handicap) : undefined,
+    currentPlayer: firstPlayer,
     timerEnabled: false,
     timerSeconds: { [BLACK]: 600, [WHITE]: 600 },
     gameRules: original.gameRules,
@@ -1363,6 +1378,23 @@ function newGame() {
   startNewGame();
 }
 
+// 只預填下一局設定；沿用 newGame 的確認流程，保留正在下的棋局。
+function applyBeginnerSettings() {
+  if (IOS_STORE) return;
+  for (const [id, value] of Object.entries({ boardSize: '9', gameMode: 'pvc', playerColor: '1', gameRules: 'chinese', handicap: '4', aiLevelMode: 'auto' })) {
+    const el = document.getElementById(id);
+    el.value = value;
+    el.dispatchEvent(new Event('change'));
+  }
+  for (const [id, checked] of Object.entries({ goBeginnerMode: true, timerToggle: false, undoToggle: true, reviewToggle: true, emotionToggle: true })) {
+    const el = document.getElementById(id);
+    el.checked = checked;
+  }
+  document.getElementById('timerSettings').style.display = 'none';
+  openGoSettings();
+}
+window.applyBeginnerSettings = applyBeginnerSettings;
+
 function startNewGame() {
   clearGoMoveFeedback();
   const rawSize = parseInt(document.getElementById('boardSize').value);
@@ -1414,6 +1446,7 @@ function startNewGame() {
     gameMode: selectedMode,
     playerColor: selectedPlayerColor,
     aiLevel: selectedAiLevel,
+    beginnerMode: !IOS_STORE && selectedMode === 'pvc' && document.getElementById('goBeginnerMode')?.checked === true,
     timerEnabled: selectedTimerEnabled,
     timerSeconds: { [BLACK]: 600, [WHITE]: 600 },
     gameRules: selectedRules,
@@ -1437,6 +1470,7 @@ function startNewGame() {
   if (manualSel) manualSel.value = String(state.aiLevel);
 
   emotionEnabled  = document.getElementById('emotionToggle').checked;
+  document.getElementById('timerArea').style.display = state.timerEnabled ? 'block' : 'none';
 
   document.getElementById('scoringPanel').style.display = 'none';
   document.getElementById('reviewBar').style.display = 'none';
@@ -1515,6 +1549,8 @@ function loadGame() {
     document.getElementById('boardSize').value = state.size;
     document.getElementById('gameMode').value = state.gameMode;
     document.getElementById('playerColor').value = state.playerColor;
+    const beginnerToggle = document.getElementById('goBeginnerMode');
+    if (beginnerToggle) beginnerToggle.checked = !IOS_STORE && state.beginnerMode;
     updateAiLevelDisplay();
     const manualSel = document.getElementById('aiManualLevel');
     if (manualSel) manualSel.value = String(state.aiLevel);
@@ -1844,11 +1880,10 @@ applyAppVersion().then((version) => {
 // desc 寫成「上句，下句」對句（意象＋氣勢），renderHome 會固定在逗號處斷成兩行（對聯感、不孤字）。
 // iOS App Store 版旗標（vite define 注入）。GPL 棋種與死活練習不進 iOS build。
 // 直接用於 UI 過濾即可；動態 import 的守衛須直接寫 `__IOS_STORE__`（見 applyRoute）才會被 DCE。
-const IOS_STORE = typeof __IOS_STORE__ !== 'undefined' ? __IOS_STORE__ : false;
-
 // webOnly：GPL 授權（象棋/將棋/西洋棋/象棋殘局）或 iOS 不收錄（死活）→ iOS 版首頁不列。
 const HOME_ITEMS = [
   { id: 'play',    title: '圍棋對弈', desc: '黑白手談，方圓論天地', hash: '#play',    img: 'img/cards/play.webp' },
+  { id: 'learn', title: '圍棋入門', desc: '從一口氣開始，練習吃子與救棋', hash: '#learn', img: 'img/cards/play.webp', webOnly: true },
   { id: 'tsumego', title: '死活練習', desc: '方寸之間，一子定生死', hash: '#tsumego', img: 'img/cards/tsumego.webp', webOnly: true },
   { id: 'xiangqi', title: '象棋對弈', desc: '楚河漢界，車馬論英雄', hash: '#xiangqi', img: 'img/cards/xiangqi.webp', webOnly: true },
   { id: 'xqpuzzle',title: '象棋殘局', desc: '古譜殘局，絕處覓殺機', hash: '#xqpuzzle', img: 'img/cards/xqpuzzle.webp', webOnly: true },
@@ -2019,6 +2054,8 @@ let leaveXiangqi = null;
 let leaveXiangqiPuzzle = null;
 
 function showScreen(name) {
+  const learnScreen = document.getElementById('goLearnScreen');
+  if (learnScreen) learnScreen.style.display = name === 'learn' ? 'flex' : 'none';
   if (_activeScreen === 'play' && name !== 'play') leavePlayMode();
   if (_activeScreen === 'xiangqi' && name !== 'xiangqi') leaveXiangqi?.();
   if (_activeScreen === 'xqpuzzle' && name !== 'xqpuzzle') leaveXiangqiPuzzle?.();
@@ -2076,6 +2113,7 @@ function goHome() { location.hash = '#home'; }
 // hash SPA 的 page_path 會被去掉 hash，否則各棋種在報表裡長一樣）。
 const SITE_TITLE = '弈樂 · 多棋類線上對弈';
 const ROUTE_TITLES = {
+  '#learn': '圍棋入門',
   '#tsumego': '圍棋死活', '#gomoku': '五子棋', '#connect6': '連六棋', '#xiangqi': '象棋對弈',
   '#shogi': '日本將棋', '#chess': '西洋棋', '#othello': '黑白棋',
   '#xqpuzzle': '象棋殘局', '#play': '圍棋對弈',
@@ -2090,7 +2128,7 @@ function trackPageview() {
 }
 
 // iOS 版未收錄的棋種 hash（GPL 棋種 + 死活）。舊書籤/殘留 hash 導回首頁，不顯示空畫面。
-const IOS_EXCLUDED_HASHES = new Set(['#tsumego', '#xiangqi', '#shogi', '#chess', '#xqpuzzle']);
+const IOS_EXCLUDED_HASHES = new Set(['#learn', '#tsumego', '#xiangqi', '#shogi', '#chess', '#xqpuzzle']);
 
 function applyRoute(animateTitle) {
   let hash = location.hash;
@@ -2099,7 +2137,18 @@ function applyRoute(animateTitle) {
   const title = document.querySelector('h1');
   // 被排除棋種以動態 import 進場，並用 `if (!__IOS_STORE__)` 直接守衛（見檔頭）：
   // iOS build 時整段被 esbuild DCE，對應 chunk 不生成、GPL 碼不進包。
-  if (hash === '#tsumego') {
+  if (hash === '#learn') {
+    showScreen('learn');
+    if (title) title.style.visibility = 'visible';
+    if (!__IOS_STORE__) import('./go-learn-ui.js').then(m => {
+      if (_activeScreen === 'learn' && location.hash === '#learn') m.enterGoLearn();
+    }).catch(err => {
+      console.error('入門練習載入失敗', err);
+      if (_activeScreen === 'learn') {
+        document.getElementById('goLearnScreen').textContent = '入門練習載入失敗，請重新整理頁面再試。';
+      }
+    });
+  } else if (hash === '#tsumego') {
     showScreen('tsumego');
     if (title) title.style.visibility = 'visible';
     if (!__IOS_STORE__) import('./tsumego-mode.js').then(m => m.enterTsumegoMode()).catch(err => { console.error('模式載入失敗', err); location.hash = '#home'; });

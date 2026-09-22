@@ -45,6 +45,7 @@ function makeApp(overrides = {}) {
     get currentPlayer() { return state.currentPlayer; },
     get playerColor() { return state.playerColor; },
     get aiLevel() { return state.aiLevel; },
+    get beginnerMode() { return state.beginnerMode; },
     get board() { return state.board; },
     get size() { return state.size; },
     get moveHistory() { return state.moveHistory; },
@@ -254,3 +255,15 @@ describe('requestAIMove 的非同步邊界守門', () => {
     expect(calls.placeStone).toEqual([[3, 4]]);
   }, 10000);
 });
+
+test('入門陪練經完整 AI 控制流程落子，無須載入 KataGo', async () => {
+  const mock = { ensureReady: jest.fn(), genmoveCandidates: jest.fn(), reset: jest.fn() };
+  const ctx = sandboxWithAiController(mock);
+  const { app, calls } = makeApp({ beginnerMode: true });
+  await ctx.makeAiController(app).requestAIMove();
+  expect(mock.ensureReady).not.toHaveBeenCalled();
+  expect(mock.genmoveCandidates).not.toHaveBeenCalled();
+  expect(calls.placeStone).toHaveLength(1);
+  expect(calls.doPassCount).toBe(0);
+  expect(app.isAIThinking).toBe(false);
+}, 10000);

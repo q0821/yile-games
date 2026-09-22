@@ -1,7 +1,7 @@
-import { tryPlaceStone, createBoard, BLACK } from './rules.js';
+import { tryPlaceStone, createBoard, placeHandicap, BLACK } from './rules.js';
 
-export function getReviewBoard(moveHistory, currentReviewMove, size) {
-  let b = createBoard(size);
+export function getReviewBoard(moveHistory, currentReviewMove, size, handicap = 0) {
+  let b = handicap >= 2 ? placeHandicap(size, handicap) : createBoard(size);
   for (let i = 0; i < currentReviewMove; i++) {
     const m = moveHistory[i];
     if (m.pass) continue;
@@ -24,8 +24,8 @@ export function getReviewLastMove(moveHistory, currentReviewMove) {
  *   blackCaptured = 黑方總共提掉的（白）子數；whiteCaptured 同理。
  *   biggest = 單手最大一次提子（並列時取最早發生者）。
  */
-export function summarizeGame(moveHistory, size) {
-  let b = createBoard(size);
+export function summarizeGame(moveHistory, size, handicap = 0) {
+  let b = getReviewBoard([], 0, size, handicap);
   let blackCaptured = 0;
   let whiteCaptured = 0;
   let biggest = null;

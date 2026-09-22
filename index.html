@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="弈樂">
-<link rel="manifest" href="manifest.json?v=v2026.09.06-1ac2a31">
+<link rel="manifest" href="manifest.json?v=v2026.09.22-1984422">
 <link rel="icon" href="favicon.ico?v=icons20260704a" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=icons20260704a">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=icons20260704a">
@@ -35,7 +35,7 @@
 <meta name="twitter:image" content="https://yile.jackie-yeh.com/icon-512.png">
 <!-- 改用系統內建宋體（見 style.css --font-serif）：移除跨來源 Google Fonts，
      讓象棋引擎可用 COEP require-corp 全瀏覽器開啟 cross-origin isolation。 -->
-<link rel="stylesheet" href="style.css?v=v2026.09.06-1ac2a31">
+<link rel="stylesheet" href="style.css?v=v2026.09.22-1984422">
 </head>
 <body>
   <h1 class="brush-title">弈樂</h1>
@@ -120,6 +120,11 @@
 
   <!-- 狀態訊息 -->
   <div class="go-status" id="mobileStatus" role="status" aria-live="polite">選擇設定後，點擊「開始新遊戲」來開始對弈</div>
+  <p id="goBeginnerBadge" data-web-only hidden>入門陪練，不升降等級。你虛手時，陪練也會收手。</p>
+  <div class="go-beginner-links" data-web-only>
+    <button type="button" onclick="applyBeginnerSettings()">新手設定</button>
+    <a href="#learn">先練數氣與吃子</a>
+  </div>
 
   <!-- 對弈功能列（永遠可見，不收進選單） -->
   <div class="go-controls" id="goControls">
@@ -227,6 +232,8 @@
         </select>
       </div>
       <div class="control-group" id="aiStrengthGroup">
+        <label data-web-only class="beginner-option"><input type="checkbox" id="goBeginnerMode"> 入門陪練（比一般對弈更輕鬆）</label>
+        <p data-web-only class="control-hint">陪練只考慮簡單吃子與救棋，不升降原有等級。下方等級設定供一般對弈使用；變更在開始新遊戲後生效。</p>
         <label>電腦等級</label>
         <select id="aiLevelMode">
           <option value="auto" selected>自動調整（依戰績升降）</option>
@@ -292,6 +299,7 @@
 </div>
 
 <!-- Tsumego (Life & Death) practice screen -->
+<section id="goLearnScreen" class="go-learn-screen" data-web-only style="display:none" aria-label="圍棋入門練習"></section>
 <div class="tsumego-screen" id="tsumegoScreen" style="display:none">
   <div class="mode-header">
     <button class="mode-back" id="tsumegoHome">回首頁</button>

@@ -50,3 +50,12 @@ describe('summarizeGame', () => {
     expect(s.biggest.moveNumber).toBe(5);
   });
 });
+
+test('讓子局第零手的覆盤保留四顆黑子，後續白手能重播', () => {
+  const { GoReview } = sandboxWithReview();
+  const initial = GoReview.getReviewBoard([], 0, 9, 4);
+  expect(initial.flat().filter(v => v === 1)).toHaveLength(4);
+  const next = GoReview.getReviewBoard([{x: 0, y: 0, player: 2}], 1, 9, 4);
+  expect(next[0][0]).toBe(2);
+  expect(next.flat().filter(v => v === 1)).toHaveLength(4);
+});

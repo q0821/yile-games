@@ -47,6 +47,7 @@ function createInitialState(options = {}) {
     gameMode: options.gameMode || 'pvc',
     playerColor: options.playerColor || BLACK,
     aiLevel: options.aiLevel || 10,
+    beginnerMode: options.beginnerMode === true,
     timerEnabled: options.timerEnabled || false,
     timerSeconds: options.timerSeconds
       ? { [BLACK]: options.timerSeconds[BLACK] || 0, [WHITE]: options.timerSeconds[WHITE] || 0 }
@@ -91,6 +92,7 @@ export function getSnapshot() {
     gameMode: current.gameMode,
     playerColor: current.playerColor,
     aiLevel: current.aiLevel,
+    beginnerMode: current.beginnerMode,
     timerEnabled: current.timerEnabled,
     gameRules: current.gameRules,
     komi: current.komi,
@@ -146,6 +148,7 @@ export function restoreSnapshot(snapshot = {}) {
     gameMode: snapshot.gameMode || 'pvc',
     playerColor: snapshot.playerColor || BLACK,
     aiLevel: snapshot.aiLevel || 10,
+    beginnerMode: snapshot.beginnerMode === true,
     timerEnabled: snapshot.timerEnabled || false,
     timerSeconds: {
       [BLACK]: snapshot.timerSeconds?.['1'] ?? 600,
@@ -304,6 +307,7 @@ export function startGame(options = {}) {
     gameMode: options.gameMode || 'pvc',
     playerColor: options.playerColor || BLACK,
     aiLevel: options.aiLevel || 10,
+    beginnerMode: options.beginnerMode === true,
     timerEnabled: options.timerEnabled || false,
     timerSeconds: options.timerSeconds || { [BLACK]: 600, [WHITE]: 600 },
     gameRules: options.gameRules || 'chinese',

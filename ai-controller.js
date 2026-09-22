@@ -7,10 +7,12 @@ import * as KataGo from './katago-service.js';
 import { levelConfig, pickMove } from './adaptive-difficulty.js';
 import { isAnalysisRequestCurrent } from './position-estimate.js';
 import { inBounds, tryPlaceStone } from './rules.js';
+import { beginnerMove } from './go-beginner.js';
 
 export function makeAiController(app) {
   // 用 KataGo 求一手，依自適應等級做隨機弱化。回傳 {x,y}|{pass:true}。
   async function katagoMove() {
+    if (app.beginnerMode) return beginnerMove(app);
     await KataGo.ensureReady(app.setStatus);
     const cfg = levelConfig(app.aiLevel);
     const position = {

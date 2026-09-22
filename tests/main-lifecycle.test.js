@@ -1163,3 +1163,44 @@ describe('圍棋主流程狀態生命週期', () => {
     expect(reloaded.GameState.getState().isReviewing).toBe(false);
   });
 });
+
+describe('網頁入門陪練狀態', () => {
+  test('讓子陪練的覆盤分支保留讓子、輪次與模式', () => {
+    const s = sandboxWithMainLifecycle();
+    s.ctx.document.getElementById('goBeginnerMode').checked = true;
+    s.ctx.document.getElementById('handicap').value = '4';
+    s.ctx.startNewGame();
+    const initial = s.GameState.getSnapshot();
+    s.GameState.applyMove(0, 0);
+    s.GameState.applyMove(0, 1);
+    s.GameState.enterReview();
+    s.GameState.reviewGo(0);
+    s.ctx.replayFromHere();
+    expect(s.GameState.getState().board).toEqual(initial.board);
+    expect(s.GameState.getState().currentPlayer).toBe(2);
+    expect(s.GameState.getState().handicap).toBe(4);
+    expect(s.GameState.getState().beginnerMode).toBe(true);
+  });
+  test('新局讀取陪練選項，勝負不改一般等級，存檔可還原', () => {
+    const s = sandboxWithMainLifecycle({ storage: { gogame_ai_level: '7' } });
+    s.ctx.document.getElementById('goBeginnerMode').checked = true;
+    s.ctx.startNewGame();
+    expect(s.GameState.getState().beginnerMode).toBe(true);
+    expect(s.app.beginnerMode).toBe(true);
+    s.ctx.doResign();
+    expect(s.GameState.getState().aiLevel).toBe(7);
+    expect(s.localStorage.getItem('gogame_ai_level')).toBe('7');
+    const saved = JSON.parse(s.localStorage.getItem('gogame_state'));
+    expect(saved.beginnerMode).toBe(true);
+    const restored = sandboxWithMainLifecycle({ sharedStorage: s.localStorage, hash: '#play' });
+    expect(restored.GameState.getState().beginnerMode).toBe(true);
+    expect(restored.elements.goBeginnerMode.checked).toBe(true);
+  });
+  test('人對人不啟用陪練', () => {
+    const s = sandboxWithMainLifecycle();
+    s.ctx.document.getElementById('goBeginnerMode').checked = true;
+    s.ctx.document.getElementById('gameMode').value = 'pvp';
+    s.ctx.startNewGame();
+    expect(s.GameState.getState().beginnerMode).toBe(false);
+  });
+});
